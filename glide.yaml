@@ -1,0 +1,9 @@
+package: github.com/opencredo/terraform-provider-venafi
+import:
+- package: github.com/hashicorp/terraform
+  version: ^0.8.5
+  subpackages:
+  - helper/hashcode
+  - helper/schema
+  - plugin
+  - terraform
