@@ -104,7 +104,6 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 	if v, ok := d.GetOk("algorithm"); ok {
 		enrollreq.KeyType = v.(string)
 	}
-	enrollreq.APIKey = venafi.apikey
 
 	dnsnum := d.Get("san_dns.#").(int)
 	if dnsnum > 0 {
@@ -135,12 +134,12 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 	}
 	enrollreq.Zone = venafi.zone
 
-	req, err := enrollreq.Request()
-	if err != nil {
-		return err
-	}
+	// req, err := enrollreq.Request()
+	// if err != nil {
+	// 	return err
+	// }
 
-	resp, err := venafi.client.Do(req)
+	resp, err := venafi.client.Do(enrollreq)
 	if err != nil {
 		return err
 	}
@@ -168,13 +167,9 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 	pickupreq := &govcert.PickupReq{
 		PickupID: id,
 	}
-	req, err = pickupreq.Request()
-	if err != nil {
-		return err
-	}
 
 	retryerr := resource.Retry(time.Duration(60)*time.Second, func() *resource.RetryError {
-		resp, err = venafi.client.Do(req)
+		resp, err = venafi.client.Do(pickupreq)
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}

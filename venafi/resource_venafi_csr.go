@@ -141,12 +141,7 @@ func resourceVenafiCSRCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	req, err := csrreq.Request()
-	if err != nil {
-		return err
-	}
-
-	resp, err := venafi.client.Do(req)
+	resp, err := venafi.client.Do(csrreq)
 	if err != nil {
 		return err
 	}
