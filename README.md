@@ -29,8 +29,8 @@ Certificate signing requests can be created using the `venafi_csr` resource. Thi
 
 The following optional fields can also be set
 
-|field|type|
---- | --- | ---
+| field                | type         |
+| -------------------- | ------------ |
 | `organizational_unit`| string array |
 | `organization_name`  | string       |
 | `country`            | string       |
@@ -43,8 +43,8 @@ The following optional fields can also be set
 
 After creation this resource will expose 2 further fields
 
-|field|type|
---- | --- | ---
+| field             |type    |
+| ----------------- | ------ |
 | `private_key_pem` | string |
 | `csr_pem`         | string |
 
@@ -78,8 +78,8 @@ Certificate signing requests can be created using the `venafi_certificate` resou
 
 The following optional fields can also be set
 
-|field|type|
---- | --- | ---
+| field          | type                                 |
+| -------------- | ------------------------------------ |
 | `algorithm`    | string [RSA or ECDSA]                |
 | `rsa_bits`     | integer (Used when `algorithm`=RSA)  |
 | `ecdsa_curve`  | string (Used when `algorithm`=ECDSA) |
@@ -90,8 +90,8 @@ The following optional fields can also be set
 
 After creation this resource will expose 3 further fields
 
-|field|type|
---- | --- | ---
+| field             |type    |
+| ----------------- | ------ |
 | `private_key_pem` | string |
 | `chain`           | string |
 | `certificate`     | string |
