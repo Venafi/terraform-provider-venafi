@@ -2,7 +2,7 @@
 
 ## Building
 
-With govcert cloned in either `$GOPATH/src/github.com/opencredo/govcert` or `./vendor/github.com/opencredo/govcert` in the current directory run
+With govcert cloned in either `$GOPATH/src/github.com/opencredo/govcert` or `./vendor/github.com/opencredo/govcert`, from within the `terraform-provider-venafi` directory run:
 
 ```
 go get -v ./...
