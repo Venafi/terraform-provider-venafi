@@ -1,5 +1,8 @@
 # terraform-provider-venafi
 
+## Pre-requisites
+Go 1.7 or higher.
+
 ## Building
 
 With govcert cloned in either `$GOPATH/src/github.com/opencredo/govcert` or `./vendor/github.com/opencredo/govcert`, from within the `terraform-provider-venafi` directory run:
