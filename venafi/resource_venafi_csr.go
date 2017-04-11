@@ -80,10 +80,6 @@ func resourceVenafiCSR() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"pickup_id": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 		},
 	}
 }
@@ -158,7 +154,6 @@ func resourceVenafiCSRCreate(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("private_key_pem", pk.PrivateKey)
 	d.Set("csr_pem", pk.CSR)
-        d.Set("pickup_id",resp.RequestID())
 	d.SetId(uuid.NewV4().String())
 
 	return nil
