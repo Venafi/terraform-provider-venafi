@@ -1,8 +1,8 @@
 package venafi
 
 import (
-	"github.com/opencredo/govcert"
-	vcert "github.com/opencredo/govcert/embedded"
+	"github.com/Venafi/govcert"
+	vcert "github.com/Venafi/govcert/embedded"
 )
 
 type Config struct {

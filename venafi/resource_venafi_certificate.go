@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/opencredo/govcert"
+	"github.com/Venafi/govcert"
 )
 
 func resourceVenafiCertificate() *schema.Resource {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/opencredo/govcert"
+	"github.com/Venafi/govcert"
 	uuid "github.com/satori/go.uuid"
 )
 

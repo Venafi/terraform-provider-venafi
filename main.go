@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/plugin"
-	"github.com/opencredo/terraform-provider-venafi/venafi"
+	"github.com/Venafi/terraform-provider-venafi/venafi"
 )
 
 func main() {
