@@ -1,4 +1,4 @@
-package: github.com/opencredo/terraform-provider-venafi
+package: github.com/Venafi/terraform-provider-venafi
 import:
 - package: github.com/hashicorp/terraform
   version: ^0.8.5
