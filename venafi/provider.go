@@ -19,7 +19,7 @@ func Provider() terraform.ResourceProvider {
 			"zone": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VENAFI_ZONE", "default"),
+				DefaultFunc: schema.EnvDefaultFunc("VENAFI_ZONE", "Default"),
 				Description: "The user password for vcd API operations.",
 			},
 		},
