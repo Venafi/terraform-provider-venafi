@@ -168,7 +168,7 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 		PickupID: id,
 	}
 
-	retryerr := resource.Retry(time.Duration(60)*time.Second, func() *resource.RetryError {
+	retryerr := resource.Retry(time.Duration(300)*time.Second, func() *resource.RetryError {
 		resp, err = venafi.client.Do(pickupreq)
 		if err != nil {
 			return resource.NonRetryableError(err)
