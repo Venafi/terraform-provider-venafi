@@ -152,9 +152,10 @@ func resourceVenafiCSRCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	u1,_ := uuid.NewV4()
 	d.Set("private_key_pem", pk.PrivateKey)
 	d.Set("csr_pem", pk.CSR)
-	d.SetId(uuid.NewV4().String())
+	d.SetId(u1.String())
 
 	return nil
 }
