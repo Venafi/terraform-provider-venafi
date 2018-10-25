@@ -125,12 +125,6 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"store_pkey": &schema.Schema{
-				Type:        schema.TypeBool,
-				Optional:    true,
-				ForceNew:    true,
-				Description: `Set it to true to store certificates privates key in certificate fields`,
-			},
 		},
 	}
 }
@@ -353,10 +347,7 @@ func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
 		return req, fmt.Errorf("error generating key: %s", err)
 	}
 
-	storePkey := d.Get("store_pkey").(bool)
-	if storePkey {
-		d.Set("private_key_pem", string(pem.EncodeToMemory(pk)))
-	}
+	d.Set("private_key_pem", string(pem.EncodeToMemory(pk)))
 
 	return req, nil
 }

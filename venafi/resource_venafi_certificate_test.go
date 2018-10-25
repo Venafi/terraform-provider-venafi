@@ -37,7 +37,6 @@ func TestDevSignedCert(t *testing.T) {
               "dev@venafi.com",
               "dev2@venafi.com"
             ]
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_dev" {
@@ -138,7 +137,6 @@ func TestDevSignedCert(t *testing.T) {
               "dev@venafi.com",
               "dev2@venafi.com"
             ]
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_dev" {
@@ -182,7 +180,6 @@ func TestDevSignedCertECDSA(t *testing.T) {
             provider = "venafi.dev"
             common_name = "dev-random.venafi.example.com"
             algorithm = "ECDSA"
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_dev_ecdsa" {
@@ -231,7 +228,6 @@ func TestCloudSignedCert(t *testing.T) {
             common_name = "cloud-random.venafi.example.com"
             algorithm = "RSA"
             rsa_bits = "2048"
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_cloud" {
@@ -294,7 +290,6 @@ func TestCloudSignedCert(t *testing.T) {
             common_name = "cloud-random.venafi.example.com"
             algorithm = "RSA"
             rsa_bits = "4096"
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_cloud" {
@@ -347,7 +342,6 @@ func TestTPPSignedCert(t *testing.T) {
             common_name = "tpp-random.venafi.example.com"
             algorithm = "RSA"
             rsa_bits = "2048"
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_tpp" {
@@ -413,7 +407,6 @@ func TestTPPSignedCert(t *testing.T) {
             common_name = "tpp-random.venafi.example.com"
             algorithm = "RSA"
             rsa_bits = "4096"
-            store_pkey = "true"
 			key_password = "123xxx"
           }
           output "cert_certificate_tpp" {

@@ -84,8 +84,6 @@ resource "venafi_certificate" "dev_certificate" {
   ]
   //private key password
   key_password = "xxxxx"
-  //Set it to true if you want so store pkey in the terrafrom state
-  store_pkey = "true"
 }
 
 //outpu certificate
@@ -120,7 +118,6 @@ resource "venafi_certificate" "dev_certificate_ecdsa" {
     "dev2@venafi.com"
   ]
   key_password = "xxxxx"
-  store_pkey = "true"
 }
 
 output "cert_certificate_dev_ecdsa" {
@@ -138,7 +135,6 @@ output "cert_private_key_dev_ecdsa" {
 resource "venafi_certificate" "cloud_certificate" {
   provider = "venafi.cloud"
   common_name = "cloud-${random_string.cn.result}.venafi.example.com"
-  store_pkey = "true"
 }
 
 output "cert_certificate_cloud" {
@@ -171,7 +167,6 @@ resource "venafi_certificate" "tpp_certificate" {
     "tpp2@venafi.com"
   ]
   key_password = "xxxxx"
-  store_pkey = "true"
 }
 
 output "cert_certificate_tpp" {
