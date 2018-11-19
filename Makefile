@@ -1,17 +1,32 @@
+#Plugin information
+PLUGIN_NAME := terraform-provider-venafi
+PLUGIN_DIR := bin
+PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
+
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 all: build test testacc
 
-#TODO: build for other platfroms
-build: clean fmtcheck
+
+#Build
+build:
+	env GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/$(PLUGIN_NAME)-linux || exit 1
+	env GOOS=linux   GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/$(PLUGIN_NAME)-linux86 || exit 1
+	env GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/$(PLUGIN_NAME)-darwin || exit 1
+	env GOOS=darwin  GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/$(PLUGIN_NAME)-darwin86 || exit 1
+	env GOOS=windows GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/$(PLUGIN_NAME)-windows || exit 1
+	env GOOS=windows GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/$(PLUGIN_NAME)-windows86 || exit 1
+	chmod +x $(PLUGIN_DIR)/*
+
+dev: clean fmtcheck
 	go test ./...
 	go build
 	terraform init
 
 clean:
 	rm -fv terraform.tfstate*
-	rm -fv terraform-provider-venafi
+	rm -fv $(PLUGIN_NAME)
 
 test: fmtcheck
 	go test -i $(TEST) || exit 1
