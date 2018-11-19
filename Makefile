@@ -47,12 +47,13 @@ dev: clean fmtcheck
 	go build
 	terraform init
 
+test: fmtcheck test_go testacc test_e2e
 
-test: fmtcheck
+test_go:
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
-testacc: fmtcheck
+testacc:
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
 fmt:
