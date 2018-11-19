@@ -1,4 +1,4 @@
-bin/*
+pkg/*
 .terraform
 terraform.tfstate*
 .idea

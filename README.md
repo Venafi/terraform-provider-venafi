@@ -29,7 +29,7 @@ X509v3 extensions:
 ## Usage
 ### Install plugin
 
-Get the binary "terraform-provider-venafi" from release page and put it somewhere in your $PATH
+Get the zip package for your OS from release page and unzip it somewhere in your $PATH
 
 ### Create provider
 This is a Terraform provider that is developed with the Venafi VCert library (https://github.com/Venafi/vcert)
