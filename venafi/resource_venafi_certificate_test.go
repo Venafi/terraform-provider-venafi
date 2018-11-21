@@ -6,6 +6,8 @@ import (
 	"fmt"
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"log"
+	"os"
 	"strings"
 	"testing"
 )
@@ -209,6 +211,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 }
 
 func TestCloudSignedCert(t *testing.T) {
+	log.Println("TF_VAR_TPPUSER is", os.Getenv("TF_VAR_TPPUSER"))
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
