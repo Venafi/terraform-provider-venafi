@@ -338,7 +338,7 @@ func TestTPPSignedCert(t *testing.T) {
               tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
-              trust_bundle = "${file("../chain.pem")}"
+              trust_bundle = "${file("/tmp/chain.pem")}"
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
@@ -403,7 +403,7 @@ func TestTPPSignedCert(t *testing.T) {
               tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
-              trust_bundle = "${file("../chain.pem")}"
+              trust_bundle = "${file("/tmp/chain.pem")}"
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
