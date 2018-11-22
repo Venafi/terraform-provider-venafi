@@ -5,3 +5,4 @@ terraform.tfstate*
 terraform-provider-venafi
 credentials
 chain.pem
+!*/**
