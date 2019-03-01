@@ -308,6 +308,14 @@ func TestCloudSignedCert(t *testing.T) {
 }
 
 func TestTPPSignedCert(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -328,18 +336,15 @@ func TestTPPSignedCert(t *testing.T) {
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
-            common_name = "tpp-random.venafi.example.com"
+            common_name = "%s"
             san_dns = [
-              "dev-web01-random.example.com",
-              "dev-web02-random.example.com"
+              "%s"
             ]
             san_ip = [
-              "10.1.1.1",
-              "192.168.0.1"
+              "%s"
             ]
             san_email = [
-              "dev@venafi.com",
-              "dev2@venafi.com"
+              "%s"
             ]
             algorithm = "RSA"
             rsa_bits = "2048"
@@ -350,8 +355,7 @@ func TestTPPSignedCert(t *testing.T) {
           }
           output "cert_private_key_tpp" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }
-                `),
+          }`,data.cn,data.dns_ns,data.dns_ip,data.dns_email),
 				Check: func(s *terraform.State) error {
 					gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
 					got, ok := gotUntyped.(string)
@@ -367,10 +371,12 @@ func TestTPPSignedCert(t *testing.T) {
 					if err != nil {
 						return fmt.Errorf("error parsing cert: %s", err)
 					}
-					if expected, got := "tpp-random.venafi.example.com", cert.Subject.CommonName; got != expected {
+					if expected, got := data.cn, cert.Subject.CommonName; got != expected {
 						return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
 					}
-
+					if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
+						return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
+					}
 					//Testing private key
 					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
 					gotPrivate, ok := gotPrivateUntyped.(string)

@@ -1,12 +1,8 @@
 package venafi
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
-	"log"
+	"math/rand"
+	"time"
 )
 
 func sliceContains(slice []string, item string) bool {
@@ -19,57 +15,47 @@ func sliceContains(slice []string, item string) bool {
 	return ok
 }
 
-func encodePKCS1PrivateRSAKey(pk *rsa.PrivateKey) []byte {
-	block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)}
-
-	return pem.EncodeToMemory(block)
-}
-
-func encodePKCS1PrivateECDSAKey(pk *ecdsa.PrivateKey) []byte {
-	b, err := x509.MarshalECPrivateKey(pk)
-	if err != nil {
-		log.Println("Can't marsha EC key: ", err)
-		return nil
+func randSeq(n int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
+	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
 	}
-	block := &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
-	return pem.EncodeToMemory(block)
+	return string(b)
 }
 
-func getPrivateKeyPEMBock(key interface{}) (*pem.Block, error) {
-	switch k := key.(type) {
-	case *rsa.PrivateKey:
-		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}, nil
-	case *ecdsa.PrivateKey:
-		b, err := x509.MarshalECPrivateKey(k)
-		if err != nil {
-			return nil, err
+func sameStringSlice(x, y []string) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	// create a map of string -> int
+	diff := make(map[string]int, len(x))
+	for _, _x := range x {
+		// 0 value for int is 0, so just increment a counter for the string
+		diff[_x]++
+	}
+	for _, _y := range y {
+		// If the string _y is not in diff bail out early
+		if _, ok := diff[_y]; !ok {
+			return false
 		}
-		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}, nil
-	default:
-		return nil, fmt.Errorf("Unable to format Key")
+		diff[_y] -= 1
+		if diff[_y] == 0 {
+			delete(diff, _y)
+		}
 	}
+	return len(diff) == 0
 }
 
-func publicKey(priv interface{}) interface{} {
-	switch k := priv.(type) {
-	case *rsa.PrivateKey:
-		return &k.PublicKey
-	case *ecdsa.PrivateKey:
-		return &k.PublicKey
-	default:
-		return nil
-	}
-}
-
-func readPublicKey(rsaKey interface{}) (string, error) {
-	pubKey := publicKey(rsaKey)
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pubKey)
-	if err != nil {
-		return "failed to marshal public key error", err
-	}
-	pubKeyPemBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKeyBytes,
-	}
-	return string(pem.EncodeToMemory(pubKeyPemBlock)), nil
+type testData struct {
+	cert        string
+	private_key string
+	wrong_cert  string
+	wrong_pkey  string
+	cn          string
+	dns_ns      string
+	dns_ip      string
+	dns_email   string
+	provider    string
 }
