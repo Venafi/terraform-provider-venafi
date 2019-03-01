@@ -109,9 +109,6 @@ func TestDevSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) > 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 
 				},
@@ -158,9 +155,6 @@ func TestDevSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) < 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
@@ -200,9 +194,6 @@ func TestDevSignedCertECDSA(t *testing.T) {
 						return fmt.Errorf("Private key is missing EC key PEM preamble")
 					}
 
-					if len(gotPrivate) > 250 {
-						return fmt.Errorf("private key PEM looks too long for a ECDSA key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
@@ -270,9 +261,6 @@ func TestCloudSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) > 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 
 				},
@@ -312,9 +300,6 @@ func TestCloudSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) < 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
@@ -332,17 +317,30 @@ func TestTPPSignedCert(t *testing.T) {
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
             variable "TPPZONE" {}
+			variable "TRUST_BUNDLE" {}
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
               tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
-              trust_bundle = "${file("/tmp/chain.pem")}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
             common_name = "tpp-random.venafi.example.com"
+            san_dns = [
+              "dev-web01-random.example.com",
+              "dev-web02-random.example.com"
+            ]
+            san_ip = [
+              "10.1.1.1",
+              "192.168.0.1"
+            ]
+            san_email = [
+              "dev@venafi.com",
+              "dev2@venafi.com"
+            ]
             algorithm = "RSA"
             rsa_bits = "2048"
 			key_password = "123xxx"
@@ -384,9 +382,6 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) > 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 
 				},
@@ -397,13 +392,14 @@ func TestTPPSignedCert(t *testing.T) {
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
             variable "TPPZONE" {}
+			variable "TRUST_BUNDLE" {}
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
               tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
-              trust_bundle = "${file("/tmp/chain.pem")}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
@@ -429,9 +425,6 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) < 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
