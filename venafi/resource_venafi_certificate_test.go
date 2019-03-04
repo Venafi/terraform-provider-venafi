@@ -355,7 +355,7 @@ func TestTPPSignedCert(t *testing.T) {
           }
           output "cert_private_key_tpp" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`,data.cn,data.dns_ns,data.dns_ip,data.dns_email),
+          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email),
 				Check: func(s *terraform.State) error {
 					gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
 					got, ok := gotUntyped.(string)
