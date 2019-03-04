@@ -125,6 +125,7 @@ func resourceVenafiCertificate() *schema.Resource {
 }
 
 func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) error {
+	//TODO: Handle if certificate file already exists. Renew certificate etc.
 	log.Printf("Creating certificate\n")
 	//venafi := meta.(*VenafiClient)
 	cfg := meta.(*vcert.Config)
