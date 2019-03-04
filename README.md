@@ -41,6 +41,17 @@ Create a Terraform configuration file called `main.tf` with a "venafi" provider 
 
 ```
 provider "venafi" {
+    url          = "https://tpp.venafi.example:443/vedsdk"
+    tpp_username = "local:admin"
+    tpp_password = "password"
+    zone         = "DevOps\\Terraform"
+}
+```
+
+and example for Venafi Cloud
+
+```
+provider "venafi" {
     api_key = "<API_KEY>"
     zone    = "<ZONE>"
 }

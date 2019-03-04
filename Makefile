@@ -8,7 +8,11 @@ PLUGIN_NAME := terraform-provider-venafi
 PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
-VERSION := 0.4-alpha
+ifdef BUILD_NUMBER
+	VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)
+else
+	VERSION=`git describe --abbrev=0 --tags`
+endif
 
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
@@ -97,3 +101,13 @@ test_e2e_dev_ecdsa:
 	cat /tmp/cert_certificate_dev_ecdsa.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 	terraform output cert_private_key_dev_ecdsa > /tmp/cert_private_key_dev_ecdsa.pem
 	cat /tmp/cert_private_key_dev_ecdsa.pem
+
+collect_artifacts:
+	mkdir -p artifcats
+	mv (PLUGIN_DIR)/linux/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_linux
+	mv (PLUGIN_DIR)/linux86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_linux86
+	mv (PLUGIN_DIR)/darwin/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_darwin
+	mv (PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_darwin86
+	mv (PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe artifcats/$(PLUGIN_NAME)-$(VERSION)_windows.exe
+	mv (PLUGIN_DIR)/windows86/$(PLUGIN_NAME).ext artifcats/$(PLUGIN_NAME)-$(VERSION)_windows86.exe
+	cd artifcats; sha1sum * > hashsums.sha1
