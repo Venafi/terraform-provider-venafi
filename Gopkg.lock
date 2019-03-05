@@ -2,8 +2,8 @@
 
 
 [[projects]]
-  branch = "policies"
-  digest = "1:e923b4ec9c97ce378ffdff4ba25fde333be2dbc62082978d18d7a2e52e8aa14c"
+  branch = "master"
+  digest = "1:443f4c127e0e140268f69c7a0c310cd95008aca0f7d7a1bd22b35fa8d17596f4"
   name = "github.com/Venafi/vcert"
   packages = [
     ".",
@@ -14,7 +14,7 @@
     "pkg/venafi/tpp",
   ]
   pruneopts = "UT"
-  revision = "54496633268b720098c980aeb1cf9471dfff2d79"
+  revision = "10baf32b1fabafc2cae7bec0850ef9eeb0a0907d"
 
 [[projects]]
   digest = "1:dc2ba13235a4c8f80a40599575a3f10acb4736cb372f1a68b88333c06564471d"
