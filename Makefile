@@ -41,6 +41,7 @@ compress:
 	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows86.zip" "$(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe" || exit 1
 
 collect_artifacts:
+	rm -rf artifcats
 	mkdir -p artifcats
 	mv $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)_v$(VERSION)_linux
 	mv $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)_v$(VERSION)_linux86
