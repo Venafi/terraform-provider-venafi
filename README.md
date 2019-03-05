@@ -35,7 +35,7 @@ X509v3 extensions:
 
 Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system. 
 Then install by downloading the package to a directory in your $PATH.
-You will need to rename plugin binary according teraffrom plugin naming convention. For example terraform-provider-venafi_v0.6.0+109_linux should become
+You will need to rename plugin binary according terafform plugin naming convention. For example terraform-provider-venafi_v0.6.0+109_linux should become
 terraform-provider-venafi_v0.6.0
 
 For more information about installing third party plugins please look into official documentation - https://www.terraform.io/docs/configuration/providers.html#third-party-plugins
