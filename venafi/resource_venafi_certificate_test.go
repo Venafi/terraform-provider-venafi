@@ -378,6 +378,7 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
 					}
 					//Testing private key
+					//TODO: we need to test private key match with certificate
 					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
 					gotPrivate, ok := gotPrivateUntyped.(string)
 					if !ok {
