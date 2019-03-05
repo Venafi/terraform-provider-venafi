@@ -46,6 +46,7 @@ clean:
 	rm -fv $(PLUGIN_NAME)
 	rm -rfv $(PLUGIN_DIR)/*
 	rm -rfv $(DIST_DIR)/*
+	rm -rfv .terraform
 
 dev: clean fmtcheck
 	go test ./...
