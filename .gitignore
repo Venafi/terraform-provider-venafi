@@ -1,6 +1,7 @@
-pkg/*
+pkg
 .terraform
 terraform.tfstate*
+condor.tf
 .idea
 terraform-provider-venafi
 credentials

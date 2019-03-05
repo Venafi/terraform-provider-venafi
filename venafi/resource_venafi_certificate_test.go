@@ -109,9 +109,6 @@ func TestDevSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) > 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 
 				},
@@ -158,9 +155,6 @@ func TestDevSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) < 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
@@ -200,9 +194,6 @@ func TestDevSignedCertECDSA(t *testing.T) {
 						return fmt.Errorf("Private key is missing EC key PEM preamble")
 					}
 
-					if len(gotPrivate) > 250 {
-						return fmt.Errorf("private key PEM looks too long for a ECDSA key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
@@ -270,9 +261,6 @@ func TestCloudSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) > 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 
 				},
@@ -312,9 +300,6 @@ func TestCloudSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) < 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},
@@ -323,6 +308,14 @@ func TestCloudSignedCert(t *testing.T) {
 }
 
 func TestTPPSignedCert(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -332,17 +325,27 @@ func TestTPPSignedCert(t *testing.T) {
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
             variable "TPPZONE" {}
+			variable "TRUST_BUNDLE" {}
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
               tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
-              trust_bundle = "${file("/tmp/chain.pem")}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
-            common_name = "tpp-random.venafi.example.com"
+            common_name = "%s"
+            san_dns = [
+              "%s"
+            ]
+            san_ip = [
+              "%s"
+            ]
+            san_email = [
+              "%s"
+            ]
             algorithm = "RSA"
             rsa_bits = "2048"
 			key_password = "123xxx"
@@ -352,8 +355,7 @@ func TestTPPSignedCert(t *testing.T) {
           }
           output "cert_private_key_tpp" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }
-                `),
+          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email),
 				Check: func(s *terraform.State) error {
 					gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
 					got, ok := gotUntyped.(string)
@@ -369,11 +371,14 @@ func TestTPPSignedCert(t *testing.T) {
 					if err != nil {
 						return fmt.Errorf("error parsing cert: %s", err)
 					}
-					if expected, got := "tpp-random.venafi.example.com", cert.Subject.CommonName; got != expected {
+					if expected, got := data.cn, cert.Subject.CommonName; got != expected {
 						return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
 					}
-
+					if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
+						return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
+					}
 					//Testing private key
+					//TODO: we need to test private key match with certificate
 					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
 					gotPrivate, ok := gotPrivateUntyped.(string)
 					if !ok {
@@ -384,9 +389,6 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) > 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 
 				},
@@ -397,13 +399,14 @@ func TestTPPSignedCert(t *testing.T) {
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
             variable "TPPZONE" {}
+			variable "TRUST_BUNDLE" {}
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
               tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
-              trust_bundle = "${file("/tmp/chain.pem")}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
@@ -429,9 +432,6 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("private key is missing RSA key PEM preamble")
 					}
 
-					if len(gotPrivate) < 1700 {
-						return fmt.Errorf("private key PEM looks too long for a 2048-bit key (got %v characters)", len(gotPrivate))
-					}
 					return nil
 				},
 			},

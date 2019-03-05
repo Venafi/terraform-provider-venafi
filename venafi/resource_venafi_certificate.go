@@ -2,18 +2,13 @@ package venafi
 
 import (
 	"fmt"
+	"net"
 	"time"
 
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
 	"github.com/Venafi/vcert"
-	vcertificate "github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
-	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/terraform/helper/schema"
 	"log"
-	"net"
 	"strings"
 )
 
@@ -130,6 +125,7 @@ func resourceVenafiCertificate() *schema.Resource {
 }
 
 func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) error {
+	//TODO: Handle if certificate file already exists. Renew certificate etc.
 	log.Printf("Creating certificate\n")
 	//venafi := meta.(*VenafiClient)
 	cfg := meta.(*vcert.Config)
@@ -150,46 +146,46 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
-	id, err := cl.RequestCertificate(certReq, "")
+	log.Println("Making certificate request")
+	err = cl.GenerateRequest(nil, certReq)
 	if err != nil {
 		return err
 	}
 
-	certReq.PickupID = id
-	var cert *vcertificate.PEMCollection
-
-	retryerr := resource.Retry(time.Duration(300)*time.Second, func() *resource.RetryError {
-		cert, err = cl.RetrieveCertificate(certReq)
-		if err != nil {
-			_, pending := err.(endpoint.ErrCertificatePending)
-			_, timeout := err.(endpoint.ErrRetrieveCertificateTimeout)
-
-			if pending || timeout {
-				return resource.RetryableError(fmt.Errorf("certificate issue pending with id %s", id))
-			} else {
-				return resource.NonRetryableError(err)
-			}
-
-		}
-
-		return nil
-	})
-
-	if retryerr != nil {
-		return retryerr
+	requestID, err := cl.RequestCertificate(certReq, "")
+	if err != nil {
+		return err
 	}
 
-	if err = d.Set("certificate", cert.Certificate); err != nil {
+	pickupReq := &certificate.Request{
+		PickupID: requestID,
+		//TODO: make timeout configurable
+		Timeout: 180 * time.Second,
+	}
+	pcc, err := cl.RetrieveCertificate(pickupReq)
+	if err != nil {
+		return err
+	}
+
+	if pass, ok := d.GetOk("key_password"); ok {
+		pcc.AddPrivateKey(certReq.PrivateKey, []byte(pass.(string)))
+	} else {
+		pcc.AddPrivateKey(certReq.PrivateKey, []byte(""))
+	}
+
+	if err = d.Set("certificate", pcc.Certificate); err != nil {
 		return fmt.Errorf("Error setting certificate: %s", err)
 	}
-	log.Println("Certificate set to ", cert)
+	log.Println("Certificate set to ", pcc.Certificate)
 
-	if err = d.Set("chain", strings.Join((cert.Chain), "")); err != nil {
+	if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
 		return fmt.Errorf("error setting chain: %s", err)
 	}
-	log.Println("Certificate chain set to", cert.Chain)
+	log.Println("Certificate chain set to", pcc.Chain)
 
-	d.SetId(id)
+	d.SetId(certReq.PickupID)
+	log.Println("Setting up private key")
+	d.Set("private_key_pem", pcc.PrivateKey)
 	return nil
 }
 
@@ -201,9 +197,11 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
+func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 
-	req := &vcertificate.Request{}
+	req := &certificate.Request{
+		CsrOrigin: certificate.LocalGeneratedCSR,
+	}
 
 	//Configuring keys
 	const defaultKeySize = 2048
@@ -238,16 +236,16 @@ func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
 			req.KeyLength = defaultKeySize
 		}
 	} else if keyType == "ECDSA" {
-		req.KeyType = vcertificate.KeyTypeECDSA
+		req.KeyType = certificate.KeyTypeECDSA
 		switch {
 		case len(keyCurve) == 0 || keyCurve == "P224":
-			req.KeyCurve = vcertificate.EllipticCurveP224
+			req.KeyCurve = certificate.EllipticCurveP224
 		case keyCurve == "P256":
-			req.KeyCurve = vcertificate.EllipticCurveP256
+			req.KeyCurve = certificate.EllipticCurveP256
 		case keyCurve == "P384":
-			req.KeyCurve = vcertificate.EllipticCurveP384
+			req.KeyCurve = certificate.EllipticCurveP384
 		case keyCurve == "P521":
-			req.KeyCurve = vcertificate.EllipticCurveP521
+			req.KeyCurve = certificate.EllipticCurveP521
 		}
 
 	} else {
@@ -259,7 +257,6 @@ func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
 	//Adding alt names if exists
 	dnsnum := d.Get("san_dns.#").(int)
 	if dnsnum > 0 {
-		req.DNSNames = make([]string, 0, dnsnum)
 		for i := 0; i < dnsnum; i++ {
 			key := fmt.Sprintf("san_dns.%d", i)
 			val := d.Get(key).(string)
@@ -281,7 +278,6 @@ func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
 
 	emailnum := d.Get("san_email.#").(int)
 	if emailnum > 0 {
-		req.EmailAddresses = make([]string, 0, emailnum)
 		for i := 0; i < emailnum; i++ {
 			key := fmt.Sprintf("san_email.%d", i)
 			val := d.Get(key).(string)
@@ -296,7 +292,6 @@ func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
 			val := d.Get(key).(string)
 			ipList = append(ipList, val)
 		}
-		req.IPAddresses = make([]net.IP, 0, len(ipList))
 		for i := 0; i < len(ipList); i += 1 {
 			ip := net.ParseIP(ipList[i])
 			if ip == nil {
@@ -315,39 +310,17 @@ func createVenafiCSR(d *schema.ResourceData) (*vcertificate.Request, error) {
 	log.Printf("Requested SAN: %s", req.DNSNames)
 
 	switch req.KeyType {
-	case vcertificate.KeyTypeECDSA:
-		req.PrivateKey, err = vcertificate.GenerateECDSAPrivateKey(req.KeyCurve)
-	case vcertificate.KeyTypeRSA:
-		req.PrivateKey, err = vcertificate.GenerateRSAPrivateKey(req.KeyLength)
+	case certificate.KeyTypeECDSA:
+		req.PrivateKey, err = certificate.GenerateECDSAPrivateKey(req.KeyCurve)
+	case certificate.KeyTypeRSA:
+		req.PrivateKey, err = certificate.GenerateRSAPrivateKey(req.KeyLength)
 	default:
 		return nil, fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
 	}
 
-	//Setting up CSR
-	certificateRequest := x509.CertificateRequest{}
-	certificateRequest.Subject = req.Subject
-	certificateRequest.DNSNames = req.DNSNames
-	certificateRequest.EmailAddresses = req.EmailAddresses
-	certificateRequest.IPAddresses = req.IPAddresses
-	certificateRequest.Attributes = req.Attributes
-
-	/* TODO:
-	zoneConfig, err = cs.Conn.ReadZoneConfiguration(cf.Zone)
-	zoneConfig.UpdateCertificateRequest(req)
-		...should happen somewhere here before CSR is signed */
-
-	csr, err := x509.CreateCertificateRequest(rand.Reader, &certificateRequest, req.PrivateKey)
-
-	req.CSR = csr
-
-	req.CSR = pem.EncodeToMemory(vcertificate.GetCertificateRequestPEMBlock(req.CSR))
-
-	pk, err := getPrivateKeyPEMBock(req.PrivateKey)
 	if err != nil {
 		return req, fmt.Errorf("error generating key: %s", err)
 	}
-
-	d.Set("private_key_pem", string(pem.EncodeToMemory(pk)))
 
 	return req, nil
 }

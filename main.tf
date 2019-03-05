@@ -19,6 +19,7 @@ variable "TPPUSER" {}
 variable "TPPPASSWORD" {}
 variable "TPPURL" {}
 variable "TPPZONE" {}
+variable "TRUST_BUNDLE" {}
 
 resource "random_string" "cn" {
   length = 5
@@ -57,7 +58,7 @@ provider "venafi" {
   tpp_username = "${var.TPPUSER}"
   tpp_password = "${var.TPPPASSWORD}"
   zone = "${var.TPPZONE}"
-  trust_bundle = "${file("chain.pem")}"
+  trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }
 
 //Certificate resource definition

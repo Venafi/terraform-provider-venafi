@@ -26,7 +26,7 @@
 
 
 [[constraint]]
-  branch = "master"
+  branch = "policies"
   name = "github.com/Venafi/vcert"
 
 [[constraint]]
