@@ -33,7 +33,9 @@ X509v3 extensions:
 
 ### Download and install the Venafi provider plugin
 
-Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest zip package for your operating system.  Then install by unzipping the package to a directory in your $PATH.
+Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system.  Then install by downloading the package to a directory in your $PATH.
+
+For more information about installing third party plugins please look into official documentation - https://www.terraform.io/docs/configuration/providers.html#third-party-plugins
 
 ### Define the Venafi provider
 
