@@ -74,6 +74,7 @@ test_e2e_tpp:
 	echo yes|terraform apply -target=venafi_certificate.tpp_certificate
 	terraform state show venafi_certificate.tpp_certificate
 	terraform output cert_certificate_tpp > /tmp/cert_certificate_tpp.pem
+	terraform output cert_private_key_tpp > /tmp/cert_private_key_tpp.pem
 	cat /tmp/cert_certificate_tpp.pem
 	cat /tmp/cert_certificate_tpp.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
