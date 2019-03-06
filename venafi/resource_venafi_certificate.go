@@ -162,6 +162,10 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 		//TODO: make timeout configurable
 		Timeout: 180 * time.Second,
 	}
+
+	//Workaround for VEN-46960
+	time.Sleep(2 * time.Second)
+
 	pcc, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
 		return err
