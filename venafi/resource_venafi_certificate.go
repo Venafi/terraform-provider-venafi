@@ -204,20 +204,12 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 	}
 
 	//Configuring keys
-	const defaultKeySize = 2048
 	var (
 		err         error
-		keySize     int
 		keyPassword string
 	)
-	if rsabits, ok := d.GetOk("rsa_bits"); ok {
-		keySize = rsabits.(int)
-	}
 
-	keyCurve := d.Get("ecdsa_curve").(string)
 	keyType := d.Get("algorithm").(string)
-
-	log.Printf("%s,%s,%s", keyPassword, keyCurve, keyType)
 
 	if pass, ok := d.GetOk("key_password"); ok {
 		keyPassword = pass.(string)
@@ -225,20 +217,13 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 	}
 
 	if keyType == "RSA" || len(keyType) == 0 {
-		//If not set setting key size to 2048 if not set or set less than 2048
-		switch {
-		case keySize == 0:
-			req.KeyLength = defaultKeySize
-		case keySize > defaultKeySize:
-			req.KeyLength = keySize
-		default:
-			log.Printf("Key Size is less than %d, setting it to %d", defaultKeySize, defaultKeySize)
-			req.KeyLength = defaultKeySize
-		}
+		req.KeyLength = d.Get("rsa_bits").(int)
+		req.KeyType = certificate.KeyTypeRSA
 	} else if keyType == "ECDSA" {
+		keyCurve := d.Get("ecdsa_curve").(string)
 		req.KeyType = certificate.KeyTypeECDSA
 		switch {
-		case len(keyCurve) == 0 || keyCurve == "P224":
+		case keyCurve == "P224":
 			req.KeyCurve = certificate.EllipticCurveP224
 		case keyCurve == "P256":
 			req.KeyCurve = certificate.EllipticCurveP256
