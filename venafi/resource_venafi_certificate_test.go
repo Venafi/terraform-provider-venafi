@@ -1,19 +1,18 @@
 package venafi
 
 import (
-	"crypto/x509"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"log"
-	"os"
 	"strings"
 	"testing"
 )
 
 func TestDevSignedCert(t *testing.T) {
+	t.Log("Testing Dev certificate")
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -164,6 +163,7 @@ func TestDevSignedCert(t *testing.T) {
 }
 
 func TestDevSignedCertECDSA(t *testing.T) {
+	t.Log("Testing Dev ECDSA certificate")
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -203,7 +203,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 }
 
 func TestCloudSignedCert(t *testing.T) {
-	log.Println("TF_VAR_TPPUSER is", os.Getenv("TF_VAR_TPPUSER"))
+	t.Log("Testing Cloud certificate")
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -309,6 +309,7 @@ func TestCloudSignedCert(t *testing.T) {
 }
 
 func TestTPPSignedCert(t *testing.T) {
+	t.Log("Testing TPP certificate")
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -379,19 +380,17 @@ func TestTPPSignedCert(t *testing.T) {
 					if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
 						return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
 					}
-					//Testing private key
-					//TODO: we need to test private key match with certificate
+					t.Log("Checking private key")
 					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
 					gotPrivate, ok := gotPrivateUntyped.(string)
 					if !ok {
 						return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
 					}
 
-					privatePEM,_ := pem.Decode([]byte(gotPrivate))
+					privatePEM, _ := pem.Decode([]byte(gotPrivate))
 					if privatePEM.Type != "RSA PRIVATE KEY" {
 						return fmt.Errorf("RSA private key is of the wrong type")
 					}
-
 
 					privPemBytes, err := x509.DecryptPEMBlock(privatePEM, []byte(key_password))
 					if err != nil {
@@ -405,7 +404,7 @@ func TestTPPSignedCert(t *testing.T) {
 
 					pkMod := pk.PublicKey.N
 					certMod := cert.PublicKey.(*rsa.PublicKey).N
-					if pkMod.Cmp(certMod) != 0  {
+					if pkMod.Cmp(certMod) != 0 {
 						return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
 					}
 
