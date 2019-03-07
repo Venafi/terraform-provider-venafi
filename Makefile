@@ -33,12 +33,12 @@ build:
 compress:
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
-	gzip -c $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_linux.gz
-	gzip -c $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_linux86.gz
-	gzip -c $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_darwin.gz
-	gzip -c $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_darwin86.gz
-	gzip -c $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows.gz
-	gzip -c $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows86.gz
+	gzip -c $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v${VERSION}_linux.gz
+	gzip -c $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v${VERSION}_linux86.gz
+	gzip -c $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v${VERSION}_darwin.gz
+	gzip -c $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v${VERSION}_darwin86.gz
+	gzip -c $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v${VERSION}_windows.gz
+	gzip -c $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v${VERSION}_windows86.gz
 
 collect_artifacts:
 	rm -rf artifcats
