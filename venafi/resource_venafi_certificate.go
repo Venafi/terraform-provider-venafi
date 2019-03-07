@@ -17,6 +17,7 @@ func resourceVenafiCertificate() *schema.Resource {
 		Create: resourceVenafiCertificateCreate,
 		Read:   resourceVenafiCertificateRead,
 		Delete: resourceVenafiCertificateDelete,
+		Update: resourceVenafiCertificateUpdate,
 
 		Schema: map[string]*schema.Schema{
 			"common_name": &schema.Schema{
@@ -120,6 +121,11 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"certificate_dn": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -162,6 +168,7 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 		//TODO: make timeout configurable
 		Timeout: 180 * time.Second,
 	}
+	d.Set("certificate_dn", requestID)
 
 	//Workaround for VEN-46960
 	time.Sleep(2 * time.Second)
@@ -198,6 +205,58 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 }
 func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) error {
 	d.SetId("")
+	return nil
+}
+
+func resourceVenafiCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
+	//TODO: Implement renew here
+	log.Printf("Renewing certificate\n")
+	//venafi := meta.(*VenafiClient)
+	cfg := meta.(*vcert.Config)
+	cl, err := vcert.NewClient(cfg)
+	if err != nil {
+		log.Printf(messageVenafiClientInitFailed + err.Error())
+		return err
+	}
+	err = cl.Ping()
+	if err != nil {
+		log.Printf(messageVenafiPingFailed + err.Error())
+		return err
+	}
+	log.Println(messageVenafiPingSucessfull)
+
+	requestID := d.Get("certificate_dn").(string)
+	renewReq := &certificate.RenewalRequest{
+		CertificateDN: requestID,
+	}
+	newRequestID, err := cl.RenewCertificate(renewReq)
+	if err != nil {
+		return err
+	}
+	renewRetrieveReq := &certificate.Request{
+		PickupID: newRequestID,
+		Timeout:  180 * time.Second,
+	}
+	pcc, err := cl.RetrieveCertificate(renewRetrieveReq)
+	if pass, ok := d.GetOk("key_password"); ok {
+		pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(pass.(string)))
+	} else {
+		pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(""))
+	}
+
+	if err = d.Set("certificate", pcc.Certificate); err != nil {
+		return fmt.Errorf("Error setting certificate: %s", err)
+	}
+	log.Println("Certificate set to ", pcc.Certificate)
+
+	if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
+		return fmt.Errorf("error setting chain: %s", err)
+	}
+	log.Println("Certificate chain set to", pcc.Chain)
+
+	//d.SetId(newRequestID)
+	log.Println("Setting up private key")
+	d.Set("private_key_pem", pcc.PrivateKey)
 	return nil
 }
 
