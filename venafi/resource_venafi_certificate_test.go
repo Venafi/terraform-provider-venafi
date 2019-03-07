@@ -239,6 +239,7 @@ func TestCloudSignedCert(t *testing.T) {
 						return fmt.Errorf("output for \"key_pem_1\" is not a string")
 					}
 
+					t.Logf("Testing certificate:\n %s",got)
 					if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
 						return fmt.Errorf("key is missing cert PEM preamble")
 					}
@@ -366,6 +367,7 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("output for \"key_pem_1\" is not a string")
 					}
 
+					t.Logf("Testing certificate:\n %s",got)
 					if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
 						return fmt.Errorf("key is missing cert PEM preamble")
 					}
