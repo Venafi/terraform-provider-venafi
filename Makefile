@@ -43,12 +43,7 @@ compress:
 collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
-	mv $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)_v$(VERSION)_linux
-	mv $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)_v$(VERSION)_linux86
-	mv $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)_v$(VERSION)_darwin
-	mv $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)_v$(VERSION)_darwin86
-	mv $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe artifcats/$(PLUGIN_NAME)_v$(VERSION)_windows.exe
-	mv $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe artifcats/$(PLUGIN_NAME)_v$(VERSION)_windows86.exe
+	cp -rv $(DIST_DIR)/*.gz artifcats
 	cd artifcats; sha1sum * > hashsums.sha1
 
 clean:
