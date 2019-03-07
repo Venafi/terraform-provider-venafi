@@ -405,7 +405,7 @@ func TestTPPSignedCert(t *testing.T) {
 
 					pkMod := pk.PublicKey.N
 					certMod := cert.PublicKey.(*rsa.PublicKey).N
-					if pkMod != certMod  {
+					if pkMod.Cmp(certMod) != 0  {
 						return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
 					}
 
