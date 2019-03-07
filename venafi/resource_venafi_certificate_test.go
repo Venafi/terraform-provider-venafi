@@ -2,6 +2,7 @@ package venafi
 
 import (
 	"crypto/x509"
+	"crypto/rsa"
 	"encoding/pem"
 	"fmt"
 	r "github.com/hashicorp/terraform/helper/resource"
@@ -315,6 +316,7 @@ func TestTPPSignedCert(t *testing.T) {
 	data.dns_ns = "alt-" + data.cn
 	data.dns_ip = "192.168.1.1"
 	data.dns_email = "venafi@example.com"
+	key_password := "123xxx"
 
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -348,14 +350,14 @@ func TestTPPSignedCert(t *testing.T) {
             ]
             algorithm = "RSA"
             rsa_bits = "2048"
-			key_password = "123xxx"
+			key_password = "%s"
           }
           output "cert_certificate_tpp" {
 			  value = "${venafi_certificate.tpp_certificate.certificate}"
           }
           output "cert_private_key_tpp" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email),
+          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, key_password),
 				Check: func(s *terraform.State) error {
 					gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
 					got, ok := gotUntyped.(string)
@@ -385,8 +387,26 @@ func TestTPPSignedCert(t *testing.T) {
 						return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
 					}
 
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN RSA PRIVATE KEY----") {
-						return fmt.Errorf("private key is missing RSA key PEM preamble")
+					privatePEM,_ := pem.Decode([]byte(gotPrivate))
+					if privatePEM.Type != "RSA PRIVATE KEY" {
+						return fmt.Errorf("RSA private key is of the wrong type")
+					}
+
+
+					privPemBytes, err := x509.DecryptPEMBlock(privatePEM, []byte(key_password))
+					if err != nil {
+						return fmt.Errorf("error decrypting private key with password: %s", err)
+					}
+
+					pk, err := x509.ParsePKCS1PrivateKey(privPemBytes)
+					if err != nil {
+						return fmt.Errorf("error parsing RSA private key: %s", err)
+					}
+
+					pkMod := pk.PublicKey.N
+					certMod := cert.PublicKey.(*rsa.PublicKey).N
+					if pkMod != certMod  {
+						return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
 					}
 
 					return nil
