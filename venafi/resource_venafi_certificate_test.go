@@ -318,13 +318,8 @@ func TestTPPSignedCert(t *testing.T) {
 	data.dns_ns = "alt-" + data.cn
 	data.dns_ip = "192.168.1.1"
 	data.dns_email = "venafi@example.com"
-	key_password := "123xxx"
-
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: fmt.Sprintf(`
+	data.private_key_password = "123xxx"
+	config := fmt.Sprintf(`
             variable "TPPUSER" {}
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
@@ -359,103 +354,78 @@ func TestTPPSignedCert(t *testing.T) {
           }
           output "cert_private_key_tpp" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, key_password),
+          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
 				Check: func(s *terraform.State) error {
-					gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
-					got, ok := gotUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"key_pem_1\" is not a string")
-					}
-
-					t.Logf("Testing certificate:\n %s",got)
-					if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
-						return fmt.Errorf("key is missing cert PEM preamble")
-					}
-					block, _ := pem.Decode([]byte(got))
-					cert, err := x509.ParseCertificate(block.Bytes)
-					if err != nil {
-						return fmt.Errorf("error parsing cert: %s", err)
-					}
-					if expected, got := data.cn, cert.Subject.CommonName; got != expected {
-						return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
-					}
-					if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
-						return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
-					}
-					t.Log("Checking private key")
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
-					}
-
-					privatePEM, _ := pem.Decode([]byte(gotPrivate))
-					if privatePEM.Type != "RSA PRIVATE KEY" {
-						return fmt.Errorf("RSA private key is of the wrong type")
-					}
-
-					privPemBytes, err := x509.DecryptPEMBlock(privatePEM, []byte(key_password))
-					if err != nil {
-						return fmt.Errorf("error decrypting private key with password: %s", err)
-					}
-
-					pk, err := x509.ParsePKCS1PrivateKey(privPemBytes)
-					if err != nil {
-						return fmt.Errorf("error parsing RSA private key: %s", err)
-					}
-
-					pkMod := pk.PublicKey.N
-					certMod := cert.PublicKey.(*rsa.PublicKey).N
-					if pkMod.Cmp(certMod) != 0 {
-						return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
-					}
-
-					return nil
-
+					return checkStandartCert(t, data, s)
 				},
 			},
 			r.TestStep{
-				Config: `
-            variable "TPPUSER" {}
-            variable "TPPPASSWORD" {}
-            variable "TPPURL" {}
-            variable "TPPZONE" {}
-			variable "TRUST_BUNDLE" {}
-            provider "venafi" {
-              alias = "tpp"
-              url = "${var.TPPURL}"
-              tpp_username = "${var.TPPUSER}"
-              tpp_password = "${var.TPPPASSWORD}"
-              zone = "${var.TPPZONE}"
-              trust_bundle = "${file(var.TRUST_BUNDLE)}"
-            }
-			resource "venafi_certificate" "tpp_certificate" {
-            provider = "venafi.tpp"
-            common_name = "tpp-random.venafi.example.com"
-            algorithm = "RSA"
-            rsa_bits = "4096"
-			key_password = "123xxx"
-          }
-          output "cert_certificate_tpp" {
-			  value = "${venafi_certificate.tpp_certificate.certificate}"
-          }
-          output "cert_private_key_tpp" {
-            value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`, Check: func(s *terraform.State) error {
-					//Testing private key
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
-					}
-
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN RSA PRIVATE KEY----") {
-						return fmt.Errorf("private key is missing RSA key PEM preamble")
-					}
-
-					return nil
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing update")
+					return checkStandartCert(t, data, s)
 				},
 			},
 		},
 	})
+}
+
+func checkStandartCert(t *testing.T, data testData, s *terraform.State) error {
+	t.Log("Testing TPP certificate with cn", data.cn)
+	gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
+	got, ok := gotUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"key_pem_1\" is not a string")
+	}
+
+	t.Logf("Testing certificate PEM:\n %s",got)
+	if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
+		return fmt.Errorf("key is missing cert PEM preamble")
+	}
+	block, _ := pem.Decode([]byte(got))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+	if expected, got := data.cn, cert.Subject.CommonName; got != expected {
+		return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
+	}
+	if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
+		return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
+	}
+	gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
+	gotPrivate, ok := gotPrivateUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
+	}
+	t.Log("Checking private key PEM:\n %s", gotPrivate)
+
+	privatePEM, _ := pem.Decode([]byte(gotPrivate))
+	if privatePEM.Type != "RSA PRIVATE KEY" {
+		return fmt.Errorf("RSA private key is of the wrong type")
+	}
+
+	privPemBytes, err := x509.DecryptPEMBlock(privatePEM, []byte(data.private_key_password))
+	if err != nil {
+		return fmt.Errorf("error decrypting private key with password: %s", err)
+	}
+
+	pk, err := x509.ParsePKCS1PrivateKey(privPemBytes)
+	if err != nil {
+		return fmt.Errorf("error parsing RSA private key: %s", err)
+	}
+
+	pkMod := pk.PublicKey.N
+	certMod := cert.PublicKey.(*rsa.PublicKey).N
+	if pkMod.Cmp(certMod) != 0 {
+		return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
+	}
+
+	return nil
 }
