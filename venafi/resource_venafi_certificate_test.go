@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDevSignedCert(t *testing.T) {
@@ -362,21 +363,33 @@ func TestTPPSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					return checkStandartCert(t, data, s)
+					return checkStandartCert(t, &data, s)
 				},
 			},
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing update")
-					return checkStandartCert(t, data, s)
+					gotSerial := data.serial
+					gotTime := data.timeCheck
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare updated certificate serial at time %s against original at time %s", data.timeCheck, gotTime)
+						if gotSerial == data.serial {
+							return fmt.Errorf("serial number from updated certificate %s is the same as in original number %s", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
 				},
 			},
 		},
 	})
 }
 
-func checkStandartCert(t *testing.T, data testData, s *terraform.State) error {
+func checkStandartCert(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Testing TPP certificate with cn", data.cn)
 	gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
 	got, ok := gotUntyped.(string)
@@ -404,6 +417,8 @@ func checkStandartCert(t *testing.T, data testData, s *terraform.State) error {
 	if !ok {
 		return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
 	}
+	data.serial = cert.SerialNumber.String()
+	data.timeCheck = time.Now().String()
 	t.Log("Checking private key PEM:\n %s", gotPrivate)
 
 	privatePEM, _ := pem.Decode([]byte(gotPrivate))
@@ -426,6 +441,7 @@ func checkStandartCert(t *testing.T, data testData, s *terraform.State) error {
 	if pkMod.Cmp(certMod) != 0 {
 		return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
 	}
+	//TODO: add ECDSA key check
 
 	return nil
 }

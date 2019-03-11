@@ -59,4 +59,6 @@ type testData struct {
 	dns_ip               string
 	dns_email            string
 	provider             string
+	serial               string
+	timeCheck			 string
 }
