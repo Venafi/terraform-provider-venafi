@@ -1,6 +1,7 @@
 package venafi
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"time"
@@ -218,6 +219,19 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		if err != nil {
 			return fmt.Errorf("error parsing cert: %s", err)
 		}
+		var pk []byte
+		if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
+			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
+			if err != nil {
+				return fmt.Errorf("error getting key: %s", err)
+			}
+		} else {
+			return fmt.Errorf("error getting key")
+		}
+		_, err = tls.X509KeyPair([]byte(certPEM), pk)
+		if err != nil {
+			return fmt.Errorf("error comparing certificate and key: %s", err)
+		}
 
 		renewWindow := time.Duration(d.Get("expiration_window").(int)) * time.Hour
 		certDuration := cert.NotAfter.Sub(cert.NotBefore)
@@ -227,6 +241,7 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		durationUntilExpiry := cert.NotAfter.Sub(time.Now())
 		renewIn := durationUntilExpiry - renewWindow
 		if renewIn <= 0 {
+			//TODO: request new certificate instead of renew
 			log.Printf("Renewing certificate because it's expiration date %s is less then exipration window %s", durationUntilExpiry, renewWindow)
 			//TODO: get request id from resource id
 			//venafi := meta.(*VenafiClient)
@@ -271,7 +286,6 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 
 
 	}
-	//TODO: optionaly keep private but change it by default.
 
 	return nil
 }
