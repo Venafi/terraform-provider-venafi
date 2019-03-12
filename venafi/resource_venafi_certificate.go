@@ -130,7 +130,7 @@ func resourceVenafiCertificate() *schema.Resource {
 			"expiration_window": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     17520,
+				Default:     168,
 				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
 				ForceNew:    true,
 			},
@@ -229,7 +229,6 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		if renewIn <= 0 {
 			log.Printf("Renewing certificate because it's expiration date %s is less then exipration window %s", durationUntilExpiry, renewWindow)
 			//TODO: get request id from resource id
-			log.Printf("Renewing certificate\n")
 			//venafi := meta.(*VenafiClient)
 			cfg := meta.(*vcert.Config)
 			cl, err := vcert.NewClient(cfg)
@@ -257,11 +256,6 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 				Timeout:  180 * time.Second,
 			}
 			pcc, err := cl.RetrieveCertificate(renewRetrieveReq)
-			if pass, ok := d.GetOk("key_password"); ok {
-				pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(pass.(string)))
-			} else {
-				pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(""))
-			}
 
 			if err = d.Set("certificate", pcc.Certificate); err != nil {
 				return fmt.Errorf("Error setting certificate: %s", err)
@@ -272,10 +266,6 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 				return fmt.Errorf("error setting chain: %s", err)
 			}
 			log.Println("Certificate chain set to", pcc.Chain)
-
-			//d.SetId(newRequestID)
-			log.Println("Setting up private key")
-			d.Set("private_key_pem", pcc.PrivateKey)
 			return nil
 		}
 

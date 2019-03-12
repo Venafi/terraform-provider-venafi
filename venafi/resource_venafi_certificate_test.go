@@ -190,6 +190,7 @@ func TestTPPSignedCert(t *testing.T) {
             algorithm = "RSA"
             rsa_bits = "2048"
 			key_password = "%s"
+			expiration_window = 17520
           }
           output "certificate" {
 			  value = "${venafi_certificate.tpp_certificate.certificate}"
