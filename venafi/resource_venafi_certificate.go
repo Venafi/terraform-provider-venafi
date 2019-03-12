@@ -165,8 +165,6 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 
 func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) error {
 
-	//TODO: verify certificate private key.
-	//TODO: verify certificate expiration date against renewal window.
 	if certUntyped, ok := d.GetOk("certificate"); ok {
 		certPEM := certUntyped.(string)
 		block, _ := pem.Decode([]byte(certPEM))
