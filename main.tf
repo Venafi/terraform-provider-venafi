@@ -46,7 +46,6 @@ provider "venafi" {
   alias = "cloud"
   api_key = "${var.CLOUDAPIKEY}"
   zone = "${var.CLOUDZONE}"
-  url = "https://api.dev12.qa.venafi.io/v1"
 }
 
 /*
