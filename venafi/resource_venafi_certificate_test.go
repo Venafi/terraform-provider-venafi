@@ -13,149 +13,49 @@ import (
 )
 
 func TestDevSignedCert(t *testing.T) {
-	t.Log("Testing Dev certificate")
+	t.Log("Testing Dev ECDSA certificate")
+	data := testData{}
+	data.cn = "dev-random.venafi.example.com"
+	data.dns_ns = "dev-web01-random.example.com"
+	config := fmt.Sprintf(`
+            provider "venafi" {
+              alias = "dev"
+              dev_mode = true
+            }
+			resource "venafi_certificate" "dev_certificate" {
+            provider = "venafi.dev"
+            common_name = "%s"
+            algorithm = "RSA"
+            rsa_bits = "2048"
+            san_dns = [
+              "%s"
+            ]
+            san_ip = [
+              "10.1.1.1",
+              "192.168.0.1"
+            ]
+            san_email = [
+              "dev@venafi.com",
+              "dev2@venafi.com"
+            ]
+          }
+          output "certificate" {
+			  value = "${venafi_certificate.dev_certificate.certificate}"
+          }
+          output "private_key" {
+            value = "${venafi_certificate.dev_certificate.private_key_pem}"
+          }
+                `, data.cn, data.dns_ns)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
 			r.TestStep{
-				Config: fmt.Sprintf(`
-            provider "venafi" {
-              alias = "dev"
-              dev_mode = true
-            }
-			resource "venafi_certificate" "dev_certificate" {
-            provider = "venafi.dev"
-            common_name = "dev-random.venafi.example.com"
-            algorithm = "RSA"
-            rsa_bits = "2048"
-            san_dns = [
-              "dev-web01-random.example.com",
-              "dev-web02-random.example.com"
-            ]
-            san_ip = [
-              "10.1.1.1",
-              "192.168.0.1"
-            ]
-            san_email = [
-              "dev@venafi.com",
-              "dev2@venafi.com"
-            ]
-			key_password = "123xxx"
-          }
-          output "certificate" {
-			  value = "${venafi_certificate.dev_certificate.certificate}"
-          }
-          output "private_key" {
-            value = "${venafi_certificate.dev_certificate.private_key_pem}"
-          }
-                `),
+				Config: config,
 				Check: func(s *terraform.State) error {
-					gotUntyped := s.RootModule().Outputs["cert_certificate_dev"].Value
-					got, ok := gotUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"key_pem_1\" is not a string")
-					}
-
-					if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
-						return fmt.Errorf("key is missing cert PEM preamble")
-					}
-					block, _ := pem.Decode([]byte(got))
-					cert, err := x509.ParseCertificate(block.Bytes)
+					err := checkStandartCert(t, &data, s)
 					if err != nil {
-						return fmt.Errorf("error parsing cert: %s", err)
+						return err
 					}
-					if expected, got := "dev-random.venafi.example.com", cert.Subject.CommonName; got != expected {
-						return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
-					}
-
-					if expected, got := 3, len(cert.DNSNames); got != expected {
-						return fmt.Errorf("incorrect number of DNS names: expected %v, got %v", expected, got)
-					}
-					if expected, got := "dev-web01-random.example.com", cert.DNSNames[0]; got != expected {
-						return fmt.Errorf("incorrect DNS name 0: expected %v, got %v", expected, got)
-					}
-					if expected, got := "dev-web02-random.example.com", cert.DNSNames[1]; got != expected {
-						return fmt.Errorf("incorrect DNS name 0: expected %v, got %v", expected, got)
-					}
-
-					if expected, got := 2, len(cert.IPAddresses); got != expected {
-						return fmt.Errorf("incorrect number of IP addresses: expected %v, got %v", expected, got)
-					}
-					if expected, got := "10.1.1.1", cert.IPAddresses[0].String(); got != expected {
-						return fmt.Errorf("incorrect IP address 0: expected %v, got %v", expected, got)
-					}
-					if expected, got := "192.168.0.1", cert.IPAddresses[1].String(); got != expected {
-						return fmt.Errorf("incorrect IP address 0: expected %v, got %v", expected, got)
-					}
-
-					if expected, got := 2, len(cert.EmailAddresses); got != expected {
-						return fmt.Errorf("incorrect number of email: expected %v, got %v", expected, got)
-					}
-
-					if expected, got := "dev@venafi.com", cert.EmailAddresses[0]; got != expected {
-						return fmt.Errorf("incorrect email 0: expected %v, got %v", expected, got)
-					}
-					if expected, got := "dev2@venafi.com", cert.EmailAddresses[1]; got != expected {
-						return fmt.Errorf("incorrect email 0: expected %v, got %v", expected, got)
-					}
-
-					//Testing private key
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_dev"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"cert_private_key_dev\" is not a string")
-					}
-
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN RSA PRIVATE KEY----") {
-						return fmt.Errorf("private key is missing RSA key PEM preamble")
-					}
-
-					return nil
-
-				},
-			},
-			r.TestStep{
-				Config: `
-            provider "venafi" {
-              alias = "dev"
-              dev_mode = true
-            }
-			resource "venafi_certificate" "dev_certificate" {
-            provider = "venafi.dev"
-            common_name = "dev-random.venafi.example.com"
-            algorithm = "RSA"
-            rsa_bits = "4096"
-            san_dns = [
-              "dev-web01-random.example.com",
-              "dev-web02-random.example.com"
-            ]
-            san_ip = [
-              "10.1.1.1",
-              "192.168.0.1"
-            ]
-            san_email = [
-              "dev@venafi.com",
-              "dev2@venafi.com"
-            ]
-			key_password = "123xxx"
-          }
-          output "certificate" {
-			  value = "${venafi_certificate.dev_certificate.certificate}"
-          }
-          output "private_key" {
-            value = "${venafi_certificate.dev_certificate.private_key_pem}"
-          }`, Check: func(s *terraform.State) error {
-					//Testing private key
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_dev"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"cert_private_key_dev\" is not a string")
-					}
-
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN RSA PRIVATE KEY----") {
-						return fmt.Errorf("private key is missing RSA key PEM preamble")
-					}
-
 					return nil
 				},
 			},
