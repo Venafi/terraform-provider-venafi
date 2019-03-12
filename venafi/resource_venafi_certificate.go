@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"log"
 	"strings"
+	"encoding/pem"
+	"crypto/x509"
 )
 
 func resourceVenafiCertificate() *schema.Resource {
@@ -17,7 +19,6 @@ func resourceVenafiCertificate() *schema.Resource {
 		Create: resourceVenafiCertificateCreate,
 		Read:   resourceVenafiCertificateRead,
 		Delete: resourceVenafiCertificateDelete,
-		Update: resourceVenafiCertificateUpdate,
 
 		Schema: map[string]*schema.Schema{
 			"common_name": &schema.Schema{
@@ -126,11 +127,12 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"renew_window": &schema.Schema{
-				Type:     schema.TypeString,
-				Description: "Time of renewing certificate before expire",
-				Optional: true,
-				Computed: true,
+			"expiration_window": &schema.Schema{
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     17520,
+				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
+				ForceNew:    true,
 			},
 		},
 	}
@@ -209,7 +211,78 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 
 	//TODO: verify certificate private key.
 	//TODO: verify certificate expiration date against renewal window.
+	if certUntyped, ok := d.GetOk("certificate"); ok {
+		certPEM := certUntyped.(string)
+		block, _ := pem.Decode([]byte(certPEM))
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("error parsing cert: %s", err)
+		}
+
+		renewWindow := time.Duration(d.Get("expiration_window").(int)) * time.Hour
+		certDuration := cert.NotAfter.Sub(cert.NotBefore)
+		if certDuration < renewWindow {
+			return fmt.Errorf("certificate validity duration %s is less than configured expiration window %s", certDuration, renewWindow)
+		}
+		durationUntilExpiry := cert.NotAfter.Sub(time.Now())
+		renewIn := durationUntilExpiry - renewWindow
+		if renewIn <= 0 {
+			log.Printf("Renewing certificate because it's expiration date %s is less then exipration window %s", durationUntilExpiry, renewWindow)
+			//TODO: get request id from resource id
+			log.Printf("Renewing certificate\n")
+			//venafi := meta.(*VenafiClient)
+			cfg := meta.(*vcert.Config)
+			cl, err := vcert.NewClient(cfg)
+			if err != nil {
+				log.Printf(messageVenafiClientInitFailed + err.Error())
+				return err
+			}
+			err = cl.Ping()
+			if err != nil {
+				log.Printf(messageVenafiPingFailed + err.Error())
+				return err
+			}
+			log.Println(messageVenafiPingSucessfull)
+
+			requestID := d.Get("certificate_dn").(string)
+			renewReq := &certificate.RenewalRequest{
+				CertificateDN: requestID,
+			}
+			newRequestID, err := cl.RenewCertificate(renewReq)
+			if err != nil {
+				return err
+			}
+			renewRetrieveReq := &certificate.Request{
+				PickupID: newRequestID,
+				Timeout:  180 * time.Second,
+			}
+			pcc, err := cl.RetrieveCertificate(renewRetrieveReq)
+			if pass, ok := d.GetOk("key_password"); ok {
+				pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(pass.(string)))
+			} else {
+				pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(""))
+			}
+
+			if err = d.Set("certificate", pcc.Certificate); err != nil {
+				return fmt.Errorf("Error setting certificate: %s", err)
+			}
+			log.Println("Certificate set to ", pcc.Certificate)
+
+			if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
+				return fmt.Errorf("error setting chain: %s", err)
+			}
+			log.Println("Certificate chain set to", pcc.Chain)
+
+			//d.SetId(newRequestID)
+			log.Println("Setting up private key")
+			d.Set("private_key_pem", pcc.PrivateKey)
+			return nil
+		}
+
+
+	}
 	//TODO: optionaly keep private but change it by default.
+
 	return nil
 }
 
@@ -218,57 +291,6 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceVenafiCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
-	//TODO: Implement renew here
-	log.Printf("Renewing certificate\n")
-	//venafi := meta.(*VenafiClient)
-	cfg := meta.(*vcert.Config)
-	cl, err := vcert.NewClient(cfg)
-	if err != nil {
-		log.Printf(messageVenafiClientInitFailed + err.Error())
-		return err
-	}
-	err = cl.Ping()
-	if err != nil {
-		log.Printf(messageVenafiPingFailed + err.Error())
-		return err
-	}
-	log.Println(messageVenafiPingSucessfull)
-
-	requestID := d.Get("certificate_dn").(string)
-	renewReq := &certificate.RenewalRequest{
-		CertificateDN: requestID,
-	}
-	newRequestID, err := cl.RenewCertificate(renewReq)
-	if err != nil {
-		return err
-	}
-	renewRetrieveReq := &certificate.Request{
-		PickupID: newRequestID,
-		Timeout:  180 * time.Second,
-	}
-	pcc, err := cl.RetrieveCertificate(renewRetrieveReq)
-	if pass, ok := d.GetOk("key_password"); ok {
-		pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(pass.(string)))
-	} else {
-		pcc.AddPrivateKey(renewRetrieveReq.PrivateKey, []byte(""))
-	}
-
-	if err = d.Set("certificate", pcc.Certificate); err != nil {
-		return fmt.Errorf("Error setting certificate: %s", err)
-	}
-	log.Println("Certificate set to ", pcc.Certificate)
-
-	if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
-		return fmt.Errorf("error setting chain: %s", err)
-	}
-	log.Println("Certificate chain set to", pcc.Chain)
-
-	//d.SetId(newRequestID)
-	log.Println("Setting up private key")
-	d.Set("private_key_pem", pcc.PrivateKey)
-	return nil
-}
 
 func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 
