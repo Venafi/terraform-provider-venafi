@@ -3,6 +3,7 @@ package venafi
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"net"
 	"time"
 
@@ -155,56 +156,10 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 	}
 	log.Println(messageVenafiPingSucessfull)
 
-	certReq, err := createVenafiCSR(d)
+	err = enrollVenafiCertificate(d, cl)
 	if err != nil {
 		return err
 	}
-
-	log.Println("Making certificate request")
-	err = cl.GenerateRequest(nil, certReq)
-	if err != nil {
-		return err
-	}
-
-	requestID, err := cl.RequestCertificate(certReq, "")
-	if err != nil {
-		return err
-	}
-
-	pickupReq := &certificate.Request{
-		PickupID: requestID,
-		//TODO: make timeout configurable
-		Timeout: 180 * time.Second,
-	}
-	d.Set("certificate_dn", requestID)
-
-	//Workaround for VEN-46960
-	time.Sleep(2 * time.Second)
-
-	pcc, err := cl.RetrieveCertificate(pickupReq)
-	if err != nil {
-		return err
-	}
-
-	if pass, ok := d.GetOk("key_password"); ok {
-		pcc.AddPrivateKey(certReq.PrivateKey, []byte(pass.(string)))
-	} else {
-		pcc.AddPrivateKey(certReq.PrivateKey, []byte(""))
-	}
-
-	if err = d.Set("certificate", pcc.Certificate); err != nil {
-		return fmt.Errorf("Error setting certificate: %s", err)
-	}
-	log.Println("Certificate set to ", pcc.Certificate)
-
-	if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
-		return fmt.Errorf("error setting chain: %s", err)
-	}
-	log.Println("Certificate chain set to", pcc.Chain)
-
-	d.SetId(certReq.PickupID)
-	log.Println("Setting up private key")
-	d.Set("private_key_pem", pcc.PrivateKey)
 	return nil
 }
 
@@ -241,10 +196,8 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		durationUntilExpiry := cert.NotAfter.Sub(time.Now())
 		renewIn := durationUntilExpiry - renewWindow
 		if renewIn <= 0 {
-			//TODO: request new certificate instead of renew
-			log.Printf("Renewing certificate because it's expiration date %s is less then exipration window %s", durationUntilExpiry, renewWindow)
 			//TODO: get request id from resource id
-			//venafi := meta.(*VenafiClient)
+			log.Printf("Requesting new certificate because it's expiration date %s is less then exipration window %s", durationUntilExpiry, renewWindow)
 			cfg := meta.(*vcert.Config)
 			cl, err := vcert.NewClient(cfg)
 			if err != nil {
@@ -258,29 +211,10 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 			}
 			log.Println(messageVenafiPingSucessfull)
 
-			requestID := d.Get("certificate_dn").(string)
-			renewReq := &certificate.RenewalRequest{
-				CertificateDN: requestID,
-			}
-			newRequestID, err := cl.RenewCertificate(renewReq)
+			err = enrollVenafiCertificate(d, cl)
 			if err != nil {
 				return err
 			}
-			renewRetrieveReq := &certificate.Request{
-				PickupID: newRequestID,
-				Timeout:  180 * time.Second,
-			}
-			pcc, err := cl.RetrieveCertificate(renewRetrieveReq)
-
-			if err = d.Set("certificate", pcc.Certificate); err != nil {
-				return fmt.Errorf("Error setting certificate: %s", err)
-			}
-			log.Println("Certificate set to ", pcc.Certificate)
-
-			if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
-				return fmt.Errorf("error setting chain: %s", err)
-			}
-			log.Println("Certificate chain set to", pcc.Chain)
 			return nil
 		}
 
@@ -296,7 +230,7 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 
-func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
+func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) error {
 
 	req := &certificate.Request{
 		CsrOrigin: certificate.LocalGeneratedCSR,
@@ -333,7 +267,7 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 		}
 
 	} else {
-		return req, fmt.Errorf("Can't determine key algorithm %s", keyType)
+		return fmt.Errorf("Can't determine key algorithm %s", keyType)
 	}
 
 	//Setting up Subject
@@ -350,7 +284,7 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 	}
 
 	if len(commonName) == 0 && len(req.DNSNames) == 0 {
-		return req, fmt.Errorf("no domains specified on certificate")
+		return fmt.Errorf("no domains specified on certificate")
 	}
 	if len(commonName) == 0 && len(req.DNSNames) > 0 {
 		commonName = req.DNSNames[0]
@@ -383,7 +317,7 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 		for i := 0; i < len(ipList); i += 1 {
 			ip := net.ParseIP(ipList[i])
 			if ip == nil {
-				return req, fmt.Errorf("invalid IP address %#v", ipList[i])
+				return fmt.Errorf("invalid IP address %#v", ipList[i])
 			}
 			req.IPAddresses = append(req.IPAddresses, ip)
 		}
@@ -403,12 +337,57 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 	case certificate.KeyTypeRSA:
 		req.PrivateKey, err = certificate.GenerateRSAPrivateKey(req.KeyLength)
 	default:
-		return nil, fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
+		return fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
 	}
 
 	if err != nil {
-		return req, fmt.Errorf("error generating key: %s", err)
+		return fmt.Errorf("error generating key: %s", err)
 	}
 
-	return req, nil
+	log.Println("Making certificate request")
+	err = cl.GenerateRequest(nil, req)
+	if err != nil {
+		return err
+	}
+
+	requestID, err := cl.RequestCertificate(req, "")
+	if err != nil {
+		return err
+	}
+
+	pickupReq := &certificate.Request{
+		PickupID: requestID,
+		//TODO: make timeout configurable
+		Timeout: 180 * time.Second,
+	}
+	d.Set("certificate_dn", requestID)
+
+	//Workaround for VEN-46960
+	time.Sleep(2 * time.Second)
+
+	pcc, err := cl.RetrieveCertificate(pickupReq)
+	if err != nil {
+		return err
+	}
+
+	if pass, ok := d.GetOk("key_password"); ok {
+		pcc.AddPrivateKey(req.PrivateKey, []byte(pass.(string)))
+	} else {
+		pcc.AddPrivateKey(req.PrivateKey, []byte(""))
+	}
+
+	if err = d.Set("certificate", pcc.Certificate); err != nil {
+		return fmt.Errorf("Error setting certificate: %s", err)
+	}
+	log.Println("Certificate set to ", pcc.Certificate)
+
+	if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
+		return fmt.Errorf("error setting chain: %s", err)
+	}
+	log.Println("Certificate chain set to", pcc.Chain)
+
+	d.SetId(req.PickupID)
+	log.Println("Setting up private key")
+	d.Set("private_key_pem", pcc.PrivateKey)
+	return nil
 }
