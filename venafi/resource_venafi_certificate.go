@@ -186,6 +186,7 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 			return fmt.Errorf("error comparing certificate and key: %s", err)
 		}
 
+		//TODO: maybe this check should be up on CSR creation
 		renewWindow := time.Duration(d.Get("expiration_window").(int)) * time.Hour
 		certDuration := cert.NotAfter.Sub(cert.NotBefore)
 		if certDuration < renewWindow {
