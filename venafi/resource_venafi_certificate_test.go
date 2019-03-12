@@ -1,7 +1,7 @@
 package venafi
 
 import (
-	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -42,10 +42,10 @@ func TestDevSignedCert(t *testing.T) {
             ]
 			key_password = "123xxx"
           }
-          output "cert_certificate_dev" {
+          output "certificate" {
 			  value = "${venafi_certificate.dev_certificate.certificate}"
           }
-          output "cert_private_key_dev" {
+          output "private_key" {
             value = "${venafi_certificate.dev_certificate.private_key_pem}"
           }
                 `),
@@ -139,10 +139,10 @@ func TestDevSignedCert(t *testing.T) {
             ]
 			key_password = "123xxx"
           }
-          output "cert_certificate_dev" {
+          output "certificate" {
 			  value = "${venafi_certificate.dev_certificate.certificate}"
           }
-          output "cert_private_key_dev" {
+          output "private_key" {
             value = "${venafi_certificate.dev_certificate.private_key_pem}"
           }`, Check: func(s *terraform.State) error {
 					//Testing private key
@@ -165,37 +165,36 @@ func TestDevSignedCert(t *testing.T) {
 
 func TestDevSignedCertECDSA(t *testing.T) {
 	t.Log("Testing Dev ECDSA certificate")
+	data := testData{}
+	data.cn = "dev-random.venafi.example.com"
+	data.private_key_password = "123xxx"
+	config := fmt.Sprintf(`
+	provider "venafi" {
+		alias = "dev"
+		dev_mode = true
+	}
+	resource "venafi_certificate" "dev_certificate" {
+		provider = "venafi.dev"
+		common_name = "%s"
+		algorithm = "ECDSA"
+		key_password = "%s"
+	}
+	output "certificate" {
+		value = "${venafi_certificate.dev_certificate.certificate}"
+	}
+	output "private_key" {
+		value = "${venafi_certificate.dev_certificate.private_key_pem}"
+	}`, data.cn, data.private_key_password)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
 			r.TestStep{
-				Config: `
-            provider "venafi" {
-              alias = "dev"
-              dev_mode = true
-            }
-			resource "venafi_certificate" "dev_certificate" {
-            provider = "venafi.dev"
-            common_name = "dev-random.venafi.example.com"
-            algorithm = "ECDSA"
-			key_password = "123xxx"
-          }
-          output "cert_certificate_dev_ecdsa" {
-			  value = "${venafi_certificate.dev_certificate.certificate}"
-          }
-          output "cert_private_key_dev_ecdsa" {
-            value = "${venafi_certificate.dev_certificate.private_key_pem}"
-          }`, Check: func(s *terraform.State) error {
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_dev_ecdsa"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"private_key_pem\" is not a string")
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
 					}
-
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN EC PRIVATE KEY----") {
-						return fmt.Errorf("Private key is missing EC key PEM preamble")
-					}
-
 					return nil
 				},
 			},
@@ -205,105 +204,47 @@ func TestDevSignedCertECDSA(t *testing.T) {
 
 func TestCloudSignedCert(t *testing.T) {
 	t.Log("Testing Cloud certificate")
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	config := fmt.Sprintf(`
+            variable "CLOUDURL" {}
+            variable "CLOUDAPIKEY" {}
+            variable "CLOUDZONE" {}
+            provider "venafi" {
+              alias = "cloud"
+              url = "${var.CLOUDURL}"
+              api_key = "${var.CLOUDAPIKEY}"
+              zone = "${var.CLOUDZONE}"
+            }
+			resource "venafi_certificate" "cloud_certificate" {
+            provider = "venafi.cloud"
+            common_name = "%s"
+            algorithm = "RSA"
+            rsa_bits = "2048"
+			key_password = "%s"
+          }
+          output "certificate" {
+			  value = "${venafi_certificate.cloud_certificate.certificate}"
+          }
+          output "private_key" {
+            value = "${venafi_certificate.cloud_certificate.private_key_pem}"
+          }
+                `, data.cn, data.private_key_password)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
 			r.TestStep{
-				Config: fmt.Sprintf(`
-            variable "CLOUDURL" {}
-            variable "CLOUDAPIKEY" {}
-            variable "CLOUDZONE" {}
-            provider "venafi" {
-              alias = "cloud"
-              url = "${var.CLOUDURL}"
-              api_key = "${var.CLOUDAPIKEY}"
-              zone = "${var.CLOUDZONE}"
-            }
-			resource "venafi_certificate" "cloud_certificate" {
-            provider = "venafi.cloud"
-            common_name = "cloud-random.venafi.example.com"
-            algorithm = "RSA"
-            rsa_bits = "2048"
-			key_password = "123xxx"
-          }
-          output "cert_certificate_cloud" {
-			  value = "${venafi_certificate.cloud_certificate.certificate}"
-          }
-          output "cert_private_key_cloud" {
-            value = "${venafi_certificate.cloud_certificate.private_key_pem}"
-          }
-                `),
+				Config: config,
 				Check: func(s *terraform.State) error {
-					gotUntyped := s.RootModule().Outputs["cert_certificate_cloud"].Value
-					got, ok := gotUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"key_pem_1\" is not a string")
-					}
-
-					t.Logf("Testing certificate:\n %s",got)
-					if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
-						return fmt.Errorf("key is missing cert PEM preamble")
-					}
-					block, _ := pem.Decode([]byte(got))
-					cert, err := x509.ParseCertificate(block.Bytes)
+					err := checkStandartCert(t, &data, s)
 					if err != nil {
-						return fmt.Errorf("error parsing cert: %s", err)
+						return err
 					}
-					if expected, got := "cloud-random.venafi.example.com", cert.Subject.CommonName; got != expected {
-						return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
-					}
-
-					//Testing private key
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_cloud"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"cert_private_key_cloud\" is not a string")
-					}
-
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN RSA PRIVATE KEY----") {
-						return fmt.Errorf("private key is missing RSA key PEM preamble")
-					}
-
 					return nil
 
-				},
-			},
-			r.TestStep{
-				Config: `
-            variable "CLOUDURL" {}
-            variable "CLOUDAPIKEY" {}
-            variable "CLOUDZONE" {}
-            provider "venafi" {
-              alias = "cloud"
-              url = "${var.CLOUDURL}"
-              api_key = "${var.CLOUDAPIKEY}"
-              zone = "${var.CLOUDZONE}"
-            }
-			resource "venafi_certificate" "cloud_certificate" {
-            provider = "venafi.cloud"
-            common_name = "cloud-random.venafi.example.com"
-            algorithm = "RSA"
-            rsa_bits = "4096"
-			key_password = "123xxx"
-          }
-          output "cert_certificate_cloud" {
-			  value = "${venafi_certificate.cloud_certificate.certificate}"
-          }
-          output "cert_private_key_cloud" {
-            value = "${venafi_certificate.cloud_certificate.private_key_pem}"
-          }`, Check: func(s *terraform.State) error {
-					//Testing private key
-					gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_cloud"].Value
-					gotPrivate, ok := gotPrivateUntyped.(string)
-					if !ok {
-						return fmt.Errorf("output for \"cert_private_key_cloud\" is not a string")
-					}
-
-					if !strings.HasPrefix(gotPrivate, "-----BEGIN RSA PRIVATE KEY----") {
-						return fmt.Errorf("private key is missing RSA key PEM preamble")
-					}
-
-					return nil
 				},
 			},
 		},
@@ -350,10 +291,89 @@ func TestTPPSignedCert(t *testing.T) {
             rsa_bits = "2048"
 			key_password = "%s"
           }
-          output "cert_certificate_tpp" {
+          output "certificate" {
 			  value = "${venafi_certificate.tpp_certificate.certificate}"
           }
-          output "cert_private_key_tpp" {
+          output "private_key" {
+            value = "${venafi_certificate.tpp_certificate.private_key_pem}"
+          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					return checkStandartCert(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing update")
+					gotSerial := data.serial
+					gotTime := data.timeCheck
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare updated certificate serial at time %s against original at time %s", data.timeCheck, gotTime)
+						if gotSerial == data.serial {
+							return fmt.Errorf("serial number from updated certificate %s is the same as in original number %s", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestTPPECDSASignedCert(t *testing.T) {
+	t.Log("Testing TPP certificate")
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	config := fmt.Sprintf(`
+            variable "TPPUSER" {}
+            variable "TPPPASSWORD" {}
+            variable "TPPURL" {}
+            variable "TPPZONE" {}
+			variable "TRUST_BUNDLE" {}
+            provider "venafi" {
+              alias = "tpp"
+              url = "${var.TPPURL}"
+              tpp_username = "${var.TPPUSER}"
+              tpp_password = "${var.TPPPASSWORD}"
+              zone = "${var.TPPZONE}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
+            }
+			resource "venafi_certificate" "tpp_certificate" {
+            provider = "venafi.tpp"
+            common_name = "%s"
+            san_dns = [
+              "%s"
+            ]
+            san_ip = [
+              "%s"
+            ]
+            san_email = [
+              "%s"
+            ]
+            algorithm = "ECDSA"
+            ecdsa_curve = "P521"
+			key_password = "%s"
+          }
+          output "certificate" {
+			  value = "${venafi_certificate.tpp_certificate.certificate}"
+          }
+          output "private_key" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
           }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
 
@@ -390,58 +410,51 @@ func TestTPPSignedCert(t *testing.T) {
 }
 
 func checkStandartCert(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Testing TPP certificate with cn", data.cn)
-	gotUntyped := s.RootModule().Outputs["cert_certificate_tpp"].Value
-	got, ok := gotUntyped.(string)
+	t.Log("Testing certificate with cn", data.cn)
+	certUntyped := s.RootModule().Outputs["certificate"].Value
+	certificate, ok := certUntyped.(string)
 	if !ok {
-		return fmt.Errorf("output for \"key_pem_1\" is not a string")
+		return fmt.Errorf("output for \"certificate\" is not a string")
 	}
 
-	t.Logf("Testing certificate PEM:\n %s",got)
-	if !strings.HasPrefix(got, "-----BEGIN CERTIFICATE----") {
+	t.Logf("Testing certificate PEM:\n %s", certificate)
+	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
 		return fmt.Errorf("key is missing cert PEM preamble")
 	}
-	block, _ := pem.Decode([]byte(got))
+	block, _ := pem.Decode([]byte(certificate))
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return fmt.Errorf("error parsing cert: %s", err)
 	}
 	if expected, got := data.cn, cert.Subject.CommonName; got != expected {
-		return fmt.Errorf("incorrect subject common name: expected %v, got %v", expected, got)
+		return fmt.Errorf("incorrect subject common name: expected %v, certificate %v", expected, got)
 	}
-	if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
-		return fmt.Errorf("incorrect DNSNames: expected %v, got %v", expected, got)
+	if len(data.dns_ns) > 0 {
+		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
+			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
+		}
+	} else {
+		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
+			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
+		}
 	}
-	gotPrivateUntyped := s.RootModule().Outputs["cert_private_key_tpp"].Value
-	gotPrivate, ok := gotPrivateUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"cert_private_key_tpp\" is not a string")
-	}
+
 	data.serial = cert.SerialNumber.String()
 	data.timeCheck = time.Now().String()
-	t.Log("Checking private key PEM:\n %s", gotPrivate)
 
-	privatePEM, _ := pem.Decode([]byte(gotPrivate))
-	if privatePEM.Type != "RSA PRIVATE KEY" {
-		return fmt.Errorf("RSA private key is of the wrong type")
+	keyUntyped := s.RootModule().Outputs["private_key"].Value
+	privateKey, ok := keyUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"private_key\" is not a string")
 	}
 
-	privPemBytes, err := x509.DecryptPEMBlock(privatePEM, []byte(data.private_key_password))
+	t.Logf("Testing private key PEM:\n %s", privateKey)
+	privKeyPEM, err := getPrivateKey([]byte(privateKey), data.private_key_password)
+
+	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEM)
 	if err != nil {
-		return fmt.Errorf("error decrypting private key with password: %s", err)
+		return fmt.Errorf("error comparing certificate and key: %s", err)
 	}
-
-	pk, err := x509.ParsePKCS1PrivateKey(privPemBytes)
-	if err != nil {
-		return fmt.Errorf("error parsing RSA private key: %s", err)
-	}
-
-	pkMod := pk.PublicKey.N
-	certMod := cert.PublicKey.(*rsa.PublicKey).N
-	if pkMod.Cmp(certMod) != 0 {
-		return fmt.Errorf("certificate public key modulues %s don't match private key modulus %s", certMod, pkMod)
-	}
-	//TODO: add ECDSA key check
 
 	return nil
 }

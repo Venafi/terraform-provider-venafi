@@ -126,6 +126,12 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"renew_window": &schema.Schema{
+				Type:     schema.TypeString,
+				Description: "Time of renewing certificate before expire",
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -200,8 +206,13 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) error {
+
+	//TODO: verify certificate private key.
+	//TODO: verify certificate expiration date against renewal window.
+	//TODO: optionaly keep private but change it by default.
 	return nil
 }
+
 func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) error {
 	d.SetId("")
 	return nil
@@ -317,6 +328,10 @@ func createVenafiCSR(d *schema.ResourceData) (*certificate.Request, error) {
 	}
 	if len(commonName) == 0 && len(req.DNSNames) > 0 {
 		commonName = req.DNSNames[0]
+	}
+	if !sliceContains(req.DNSNames, commonName) {
+		log.Printf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames)
+		req.DNSNames = append(req.DNSNames, commonName)
 	}
 
 	//Obtain a certificate from the Venafi server
