@@ -35,6 +35,12 @@ const cloud_provider  = `variable "CLOUDURL" {}
               zone = "${var.CLOUDZONE}"
             }`
 
+const rsa2048 = `algorithm = "RSA"
+            rsa_bits = "2048"`
+
+const ecdsa521 = `algorithm = "ECDSA"
+            ecdsa_curve = "P521"`
+
 func TestDevSignedCert(t *testing.T) {
 	t.Log("Testing Dev ECDSA certificate")
 	data := testData{}
@@ -160,6 +166,86 @@ func TestCloudSignedCert(t *testing.T) {
 					}
 					return nil
 
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing Cloud certificate second run")
+					gotSerial := data.serial
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s." +
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestCloudSignedCertUpdate(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	key_algo := rsa2048
+	config := fmt.Sprintf(`
+            %s
+			resource "venafi_certificate" "cloud_certificate" {
+            provider = "venafi.cloud"
+            common_name = "%s"
+			%s
+			key_password = "%s"
+			expiration_window = 2171
+          }
+          output "certificate" {
+			  value = "${venafi_certificate.cloud_certificate.certificate}"
+          }
+          output "private_key" {
+            value = "${venafi_certificate.cloud_certificate.private_key_pem}"
+          }
+                `,cloud_provider, data.cn, key_algo, data.private_key_password)
+	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate update")
+					gotSerial := data.serial
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare updated original certificate serial %s with updated %s", gotSerial, data.serial)
+						if gotSerial == data.serial {
+							return fmt.Errorf("serial number from updated certificate %s is the same as " +
+								"in original number %s", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
 				},
 			},
 		},
