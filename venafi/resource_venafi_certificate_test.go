@@ -12,7 +12,8 @@ import (
 	"time"
 )
 
-const tpp_provider = `variable "TPPUSER" {}
+const (
+	tpp_provider = `variable "TPPUSER" {}
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
             variable "TPPZONE" {}
@@ -25,7 +26,8 @@ const tpp_provider = `variable "TPPUSER" {}
               zone = "${var.TPPZONE}"
               trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }`
-const cloud_provider  = `variable "CLOUDURL" {}
+
+	cloud_provider = `variable "CLOUDURL" {}
             variable "CLOUDAPIKEY" {}
             variable "CLOUDZONE" {}
             provider "venafi" {
@@ -34,14 +36,15 @@ const cloud_provider  = `variable "CLOUDURL" {}
               api_key = "${var.CLOUDAPIKEY}"
               zone = "${var.CLOUDZONE}"
             }`
-
-const rsa2048 = `algorithm = "RSA"
+	rsa2048 = `algorithm = "RSA"
             rsa_bits = "2048"`
 
-const ecdsa521 = `algorithm = "ECDSA"
+	ecdsa521 = `algorithm = "ECDSA"
             ecdsa_curve = "P521"`
+)
 
-var dev_config = `
+var (
+	dev_config = `
             provider "venafi" {
               alias = "dev"
               dev_mode = true
@@ -67,8 +70,23 @@ var dev_config = `
           }
           output "private_key" {
             value = "${venafi_certificate.dev_certificate.private_key_pem}"
+          }`
+
+	cloud_config = `
+            %s
+			resource "venafi_certificate" "cloud_certificate" {
+            provider = "venafi.cloud"
+            common_name = "%s"
+            %s
+			key_password = "%s"
           }
-`
+          output "certificate" {
+			  value = "${venafi_certificate.cloud_certificate.certificate}"
+          }
+          output "private_key" {
+            value = "${venafi_certificate.cloud_certificate.private_key_pem}"
+          }`
+)
 
 func TestDevSignedCert(t *testing.T) {
 	t.Log("Testing Dev RSA certificate")
@@ -126,22 +144,7 @@ func TestCloudSignedCert(t *testing.T) {
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
-	config := fmt.Sprintf(`
-            %s
-			resource "venafi_certificate" "cloud_certificate" {
-            provider = "venafi.cloud"
-            common_name = "%s"
-            algorithm = "RSA"
-            rsa_bits = "2048"
-			key_password = "%s"
-          }
-          output "certificate" {
-			  value = "${venafi_certificate.cloud_certificate.certificate}"
-          }
-          output "private_key" {
-            value = "${venafi_certificate.cloud_certificate.private_key_pem}"
-          }
-                `,cloud_provider, data.cn, data.private_key_password)
+	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -168,7 +171,7 @@ func TestCloudSignedCert(t *testing.T) {
 					} else {
 						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
 						if gotSerial != data.serial {
-							return fmt.Errorf("serial number from second run %s is different as in original number %s." +
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
 								" Which means that certificate was updated without reason", data.serial, gotSerial)
 						} else {
 							return nil
@@ -202,7 +205,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
           output "private_key" {
             value = "${venafi_certificate.cloud_certificate.private_key_pem}"
           }
-                `,cloud_provider, data.cn, data.key_algo, data.private_key_password)
+                `, cloud_provider, data.cn, data.key_algo, data.private_key_password)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -229,7 +232,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 					} else {
 						t.Logf("Compare updated original certificate serial %s with updated %s", gotSerial, data.serial)
 						if gotSerial == data.serial {
-							return fmt.Errorf("serial number from updated certificate %s is the same as " +
+							return fmt.Errorf("serial number from updated certificate %s is the same as "+
 								"in original number %s", data.serial, gotSerial)
 						} else {
 							return nil
@@ -274,7 +277,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
           }
           output "private_key" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`,tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+          }`, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -297,7 +300,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 					} else {
 						t.Logf("Compare updated original certificate serial %s with updated %s", gotSerial, data.serial)
 						if gotSerial == data.serial {
-							return fmt.Errorf("serial number from updated certificate %s is the same as " +
+							return fmt.Errorf("serial number from updated certificate %s is the same as "+
 								"in original number %s", data.serial, gotSerial)
 						} else {
 							return nil
@@ -341,7 +344,7 @@ func TestTPPSignedCert(t *testing.T) {
           }
           output "private_key" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`,tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+          }`, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -364,7 +367,7 @@ func TestTPPSignedCert(t *testing.T) {
 					} else {
 						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
 						if gotSerial != data.serial {
-							return fmt.Errorf("serial number from second run %s is different as in original number %s." +
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
 								" Which means that certificate was updated without reason", data.serial, gotSerial)
 						} else {
 							return nil
@@ -408,7 +411,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
           }
           output "private_key" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`,tpp_provider , data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+          }`, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
 	t.Logf("Testing TPP certificate with ECDSA key  with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -431,7 +434,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 					} else {
 						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
 						if gotSerial != data.serial {
-							return fmt.Errorf("serial number from second run %s is different as in original number %s." +
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
 								" Which means that certificate was updated without reason", data.serial, gotSerial)
 						} else {
 							return nil
