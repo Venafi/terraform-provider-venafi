@@ -79,6 +79,7 @@ var (
             common_name = "%s"
             %s
 			key_password = "%s"
+			expiration_window = %s
           }
           output "certificate" {
 			  value = "${venafi_certificate.cloud_certificate.certificate}"
@@ -102,7 +103,7 @@ var (
             ]
 			%s
 			key_password = "%s"
-			expiration_window = 17520
+			expiration_window = %s
           }
           output "certificate" {
 			  value = "${venafi_certificate.tpp_certificate.certificate}"
@@ -169,7 +170,8 @@ func TestCloudSignedCert(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password)
+	data.expiration_window = 2171
+	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -215,7 +217,8 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password)
+	data.expiration_window = 2171
+	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -264,7 +267,8 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password)
+	data.expiration_window = 17520
+	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -309,7 +313,8 @@ func TestTPPSignedCert(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password)
+	data.expiration_window = 168
+	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
