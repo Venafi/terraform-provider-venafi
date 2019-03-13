@@ -79,7 +79,7 @@ var (
             common_name = "%s"
             %s
 			key_password = "%s"
-			expiration_window = %s
+			expiration_window = %d
           }
           output "certificate" {
 			  value = "${venafi_certificate.cloud_certificate.certificate}"
@@ -103,7 +103,7 @@ var (
             ]
 			%s
 			key_password = "%s"
-			expiration_window = %s
+			expiration_window = %d
           }
           output "certificate" {
 			  value = "${venafi_certificate.tpp_certificate.certificate}"
