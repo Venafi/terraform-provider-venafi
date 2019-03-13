@@ -172,6 +172,7 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		if err != nil {
 			return fmt.Errorf("error parsing cert: %s", err)
 		}
+		//Checking Private Key
 		var pk []byte
 		if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
 			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))

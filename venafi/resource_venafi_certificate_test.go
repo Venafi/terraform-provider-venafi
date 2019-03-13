@@ -12,6 +12,29 @@ import (
 	"time"
 )
 
+const tpp_provider = `variable "TPPUSER" {}
+            variable "TPPPASSWORD" {}
+            variable "TPPURL" {}
+            variable "TPPZONE" {}
+			variable "TRUST_BUNDLE" {}
+            provider "venafi" {
+              alias = "tpp"
+              url = "${var.TPPURL}"
+              tpp_username = "${var.TPPUSER}"
+              tpp_password = "${var.TPPPASSWORD}"
+              zone = "${var.TPPZONE}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
+            }`
+const cloud_provider  = `variable "CLOUDURL" {}
+            variable "CLOUDAPIKEY" {}
+            variable "CLOUDZONE" {}
+            provider "venafi" {
+              alias = "cloud"
+              url = "${var.CLOUDURL}"
+              api_key = "${var.CLOUDAPIKEY}"
+              zone = "${var.CLOUDZONE}"
+            }`
+
 func TestDevSignedCert(t *testing.T) {
 	t.Log("Testing Dev ECDSA certificate")
 	data := testData{}
@@ -103,22 +126,13 @@ func TestDevSignedCertECDSA(t *testing.T) {
 }
 
 func TestCloudSignedCert(t *testing.T) {
-	t.Log("Testing Cloud certificate")
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	config := fmt.Sprintf(`
-            variable "CLOUDURL" {}
-            variable "CLOUDAPIKEY" {}
-            variable "CLOUDZONE" {}
-            provider "venafi" {
-              alias = "cloud"
-              url = "${var.CLOUDURL}"
-              api_key = "${var.CLOUDAPIKEY}"
-              zone = "${var.CLOUDZONE}"
-            }
+            %s
 			resource "venafi_certificate" "cloud_certificate" {
             provider = "venafi.cloud"
             common_name = "%s"
@@ -132,7 +146,8 @@ func TestCloudSignedCert(t *testing.T) {
           output "private_key" {
             value = "${venafi_certificate.cloud_certificate.private_key_pem}"
           }
-                `, data.cn, data.private_key_password)
+                `,cloud_provider, data.cn, data.private_key_password)
+	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -151,8 +166,7 @@ func TestCloudSignedCert(t *testing.T) {
 	})
 }
 
-func TestTPPSignedCert(t *testing.T) {
-	t.Log("Testing TPP certificate")
+func TestTPPSignedCertUpdate(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -162,19 +176,7 @@ func TestTPPSignedCert(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	config := fmt.Sprintf(`
-            variable "TPPUSER" {}
-            variable "TPPPASSWORD" {}
-            variable "TPPURL" {}
-            variable "TPPZONE" {}
-			variable "TRUST_BUNDLE" {}
-            provider "venafi" {
-              alias = "tpp"
-              url = "${var.TPPURL}"
-              tpp_username = "${var.TPPUSER}"
-              tpp_password = "${var.TPPPASSWORD}"
-              zone = "${var.TPPZONE}"
-              trust_bundle = "${file(var.TRUST_BUNDLE)}"
-            }
+			%s
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
             common_name = "%s"
@@ -197,30 +199,98 @@ func TestTPPSignedCert(t *testing.T) {
           }
           output "private_key" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
-
+          }`,tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandartCert(t, &data, s)
 				},
 			},
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing update")
+					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					gotTime := data.timeCheck
 					err := checkStandartCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
-						t.Logf("Compare updated certificate serial at time %s against original at time %s", data.timeCheck, gotTime)
+						t.Logf("Compare updated original certificate serial %s with updated %s", gotSerial, data.serial)
 						if gotSerial == data.serial {
-							return fmt.Errorf("serial number from updated certificate %s is the same as in original number %s", data.serial, gotSerial)
+							return fmt.Errorf("serial number from updated certificate %s is the same as " +
+								"in original number %s", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestTPPSignedCert(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	config := fmt.Sprintf(`
+			%s
+			resource "venafi_certificate" "tpp_certificate" {
+            provider = "venafi.tpp"
+            common_name = "%s"
+            san_dns = [
+              "%s"
+            ]
+            san_ip = [
+              "%s"
+            ]
+            san_email = [
+              "%s"
+            ]
+            algorithm = "RSA"
+            rsa_bits = "2048"
+			key_password = "%s"
+          }
+          output "certificate" {
+			  value = "${venafi_certificate.tpp_certificate.certificate}"
+          }
+          output "private_key" {
+            value = "${venafi_certificate.tpp_certificate.private_key_pem}"
+          }`,tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandartCert(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate second run")
+					gotSerial := data.serial
+					err := checkStandartCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s." +
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
 						} else {
 							return nil
 						}
@@ -232,7 +302,6 @@ func TestTPPSignedCert(t *testing.T) {
 }
 
 func TestTPPECDSASignedCert(t *testing.T) {
-	t.Log("Testing TPP certificate")
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -242,19 +311,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	config := fmt.Sprintf(`
-            variable "TPPUSER" {}
-            variable "TPPPASSWORD" {}
-            variable "TPPURL" {}
-            variable "TPPZONE" {}
-			variable "TRUST_BUNDLE" {}
-            provider "venafi" {
-              alias = "tpp"
-              url = "${var.TPPURL}"
-              tpp_username = "${var.TPPUSER}"
-              tpp_password = "${var.TPPPASSWORD}"
-              zone = "${var.TPPZONE}"
-              trust_bundle = "${file(var.TRUST_BUNDLE)}"
-            }
+            %s
 			resource "venafi_certificate" "tpp_certificate" {
             provider = "venafi.tpp"
             common_name = "%s"
@@ -276,30 +333,31 @@ func TestTPPECDSASignedCert(t *testing.T) {
           }
           output "private_key" {
             value = "${venafi_certificate.tpp_certificate.private_key_pem}"
-          }`, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
-
+          }`,tpp_provider , data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.private_key_password)
+	t.Logf("Testing TPP certificate with ECDSA key  with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandartCert(t, &data, s)
 				},
 			},
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing update")
+					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					gotTime := data.timeCheck
 					err := checkStandartCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
-						t.Logf("Compare updated certificate serial at time %s against original at time %s", data.timeCheck, gotTime)
-						if gotSerial == data.serial {
-							return fmt.Errorf("serial number from updated certificate %s is the same as in original number %s", data.serial, gotSerial)
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s." +
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
 						} else {
 							return nil
 						}
