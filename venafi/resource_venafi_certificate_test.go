@@ -41,12 +41,7 @@ const rsa2048 = `algorithm = "RSA"
 const ecdsa521 = `algorithm = "ECDSA"
             ecdsa_curve = "P521"`
 
-func TestDevSignedCert(t *testing.T) {
-	t.Log("Testing Dev ECDSA certificate")
-	data := testData{}
-	data.cn = "dev-random.venafi.example.com"
-	data.dns_ns = "dev-web01-random.example.com"
-	config := fmt.Sprintf(`
+var dev_config = `
             provider "venafi" {
               alias = "dev"
               dev_mode = true
@@ -54,8 +49,7 @@ func TestDevSignedCert(t *testing.T) {
 			resource "venafi_certificate" "dev_certificate" {
             provider = "venafi.dev"
             common_name = "%s"
-            algorithm = "RSA"
-            rsa_bits = "2048"
+            %s
             san_dns = [
               "%s"
             ]
@@ -74,7 +68,16 @@ func TestDevSignedCert(t *testing.T) {
           output "private_key" {
             value = "${venafi_certificate.dev_certificate.private_key_pem}"
           }
-                `, data.cn, data.dns_ns)
+`
+
+func TestDevSignedCert(t *testing.T) {
+	t.Log("Testing Dev RSA certificate")
+	data := testData{}
+	data.cn = "dev-random.venafi.example.com"
+	data.dns_ns = "dev-web01-random.example.com"
+	data.key_algo = rsa2048
+	config := fmt.Sprintf(dev_config, data.cn, data.key_algo, data.dns_ns)
+	t.Logf("Testing dev certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -96,24 +99,10 @@ func TestDevSignedCertECDSA(t *testing.T) {
 	t.Log("Testing Dev ECDSA certificate")
 	data := testData{}
 	data.cn = "dev-random.venafi.example.com"
-	data.private_key_password = "123xxx"
-	config := fmt.Sprintf(`
-	provider "venafi" {
-		alias = "dev"
-		dev_mode = true
-	}
-	resource "venafi_certificate" "dev_certificate" {
-		provider = "venafi.dev"
-		common_name = "%s"
-		algorithm = "ECDSA"
-		key_password = "%s"
-	}
-	output "certificate" {
-		value = "${venafi_certificate.dev_certificate.certificate}"
-	}
-	output "private_key" {
-		value = "${venafi_certificate.dev_certificate.private_key_pem}"
-	}`, data.cn, data.private_key_password)
+	data.dns_ns = "dev-web01-random.example.com"
+	data.key_algo = ecdsa521
+	config := fmt.Sprintf(dev_config, data.cn, data.key_algo, data.dns_ns)
+	t.Logf("Testing dev certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -197,7 +186,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
-	key_algo := rsa2048
+	data.key_algo = rsa2048
 	config := fmt.Sprintf(`
             %s
 			resource "venafi_certificate" "cloud_certificate" {
@@ -213,7 +202,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
           output "private_key" {
             value = "${venafi_certificate.cloud_certificate.private_key_pem}"
           }
-                `,cloud_provider, data.cn, key_algo, data.private_key_password)
+                `,cloud_provider, data.cn, data.key_algo, data.private_key_password)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,

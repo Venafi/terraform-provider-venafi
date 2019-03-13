@@ -65,6 +65,7 @@ type testData struct {
 	provider             string
 	serial               string
 	timeCheck            string
+	key_algo			 string
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {

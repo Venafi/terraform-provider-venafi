@@ -362,8 +362,10 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	}
 	d.Set("certificate_dn", requestID)
 
-	//Workaround for VEN-46960
-	time.Sleep(2 * time.Second)
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		log.Println("Waiting 2 seconds as workaround for VEN-46960")
+		time.Sleep(2 * time.Second)
+	}
 
 	pcc, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
