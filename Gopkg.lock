@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:443f4c127e0e140268f69c7a0c310cd95008aca0f7d7a1bd22b35fa8d17596f4"
+  digest = "1:3376460bd3c7db3f2667e831e9061eaa02c5c85bc4420b0563a876bb51136516"
   name = "github.com/Venafi/vcert"
   packages = [
     ".",
@@ -14,7 +14,7 @@
     "pkg/venafi/tpp",
   ]
   pruneopts = "UT"
-  revision = "10baf32b1fabafc2cae7bec0850ef9eeb0a0907d"
+  revision = "36e6e55f3d2fbf3b98b21c27f6d322d54572ca67"
 
 [[projects]]
   digest = "1:dc2ba13235a4c8f80a40599575a3f10acb4736cb372f1a68b88333c06564471d"
@@ -425,6 +425,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:57e168c6dfcc02c1c53bdf1589afbef59694d819cac65bfd3a855de2256d4950"
   name = "github.com/posener/complete"
   packages = [
@@ -597,6 +605,7 @@
     "github.com/hashicorp/terraform/helper/schema",
     "github.com/hashicorp/terraform/plugin",
     "github.com/hashicorp/terraform/terraform",
+    "github.com/pkg/errors",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
