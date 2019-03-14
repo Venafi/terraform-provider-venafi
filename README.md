@@ -97,13 +97,13 @@ Certificates are created using the `venafi_certificate` resource which has only 
 | Property       | Type                                    |  Description                                                                              | Default
 | -------------- | --------------------------------------- |-------------------------------------------------------------------------------------------|--------
 |`common_name`   | string                                  | "Common name of certificate"                                                              |`none`
-| `algorithm`    | string [RSA or ECDSA]   RSA is default  | "Key encryption algorithm. RSA or ECDSA. RSA is default."                                 | RSA
-| `rsa_bits`     | integer (applies when `algorithm`=RSA)  | "Number of bits to use when generating an RSA key"                                        | 2048
-| `ecdsa_curve`  | string (applies when `algorithm`=ECDSA) | "ECDSA curve to use when generating a key"                                                | P521
-| `san_dns`      | string array                            | "List of DNS names to use as subjects of the certificate"                                 |
-| `san_email`    | string array                            | "List of email addresses to use as subjects of the certificate"                           |
-| `san_ip`       | string array                            | "Private key password."                                                                   |
-| `key_password` | string                                  |  "Number of hours before the certificates expiry when a new certificate will be generated" |
+| `algorithm`    | string   | "Key encryption algorithm. RSA or ECDSA. RSA is default."                                 | RSA
+| `rsa_bits`     | integer  | "Number of bits to use when generating an RSA key. Applies when `algorithm`=RSA"                                        | 2048
+| `ecdsa_curve`  | string  | "ECDSA curve to use when generating a key. Applies when `algorithm`=ECDSA"                                                | P521
+| `san_dns`      | string array                            | "List of DNS names to use as subjects of the certificate"                                 | `none`
+| `san_email`    | string array                            | "List of email addresses to use as subjects of the certificate"                           | `none`
+| `san_ip`       | string array                            | "Private key password."                                                                   | `none`
+| `key_password` | string                                  |  "Number of hours before the certificates expiry when a new certificate will be generated" | 168
 |`expiration_window`|int|
 
 After creation this resource will expose the following:
