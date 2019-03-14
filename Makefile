@@ -8,11 +8,8 @@ PLUGIN_NAME := terraform-provider-venafi
 PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
-ifdef BUILD_NUMBER
-	VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)
-else
-	VERSION=`git describe --abbrev=0 --tags`
-endif
+VERSION=`git describe --abbrev=0 --tags`
+
 
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
@@ -33,12 +30,12 @@ build:
 compress:
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
-	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_linux.zip" "$(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
-	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_linux86.zip" "$(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
-	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_darwin.zip" "$(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
-	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_darwin86.zip" "$(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
-	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_windows.zip" "$(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_v$(VERSION).exe" || exit 1
-	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_windows86.zip" "$(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_v$(VERSION).exe" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_$(BUILD_NUMBER)_linux.zip" "$(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_$(BUILD_NUMBER)_linux86.zip" "$(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_$(BUILD_NUMBER)_darwin.zip" "$(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_$(BUILD_NUMBER)_darwin86.zip" "$(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)_v$(VERSION)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_$(BUILD_NUMBER)_windows.zip" "$(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_v$(VERSION).exe" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_v$(VERSION)_$(BUILD_NUMBER)_windows86.zip" "$(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_v$(VERSION).exe" || exit 1
 
 collect_artifacts:
 	rm -rf artifcats
