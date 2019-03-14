@@ -237,11 +237,11 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		case keyCurve == "P521":
 			req.KeyCurve = certificate.EllipticCurveP521
 		default:
-			return fmt.Errorf("Ecliptic curve not supported by vcert %s", req.KeyCurve)
+			return fmt.Errorf("ecliptic curve not supported by vcert %s", keyCurve)
 		}
 
 	} else {
-		return fmt.Errorf("Can't determine key algorithm %s", keyType)
+		return fmt.Errorf("can't determine key algorithm %s", keyType)
 	}
 
 	//Setting up Subject
