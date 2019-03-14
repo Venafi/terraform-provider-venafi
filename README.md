@@ -34,11 +34,11 @@ X509v3 extensions:
 ### Download and install the Venafi provider plugin
 
 Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system. 
-Then install by downloading the package to a directory in your $PATH.
-You will need to rename plugin binary according terafform plugin naming convention. For example terraform-provider-venafi_v0.6.0+109_linux should become
-terraform-provider-venafi_v0.6.0
+Then install by downloading and unzipping package to a directory in your $PATH. Make sure that binary name matches 
+[terraform plugin naming convention](https://www.terraform.io/docs/configuration/providers.html#plugin-names-and-versions). 
+Example: terraform-provider-venafi_v0.6.2
 
-For more information about installing third party plugins please look into official documentation - https://www.terraform.io/docs/configuration/providers.html#third-party-plugins
+For more information about installing third party plugins please look into [official documentation](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins)
 
 ### Define the Venafi provider
 
@@ -94,15 +94,17 @@ provider "venafi" {
 
 Certificates are created using the `venafi_certificate` resource which has only one required property, `common_name` (string). The following options may also be specified:
 
-| Property       | Type                                    |
-| -------------- | --------------------------------------- |
-| `algorithm`    | string [RSA or ECDSA]   RSA is default  |
-| `rsa_bits`     | integer (applies when `algorithm`=RSA)  |
-| `ecdsa_curve`  | string (applies when `algorithm`=ECDSA) |
-| `san_dns`      | string array                            |
-| `san_email`    | string array                            |
-| `san_ip`       | string array                            |
-| `key_password` | string                                  |
+| Property       | Type                                    |  Description                                                                              | Default
+| -------------- | --------------------------------------- |-------------------------------------------------------------------------------------------|--------
+|`common_name`   | string                                  | "Common name of certificate"                                                              |`none`
+| `algorithm`    | string [RSA or ECDSA]   RSA is default  | "Key encryption algorithm. RSA or ECDSA. RSA is default."                                 | RSA
+| `rsa_bits`     | integer (applies when `algorithm`=RSA)  | "Number of bits to use when generating an RSA key"                                        | 2048
+| `ecdsa_curve`  | string (applies when `algorithm`=ECDSA) | "ECDSA curve to use when generating a key"                                                | P521
+| `san_dns`      | string array                            | "List of DNS names to use as subjects of the certificate"                                 |
+| `san_email`    | string array                            | "List of email addresses to use as subjects of the certificate"                           |
+| `san_ip`       | string array                            | "Private key password."                                                                   |
+| `key_password` | string                                  |  "Number of hours before the certificates expiry when a new certificate will be generated" |
+|`expiration_window`|int|
 
 After creation this resource will expose the following:
 

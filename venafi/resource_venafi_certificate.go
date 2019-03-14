@@ -7,13 +7,13 @@ import (
 	"net"
 	"time"
 
+	"crypto/x509"
+	"encoding/pem"
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/terraform/helper/schema"
 	"log"
 	"strings"
-	"encoding/pem"
-	"crypto/x509"
 )
 
 func resourceVenafiCertificate() *schema.Resource {
@@ -24,16 +24,17 @@ func resourceVenafiCertificate() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"common_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Common name of certificate",
+				ForceNew:    true,
 			},
 			"algorithm": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
 				Default:     "RSA",
-				Description: "RSA or ECDSA. RSA is default.",
+				Description: "Key encryption algorithm. RSA or ECDSA. RSA is default.",
 			},
 			"rsa_bits": &schema.Schema{
 				Type:        schema.TypeInt,
@@ -48,76 +49,56 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional:    true,
 				Description: "ECDSA curve to use when generating a key",
 				ForceNew:    true,
-				Default:     "P224",
+				Default:     "P521",
 			},
 
 			"san_dns": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				ForceNew: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of DNS names to use as subjects of the certificate",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"san_email": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				ForceNew: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of email addresses to use as subjects of the certificate",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"san_ip": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				ForceNew: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of IP addresses to use as subjects of the certificate",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"key_password": &schema.Schema{
-				Type:      schema.TypeString,
-				Optional:  true,
-				ForceNew:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Private key password.",
+				Sensitive:   true,
 			},
-
+			"expiration_window": &schema.Schema{
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     168,
+				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
+				ForceNew:    true,
+			},
 			"private_key_pem": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-
 			"chain": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-
 			"certificate": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
-			},
-			"organizational_unit": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				ForceNew: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
-
-			"organization_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-
-			"country": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-			"state": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-			"locality": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
 			},
 			"csr_pem": &schema.Schema{
 				Type:     schema.TypeString,
@@ -128,13 +109,6 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-			},
-			"expiration_window": &schema.Schema{
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     168,
-				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
-				ForceNew:    true,
 			},
 		},
 	}
@@ -218,7 +192,6 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 			return nil
 		}
 
-
 	}
 
 	return nil
@@ -228,7 +201,6 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 	d.SetId("")
 	return nil
 }
-
 
 func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) error {
 
@@ -264,6 +236,8 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 			req.KeyCurve = certificate.EllipticCurveP384
 		case keyCurve == "P521":
 			req.KeyCurve = certificate.EllipticCurveP521
+		default:
+			return fmt.Errorf("Ecliptic curve not supported by vcert %s", req.KeyCurve)
 		}
 
 	} else {

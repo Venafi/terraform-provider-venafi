@@ -396,6 +396,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 }
 
 //TODO: make test with invalid key
+//TODO: make test on invalid options fo RSA, ECSA keys
 //TODO: make test with too big expiration window
 func checkStandartCert(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Testing certificate with cn", data.cn)
