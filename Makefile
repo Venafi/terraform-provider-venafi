@@ -43,7 +43,7 @@ compress:
 collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
-	cp -rv $(DIST_DIR)/*.gz artifcats
+	cp -rv $(DIST_DIR)/*.zip artifcats
 	cd artifcats; sha1sum * > hashsums.sha1
 
 clean:
