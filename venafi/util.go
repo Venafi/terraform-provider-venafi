@@ -1,6 +1,10 @@
 package venafi
 
 import (
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+	"github.com/pkg/errors"
 	"math/rand"
 	"time"
 )
@@ -49,13 +53,37 @@ func sameStringSlice(x, y []string) bool {
 }
 
 type testData struct {
-	cert        string
-	private_key string
-	wrong_cert  string
-	wrong_pkey  string
-	cn          string
-	dns_ns      string
-	dns_ip      string
-	dns_email   string
-	provider    string
+	cert                 string
+	private_key          string
+	private_key_password string
+	wrong_cert           string
+	wrong_pkey           string
+	cn                   string
+	dns_ns               string
+	dns_ip               string
+	dns_email            string
+	provider             string
+	serial               string
+	timeCheck            string
+	key_algo             string
+	expiration_window    int
+}
+
+func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
+	// this section makes some small changes to code from notary/tuf/utils/x509.go
+	pemBlock, _ := pem.Decode(keyBytes)
+	if pemBlock == nil {
+		return nil, fmt.Errorf("no valid private key found")
+	}
+
+	var err error
+	if x509.IsEncryptedPEMBlock(pemBlock) {
+		keyBytes, err = x509.DecryptPEMBlock(pemBlock, []byte(passphrase))
+		if err != nil {
+			return nil, errors.Wrap(err, "private key is encrypted, but could not decrypt it")
+		}
+		keyBytes = pem.EncodeToMemory(&pem.Block{Type: pemBlock.Type, Bytes: keyBytes})
+	}
+
+	return keyBytes, nil
 }

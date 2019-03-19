@@ -1,4 +1,5 @@
 pkg
+dev-tests
 .terraform
 terraform.tfstate*
 condor.tf
