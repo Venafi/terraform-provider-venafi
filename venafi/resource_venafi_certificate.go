@@ -162,11 +162,11 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		}
 
 		//TODO: maybe this check should be up on CSR creation
-		renewIn, err := checkForRenew(*cert,d.Get("expiration_window").(int))
+		renewRequired, err := checkForRenew(*cert, d.Get("expiration_window").(int))
 		if err != nil {
 			return err
 		}
-		if renewIn <= 0 {
+		if renewRequired {
 			//TODO: get request id from resource id
 			log.Printf("Certificate should be renewed in %d. Requesting", renewIn)
 			cfg := meta.(*vcert.Config)
@@ -194,16 +194,14 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-func checkForRenew(cert x509.Certificate, expirationWindow int) (renewIn time.Duration, err error) {
+func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired bool, err error) {
 	renewWindow := time.Duration(expirationWindow) * time.Hour
-	certDurationWindow := 24 * time.Hour
-	certDuration := cert.NotAfter.Sub(cert.NotBefore)
-	if certDuration+certDurationWindow < renewWindow {
-		return 0, fmt.Errorf("certificate validity duration %s is less than configured expiration window %s", certDuration, renewWindow)
+	if cert.NotAfter.Sub(cert.NotBefore) < renewWindow {
+		err = fmt.Errorf("certificate validity duration %s is less than configured expiration window %s", cert.NotAfter.Sub(cert.NotBefore), renewWindow)
+		return
 	}
-	durationUntilExpiry := cert.NotAfter.Sub(time.Now())
-	renewIn = durationUntilExpiry - renewWindow
-	return renewIn, nil
+	renewRequired = time.Now().Add(renewWindow).After(cert.NotAfter)
+	return
 }
 
 func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) error {
