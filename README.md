@@ -31,6 +31,8 @@ X509v3 extensions:
 
 ## Usage
 
+[![asciicast](https://asciinema.org/a/237631.svg)](https://asciinema.org/a/237631)
+
 ### Download and install the Venafi provider plugin
 
 Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system. 
@@ -142,6 +144,7 @@ output "cert_chain" {
 
 output "cert_private_key" {
     value = "${venafi_certificate.webserver.private_key_pem}"
+    sensitive   = true
 }
 ```
 
@@ -151,7 +154,7 @@ To invoke execute `terraform plan`, then `terraform apply`, and finally `terrafo
 
 ### Prerequisites
 
-Go language 1.7 or higher.
+Go language 1.10 or higher.
 
 ### Building
 
