@@ -8,7 +8,7 @@ PLUGIN_NAME := terraform-provider-venafi
 PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
-VERSION=`git describe --abbrev=0 --tags`
+VERSION := $(shell git describe --abbrev=0 --tags)
 
 
 TEST?=$$(go list ./... |grep -v 'vendor')
