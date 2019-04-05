@@ -6,35 +6,14 @@ This solution adds certificate enrollment capabilities to [HashiCorp Terraform](
 
 This Terraform provider is powered by the Venafi VCert library (https://github.com/Venafi/vcert).
 
-## Requirements for usage with Trust Protection Platform
-
-> Note: The following assume certificates will be enrolled by a Microsoft Active Directory Certificate Services (ADCS) certificate authority. Other CAs will also work with this solution but may have slightly different requirements.
-
-1. The Microsoft CA template appropriate for issuing Vault certificates must be assigned by policy, and should have the "Automatically include CN as DNS SAN" option enabled.
-
-2. The WebSDK user that Vault will be using to authenticate with the Venafi Platform has been granted view, read, write, and create permission to their policy folder.
-
-3. The CRL distribution point and Authority Information Access (AIA) URIs configured for certificates issued by the Microsoft ADCS must start with an HTTP URI (non-default configuration).  If an LDAP URI appears first in the X509v3 extensions, NGINX ingress controllers will fail because they aren't able to retrieve CRL and OCSP information. Example:
-
-```
-X509v3 extensions:
-    X509v3 Subject Alternative Name: DNS:test-cert-manager1.venqa.venafi.com
-    X509v3 Subject Key Identifier: 61:5B:4D:40:F2:CF:87:D5:75:5E:58:55:EF:E8:9E:02:9D:E1:81:8E
-    X509v3 Authority Key Identifier: keyid:3C:AC:9C:A6:0D:A1:30:D4:56:A7:3D:78:BC:23:1B:EC:B4:7B:4D:75
-    X509v3 CRL Distribution Points: Full Name:
-        URI:http://qavenafica.venqa.venafi.com/CertEnroll/QA%20Venafi%20CA.crl
-        URI:ldap:///CN=QA%20Venafi%20CA,CN=qavenafica,CN=CDP,CN=Public%20Key%20Services,CN=Services,CN=Configuration,DC=venqa,DC=venafi,DC=com?certificateRevocationList?base?objectClass=cRLDistributionPoint
-    Authority Information Access:
-        CA Issuers - URI:http://qavenafica.venqa.venafi.com/CertEnroll/qavenafica.venqa.venafi.com_QA%20Venafi%20CA.crt
-        CA Issuers - URI:ldap:///CN=QA%20Venafi%20CA,CN=AIA,CN=Public%20Key%20Services,CN=Services,CN=Configuration,DC=venqa,DC=venafi,DC=com?cACertificate?base?objectClass=certificationAuthority
-```
-
 ## Usage
+
+[![asciicast](https://asciinema.org/a/237631.svg)](https://asciinema.org/a/237631)
 
 ### Download and install the Venafi provider plugin
 
 Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system. 
-Then install by downloading and unzipping package to a directory in your $PATH. Make sure that binary name matches 
+Then install by downloading and unzipping package to `%APPDATA%\terraform.d\plugins` \[Windows\] or `~/.terraform.d/plugins` \[over systems\]. Make sure that binary name matches 
 [terraform plugin naming convention](https://www.terraform.io/docs/configuration/providers.html#plugin-names-and-versions). 
 Example: terraform-provider-venafi_v0.6.2
 
@@ -78,7 +57,8 @@ The Venafi provider has the following options:
 
 ### Establishing Trust between Terraform and Trust Protection Platform
 
-It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA, therefore establishing trust for that server certificate is a critical part of your configuration.  Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file whenever in your `main.tf` using the 'trust_bundle' parameter like this:
+It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA, therefore establishing trust for that server certificate is a critical part of your configuration.  
+Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file whenever in your `main.tf` using the 'trust_bundle' parameter like this:
 
 ```
 provider "venafi" {
@@ -142,16 +122,42 @@ output "cert_chain" {
 
 output "cert_private_key" {
     value = "${venafi_certificate.webserver.private_key_pem}"
+    sensitive   = true
 }
 ```
 
 To invoke execute `terraform plan`, then `terraform apply`, and finally `terraform show` from the directory containing your Terraform configuration file (e.g. `main.tf`).
 
+
+## Requirements for usage with Trust Protection Platform
+
+> Note: The following assume certificates will be enrolled by a Microsoft Active Directory Certificate Services (ADCS) certificate authority. Other CAs will also work with this solution but may have slightly different requirements.
+
+1. The Microsoft CA template appropriate for issuing Vault certificates must be assigned by policy, and should have the "Automatically include CN as DNS SAN" option enabled.
+
+2. The WebSDK user that Vault will be using to authenticate with the Venafi Platform has been granted view, read, write, and create permission to their policy folder.
+
+3. The CRL distribution point and Authority Information Access (AIA) URIs configured for certificates issued by the Microsoft ADCS must start with an HTTP URI (non-default configuration).  If an LDAP URI appears first in the X509v3 extensions, NGINX ingress controllers will fail because they aren't able to retrieve CRL and OCSP information. Example:
+
+```
+X509v3 extensions:
+    X509v3 Subject Alternative Name: DNS:test-cert-manager1.venqa.venafi.com
+    X509v3 Subject Key Identifier: 61:5B:4D:40:F2:CF:87:D5:75:5E:58:55:EF:E8:9E:02:9D:E1:81:8E
+    X509v3 Authority Key Identifier: keyid:3C:AC:9C:A6:0D:A1:30:D4:56:A7:3D:78:BC:23:1B:EC:B4:7B:4D:75
+    X509v3 CRL Distribution Points: Full Name:
+        URI:http://qavenafica.venqa.venafi.com/CertEnroll/QA%20Venafi%20CA.crl
+        URI:ldap:///CN=QA%20Venafi%20CA,CN=qavenafica,CN=CDP,CN=Public%20Key%20Services,CN=Services,CN=Configuration,DC=venqa,DC=venafi,DC=com?certificateRevocationList?base?objectClass=cRLDistributionPoint
+    Authority Information Access:
+        CA Issuers - URI:http://qavenafica.venqa.venafi.com/CertEnroll/qavenafica.venqa.venafi.com_QA%20Venafi%20CA.crt
+        CA Issuers - URI:ldap:///CN=QA%20Venafi%20CA,CN=AIA,CN=Public%20Key%20Services,CN=Services,CN=Configuration,DC=venqa,DC=venafi,DC=com?cACertificate?base?objectClass=certificationAuthority
+```
+
+
 ## Development
 
 ### Prerequisites
 
-Go language 1.7 or higher.
+Go language 1.12 or higher.
 
 ### Building
 
