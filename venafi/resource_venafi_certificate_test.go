@@ -449,7 +449,7 @@ func checkStandartCert(t *testing.T, data *testData, s *terraform.State) error {
 }
 
 func TestCheckForRenew(t *testing.T) {
-checkingCert :=`
+	checkingCert := `
 -----BEGIN CERTIFICATE-----
 MIIFXTCCBEWgAwIBAgIKFeowvwAAAANfaDANBgkqhkiG9w0BAQsFADCBkTELMAkG
 A1UEBhMCVVMxDTALBgNVBAgTBFV0YWgxFzAVBgNVBAcTDlNhbHQgTGFrZSBDaXR5
@@ -481,8 +481,8 @@ qtWSqayqM2EKrNEKcexwV/csZs1n8C9eoMn5mn4uS/XgZ42+dJeXbeTk7MR10H9G
 niEgPgNh7FcQZ9/Y3YkJnf6IYGMREkGnCxKEtkjhmiLvZq2B41t7IaWVh8A9oe2w
 re33mo74mGFv4rpxWk249YXvEbskI8VS83IAhMrUENR0
 -----END CERTIFICATE-----`
-t.Log("Cehc cert",checkingCert)
-cert2 := `-----BEGIN CERTIFICATE-----
+	t.Log("Cehc cert", checkingCert)
+	cert2 := `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAI7dxrBnlT6ZMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
 BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
 aWRnaXRzIFB0eSBMdGQwHhcNMTkwMzIyMTYyNzM2WhcNMTkwMzIzMTYyNzM2WjBF
@@ -505,11 +505,11 @@ xA==
 -----END CERTIFICATE-----
 `
 	block, _ := pem.Decode([]byte(cert2))
-	cert,_ := x509.ParseCertificate(block.Bytes)
-	renew,err := checkForRenew(*cert, 24)
+	cert, _ := x509.ParseCertificate(block.Bytes)
+	renew, err := checkForRenew(*cert, 24)
 	if err != nil {
-		t.Log("error is",err.Error())
-	} else if renew <= 0 {
+		t.Log("error is", err.Error())
+	} else if renew {
 		t.Log("Certificate should be renewed in", renew)
 	} else {
 		t.Log("It's enough time until renew:", renew)

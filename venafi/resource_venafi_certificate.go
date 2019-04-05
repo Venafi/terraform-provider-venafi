@@ -168,7 +168,7 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 		}
 		if renewRequired {
 			//TODO: get request id from resource id
-			log.Printf("Certificate should be renewed in %d. Requesting", renewIn)
+			log.Printf("Certificate expire %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
 			cfg := meta.(*vcert.Config)
 			cl, err := vcert.NewClient(cfg)
 			if err != nil {
@@ -188,9 +188,7 @@ func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) err
 			}
 			return nil
 		}
-
 	}
-
 	return nil
 }
 
