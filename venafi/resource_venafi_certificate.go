@@ -339,7 +339,10 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		//TODO: make timeout configurable
 		Timeout: 180 * time.Second,
 	}
-	d.Set("certificate_dn", requestID)
+	err = d.Set("certificate_dn", requestID)
+	if err != nil {
+		return err
+	}
 
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
 		log.Println("Waiting 2 seconds as workaround for VEN-46960")
@@ -352,11 +355,13 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	}
 
 	if pass, ok := d.GetOk("key_password"); ok {
-		pcc.AddPrivateKey(req.PrivateKey, []byte(pass.(string)))
+		err = pcc.AddPrivateKey(req.PrivateKey, []byte(pass.(string)))
 	} else {
-		pcc.AddPrivateKey(req.PrivateKey, []byte(""))
+		err = pcc.AddPrivateKey(req.PrivateKey, []byte(""))
 	}
-
+	if err != nil {
+		return err
+	}
 	if err = d.Set("certificate", pcc.Certificate); err != nil {
 		return fmt.Errorf("Error setting certificate: %s", err)
 	}
@@ -369,6 +374,5 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	d.SetId(req.PickupID)
 	log.Println("Setting up private key")
-	d.Set("private_key_pem", pcc.PrivateKey)
-	return nil
+	return d.Set("private_key_pem", pcc.PrivateKey)
 }

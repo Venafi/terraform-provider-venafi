@@ -93,7 +93,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	var cfg vcert.Config
 
 	if devMode {
-		log.Printf(messageUseDevMode)
+		log.Print(messageUseDevMode)
 		cfg = vcert.Config{
 			ConnectorType: endpoint.ConnectorTypeFake,
 			LogVerbose:    true,

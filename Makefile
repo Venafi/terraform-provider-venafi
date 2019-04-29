@@ -108,3 +108,6 @@ test_e2e_dev_ecdsa:
 	cat /tmp/cert_certificate_dev_ecdsa.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 	terraform output cert_private_key_dev_ecdsa > /tmp/cert_private_key_dev_ecdsa.pem
 	cat /tmp/cert_private_key_dev_ecdsa.pem
+
+linter:
+	golangci-lint run
