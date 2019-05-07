@@ -63,7 +63,7 @@ Ideally this is done by obtaining the root CA certificate in the issuing chain i
 ```
 provider "venafi" {
     url          = "https://tpp.venafi.example:443/vedsdk"
-    trust_bundle = ${file("/opt/venafi/bundle.pem")}
+    trust_bundle = "${file("/opt/venafi/bundle.pem")}"
     tpp_username = "local:admin"
     tpp_password = "password"
     zone         = "DevOps\\Terraform"
