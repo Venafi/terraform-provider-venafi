@@ -53,6 +53,20 @@ func sameStringSlice(x, y []string) bool {
 }
 
 type testData struct {
+	cert                 string
+	private_key          string
+	private_key_password string
+	wrong_cert           string
+	wrong_pkey           string
+	cn                   string
+	dns_ns               string
+	dns_ip               string
+	dns_email            string
+	provider             string
+	serial               string
+	timeCheck            string
+	key_algo             string
+	expiration_window    int
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
