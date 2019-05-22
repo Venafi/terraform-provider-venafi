@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/terraform-providers/terraform-provider-venafi/venafi"
 	"github.com/hashicorp/terraform/plugin"
+	"github.com/terraform-providers/terraform-provider-venafi/venafi"
 )
 
 func main() {
