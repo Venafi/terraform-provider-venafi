@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Venafi/terraform-provider-venafi/venafi"
+	"github.com/terraform-providers/terraform-provider-venafi/venafi"
 	"github.com/hashicorp/terraform/plugin"
 )
 
