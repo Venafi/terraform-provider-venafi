@@ -31,6 +31,7 @@ const (
             variable "TPPURL" {}
             variable "TPPZONE" {}
 			variable "TRUST_BUNDLE" {}
+			variable "TPPZONE_ECDSA"
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
