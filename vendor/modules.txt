@@ -1,4 +1,4 @@
-# github.com/Venafi/vcert v0.0.0-20190312132320-36e6e55f3d2f
+# github.com/Venafi/vcert v0.0.0-20190613103158-62139eb19b25
 github.com/Venafi/vcert
 github.com/Venafi/vcert/pkg/certificate
 github.com/Venafi/vcert/pkg/endpoint
@@ -79,8 +79,9 @@ github.com/hashicorp/go-getter/helper/url
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
-# github.com/hashicorp/go-plugin v0.0.0-20181030172320-54b6ff97d818
+# github.com/hashicorp/go-plugin v1.0.1-0.20190509212451-a1756f37cec6
 github.com/hashicorp/go-plugin
+github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-safetemp v1.0.0
 github.com/hashicorp/go-safetemp
 # github.com/hashicorp/go-uuid v1.0.0
@@ -184,7 +185,7 @@ github.com/zclconf/go-cty/cty/function/stdlib
 github.com/zclconf/go-cty/cty/set
 github.com/zclconf/go-cty/cty/gocty
 github.com/zclconf/go-cty/cty/json
-# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+# golang.org/x/crypto v0.0.0-20190424203555-c05e17bb3b2d
 golang.org/x/crypto/openpgp
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/openpgp/armor
@@ -194,7 +195,7 @@ golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/openpgp/elgamal
-# golang.org/x/net v0.0.0-20190311183353-d8887717615a
+# golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/trace
@@ -204,7 +205,7 @@ golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/http/httpguts
-# golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
+# golang.org/x/sys v0.0.0-20190425045458-9f0b1ff7b46a
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.0
 golang.org/x/text/unicode/norm
