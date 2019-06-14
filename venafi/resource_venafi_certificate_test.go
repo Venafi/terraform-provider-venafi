@@ -245,6 +245,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 					return nil
 
 				},
+				ExpectNonEmptyPlan: true,
 			},
 			r.TestStep{
 				Config: config,
@@ -264,6 +265,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 						}
 					}
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -291,6 +293,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandartCert(t, &data, s)
 				},
+				ExpectNonEmptyPlan: true,
 			},
 			r.TestStep{
 				Config: config,
@@ -310,6 +313,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 						}
 					}
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
