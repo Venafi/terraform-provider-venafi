@@ -18,13 +18,17 @@ package cloud
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 )
 
 const apiURL = "api.venafi.cloud/v1/"
@@ -32,26 +36,27 @@ const apiURL = "api.venafi.cloud/v1/"
 type urlResource string
 
 const (
-	urlResourceUserAccounts           urlResource = "useraccounts"
-	urlResourcePing                               = "ping"
-	urlResourceZones                              = "zones"
-	urlResourceZoneByTag                          = urlResourceZones + "/tag/%s"
-	urlResourceCertificatePolicies                = "certificatepolicies"
-	urlResourcePoliciesByID                       = urlResourceCertificatePolicies + "/%s"
-	urlResourcePoliciesForZoneByID                = urlResourceCertificatePolicies + "?zoneId=%s"
-	urlResourceCertificateRequests                = "certificaterequests"
-	urlResourceCertificateStatus                  = urlResourceCertificateRequests + "/%s"
-	urlResourceCertificateRetrieve                = urlResourceCertificateRequests + "/%s/certificate"
-	urlResourceCertificateSearch                  = "certificatesearch"
-	urlResourceManagedCertificates                = "managedcertificates"
-	urlResourceManagedCertificateById             = urlResourceManagedCertificates + "/%s"
+	urlResourceUserAccounts              urlResource = "useraccounts"
+	urlResourcePing                                  = "ping"
+	urlResourceZones                                 = "zones"
+	urlResourceZoneByTag                             = urlResourceZones + "/tag/%s"
+	urlResourceCertificateRequests                   = "certificaterequests"
+	urlResourceCertificateStatus                     = urlResourceCertificateRequests + "/%s"
+	urlResourceCertificateRetrieveViaCSR             = urlResourceCertificateRequests + "/%s/certificate"
+	urlResourceCertificateRetrieve                   = "certificates/%s"
+	urlResourceCertificateRetrievePem                = urlResourceCertificateRetrieve + "/encoded"
+	urlResourceCertificateSearch                     = "certificatesearch"
+	urlResourceManagedCertificates                   = "managedcertificates"
+	urlResourceManagedCertificateByID                = urlResourceManagedCertificates + "/%s"
+	urlResourceDiscovery                             = "discovery"
+	urlResourceTemplate                              = "certificateissuingtemplates/%s"
 )
 
 type condorChainOption string
 
 const (
 	condorChainOptionRootFirst condorChainOption = "ROOT_FIRST"
-	condorChainOptionRootLast                    = "EE_FIRST"
+	condorChainOptionRootLast  condorChainOption = "EE_FIRST"
 )
 
 // Connector contains the base data needed to communicate with the Venafi Cloud servers
@@ -65,10 +70,37 @@ type Connector struct {
 }
 
 // NewConnector creates a new Venafi Cloud Connector object used to communicate with Venafi Cloud
-func NewConnector(verbose bool, trust *x509.CertPool) *Connector {
-	c := Connector{verbose: verbose, trust: trust}
-	c.SetBaseURL(apiURL)
-	return &c
+func NewConnector(url string, zone string, verbose bool, trust *x509.CertPool) (*Connector, error) {
+	c := Connector{verbose: verbose, trust: trust, zone: zone}
+	var err error
+	c.baseURL, err = normalizeURL(url)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+//normalizeURL allows overriding the default URL used to communicate with Venafi Cloud
+func normalizeURL(url string) (normalizedURL string, err error) {
+	if url == "" {
+		url = apiURL
+		//return "", fmt.Errorf("base URL cannot be empty")
+	}
+	modified := strings.ToLower(url)
+	reg := regexp.MustCompile("^http(|s)://")
+	if reg.FindStringIndex(modified) == nil {
+		modified = "https://" + modified
+	} else {
+		modified = reg.ReplaceAllString(modified, "https://")
+	}
+	reg = regexp.MustCompile("/v1(|/)$")
+	if reg.FindStringIndex(modified) == nil {
+		modified += "v1/"
+	} else {
+		modified = reg.ReplaceAllString(modified, "/v1/")
+	}
+	normalizedURL = modified
+	return normalizedURL, nil
 }
 
 func (c *Connector) SetZone(z string) {
@@ -79,21 +111,13 @@ func (c *Connector) GetType() endpoint.ConnectorType {
 	return endpoint.ConnectorTypeCloud
 }
 
-//Ping attempts to connect to the Venafi Cloud API and returns an errror if it cannot
+// Ping attempts to connect to the Venafi Cloud API and returns an errror if it cannot
 func (c *Connector) Ping() (err error) {
-	url := c.getURL(urlResourcePing)
 
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Unexpected status code on Venafi Cloud ping. Status: %d %s", resp.StatusCode, resp.Status)
-	}
-	return err
+	return nil
 }
 
-//Authenticate authenticates the user with Venafi Cloud using the provided API Key
+// Authenticate authenticates the user with Venafi Cloud using the provided API Key
 func (c *Connector) Authenticate(auth *endpoint.Authentication) (err error) {
 	if auth == nil {
 		return fmt.Errorf("failed to authenticate: missing credentials")
@@ -101,6 +125,9 @@ func (c *Connector) Authenticate(auth *endpoint.Authentication) (err error) {
 	c.apiKey = auth.APIKey
 	url := c.getURL(urlResourceUserAccounts)
 	statusCode, status, body, err := c.request("GET", url, nil, true)
+	if err != nil {
+		return err
+	}
 	ud, err := parseUserDetailsResult(http.StatusOK, statusCode, status, body)
 	if err != nil {
 		return
@@ -109,26 +136,8 @@ func (c *Connector) Authenticate(auth *endpoint.Authentication) (err error) {
 	return
 }
 
-//Register registers a new user with Venafi Cloud
-func (c *Connector) Register(email string) (err error) {
-
-	url := c.getURL(urlResourceUserAccounts)
-	statusCode, status, body, err := c.request("POST", url, userAccount{Username: email, UserAccountType: "API"})
-
-	//the user has already been registered and there is nothing to parse
-	if statusCode == http.StatusAccepted {
-		return nil
-	}
-	ud, err := parseUserDetailsResult(http.StatusCreated, statusCode, status, body)
-	if err != nil {
-		return err
-	}
-	c.user = ud
-	return nil
-}
-
-func (c *Connector) ReadPolicyConfiguration(zone string) (policy *endpoint.Policy, err error) {
-	config, err := c.ReadZoneConfiguration(zone)
+func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err error) {
+	config, err := c.ReadZoneConfiguration()
 	if err != nil {
 		return nil, err
 	}
@@ -136,27 +145,28 @@ func (c *Connector) ReadPolicyConfiguration(zone string) (policy *endpoint.Polic
 	return
 }
 
-//ReadZoneConfiguration reads the Zone information needed for generating and requesting a certificate from Venafi Cloud
-func (c *Connector) ReadZoneConfiguration(zone string) (config *endpoint.ZoneConfiguration, err error) {
-	z, err := c.getZoneByTag(zone)
+// ReadZoneConfiguration reads the Zone information needed for generating and requesting a certificate from Venafi Cloud
+func (c *Connector) ReadZoneConfiguration() (config *endpoint.ZoneConfiguration, err error) {
+	if c.zone == "" {
+		return nil, fmt.Errorf("empty zone name")
+	}
+	z, err := c.getZoneByTag(c.zone)
 	if err != nil {
 		return nil, err
 	}
-	p, err := c.getPoliciesByID([]string{z.DefaultCertificateIdentityPolicy, z.DefaultCertificateUsePolicy})
+	if z.CertificateIssuingTemplateId == "" {
+		return nil, fmt.Errorf("Empty certificateTemplateID in zone. May be it`s old type zone.")
+	}
+	t, err := c.getTemplateByID(z.CertificateIssuingTemplateId)
 	if err != nil {
 		return
 	}
-	config = z.getZoneConfiguration(c.user, p)
+	config = z.getZoneConfiguration(c.user, t)
 	return config, nil
 }
 
-//RequestCertificate submits the CSR to the Venafi Cloud API for processing
-func (c *Connector) RequestCertificate(req *certificate.Request, zone string) (requestID string, err error) {
-
-	if zone == "" {
-		zone = c.zone
-	}
-
+// RequestCertificate submits the CSR to the Venafi Cloud API for processing
+func (c *Connector) RequestCertificate(req *certificate.Request) (requestID string, err error) {
 	if req.CsrOrigin == certificate.ServiceGeneratedCSR {
 		return "", fmt.Errorf("service generated CSR is not supported by Saas service")
 	}
@@ -165,12 +175,12 @@ func (c *Connector) RequestCertificate(req *certificate.Request, zone string) (r
 	if c.user == nil || c.user.Company == nil {
 		return "", fmt.Errorf("Must be autheticated to request a certificate")
 	}
-	z, err := c.getZoneByTag(zone)
+	z, err := c.getZoneByTag(c.zone)
 	if err != nil {
 		return "", err
 	}
 
-	statusCode, status, body, err := c.request("POST", url, certificateRequest{ZoneID: z.ID, CSR: string(req.CSR)})
+	statusCode, status, body, err := c.request("POST", url, certificateRequest{ZoneID: z.ID, CSR: string(req.GetCSR())})
 
 	if err != nil {
 		return "", err
@@ -188,7 +198,9 @@ func (c *Connector) getCertificateStatus(requestID string) (certStatus *certific
 	url := c.getURL(urlResourceCertificateStatus)
 	url = fmt.Sprintf(url, requestID)
 	statusCode, _, body, err := c.request("GET", url, nil)
-
+	if err != nil {
+		return nil, err
+	}
 	if statusCode == http.StatusOK {
 		certStatus = &certificateStatus{}
 		err = json.Unmarshal(body, certStatus)
@@ -210,14 +222,13 @@ func (c *Connector) getCertificateStatus(requestID string) (certStatus *certific
 
 }
 
-//RetrieveCertificate retrieves the certificate for the specified ID
+// RetrieveCertificate retrieves the certificate for the specified ID
 func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates *certificate.PEMCollection, err error) {
 
 	if req.FetchPrivateKey {
 		return nil, fmt.Errorf("Failed to retrieve private key from Venafi Cloud service: not supported")
 	}
-
-	if req.PickupID == "" && req.Thumbprint != "" {
+	if req.PickupID == "" && req.CertID == "" && req.Thumbprint != "" {
 		// search cert by Thumbprint and fill pickupID
 		var certificateRequestId string
 		searchResult, err := c.searchCertificatesByFingerprint(req.Thumbprint)
@@ -235,7 +246,12 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 			if certificateRequestId != "" && certificateRequestId != c.CertificateRequestId {
 				isOnlyOneCertificateRequestId = false
 			}
-			certificateRequestId = c.CertificateRequestId
+			if c.CertificateRequestId != "" {
+				certificateRequestId = c.CertificateRequestId
+			}
+			if c.Id != "" {
+				req.CertID = c.Id
+			}
 		}
 		if !isOnlyOneCertificateRequestId {
 			return nil, fmt.Errorf("More than one CertificateRequestId was found with the same Fingerprint: %s", reqIds)
@@ -245,50 +261,78 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 	}
 
 	startTime := time.Now()
-	for {
-		status, err := c.getCertificateStatus(req.PickupID)
-		if err != nil {
-			return nil, fmt.Errorf("unable to retrieve: %s", err)
+	//Wait for certificate to be issued by checking it's PickupID
+	//If certID is filled then certificate should be already issued.
+	if req.CertID == "" {
+		for {
+			if req.PickupID == "" {
+				break
+			}
+			status, err := c.getCertificateStatus(req.PickupID)
+			if err != nil {
+				return nil, fmt.Errorf("unable to retrieve: %s", err)
+			}
+			if status.Status == "ISSUED" {
+				break // to fetch the cert itself
+			} else if status.Status == "FAILED" {
+				return nil, fmt.Errorf("Failed to retrieve certificate. Status: %v", status)
+			}
+			// status.Status == "REQUESTED" || status.Status == "PENDING"
+			if req.Timeout == 0 {
+				return nil, endpoint.ErrCertificatePending{CertificateID: req.PickupID, Status: status.Status}
+			}
+			if time.Now().After(startTime.Add(req.Timeout)) {
+				return nil, endpoint.ErrRetrieveCertificateTimeout{CertificateID: req.PickupID}
+			}
+			// fmt.Printf("pending... %s\n", status.Status)
+			time.Sleep(2 * time.Second)
 		}
-		if status.Status == "ISSUED" {
-			break // to fetch the cert itself
-		} else if status.Status == "FAILED" {
-			return nil, fmt.Errorf("Failed to retrieve certificate. Status: %v", status)
-		}
-		// status.Status == "REQUESTED" || status.Status == "PENDING"
-		if req.Timeout == 0 {
-			return nil, endpoint.ErrCertificatePending{CertificateID: req.PickupID, Status: status.Status}
-		}
-		if time.Now().After(startTime.Add(req.Timeout)) {
-			return nil, endpoint.ErrRetrieveCertificateTimeout{CertificateID: req.PickupID}
-		}
-		// fmt.Printf("pending... %s\n", status.Status)
-		time.Sleep(2 * time.Second)
 	}
 
-	url := c.getURL(urlResourceCertificateRetrieve)
 	if c.user == nil || c.user.Company == nil {
 		return nil, fmt.Errorf("Must be autheticated to retieve certificate")
 	}
-	url = fmt.Sprintf(url, req.PickupID)
-	url += "?chainOrder=%s&format=PEM"
-	switch req.ChainOption {
-	case certificate.ChainOptionRootFirst:
-		url = fmt.Sprintf(url, condorChainOptionRootFirst)
-	default:
-		url = fmt.Sprintf(url, condorChainOptionRootLast)
+
+	switch {
+	case req.CertID != "":
+		url := c.getURL(urlResourceCertificateRetrievePem)
+		url = fmt.Sprintf(url, req.CertID)
+		statusCode, status, body, err := c.request("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		if statusCode != http.StatusOK {
+			return nil, fmt.Errorf("Failed to retrieve certificate. StatusCode: %d -- Status: %s -- Server Data: %s", statusCode, status, body)
+		}
+		return newPEMCollectionFromResponse(body, certificate.ChainOptionIgnore)
+	case req.PickupID != "":
+		url := c.getURL(urlResourceCertificateRetrieveViaCSR)
+		url = fmt.Sprintf(url, req.PickupID)
+		url += "?chainOrder=%s&format=PEM"
+		switch req.ChainOption {
+		case certificate.ChainOptionRootFirst:
+			url = fmt.Sprintf(url, condorChainOptionRootFirst)
+		default:
+			url = fmt.Sprintf(url, condorChainOptionRootLast)
+		}
+		statusCode, status, body, err := c.request("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		if statusCode == http.StatusOK {
+			certificates, err = newPEMCollectionFromResponse(body, req.ChainOption)
+			if err != nil {
+				return nil, err
+			}
+			err = req.CheckCertificate(certificates.Certificate)
+			return certificates, err
+		} else if statusCode == http.StatusConflict { // Http Status Code 409 means the certificate has not been signed by the ca yet.
+			return nil, endpoint.ErrCertificatePending{CertificateID: req.PickupID}
+		} else {
+			return nil, fmt.Errorf("Failed to retrieve certificate. StatusCode: %d -- Status: %s -- Server Data: %s", statusCode, status, body) //todo:remove body from err
+		}
 	}
-	statusCode, status, body, err := c.request("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	if statusCode == http.StatusOK {
-		return newPEMCollectionFromResponse(body, req.ChainOption)
-	} else if statusCode == http.StatusConflict { // Http Status Code 409 means the certificate has not been signed by the ca yet.
-		return nil, endpoint.ErrCertificatePending{CertificateID: req.PickupID}
-	} else {
-		return nil, fmt.Errorf("Failed to retrieve certificate. StatusCode: %d -- Status: %s -- Server Data: %s", statusCode, status, body) //todo:remove body from err
-	}
+	return nil, fmt.Errorf("Couldn't retrieve certificate because both PickupID and CertId are empty")
 }
 
 // RevokeCertificate attempts to revoke the certificate
@@ -372,8 +416,8 @@ func (c *Connector) RenewCertificate(renewReq *certificate.RenewalRequest) (requ
 	}
 
 	req := certificateRequest{ZoneID: zoneId, ExistingManagedCertificateId: managedCertificateId}
-	if renewReq.CertificateRequest != nil && 0 < len(renewReq.CertificateRequest.CSR) {
-		req.CSR = string(renewReq.CertificateRequest.CSR)
+	if renewReq.CertificateRequest != nil && len(renewReq.CertificateRequest.GetCSR()) != 0 {
+		req.CSR = string(renewReq.CertificateRequest.GetCSR())
 		req.ReuseCSR = false
 	} else {
 		req.ReuseCSR = true
@@ -391,6 +435,7 @@ func (c *Connector) RenewCertificate(renewReq *certificate.RenewalRequest) (requ
 }
 
 func (c *Connector) getZoneByTag(tag string) (*zone, error) {
+
 	url := c.getURL(urlResourceZoneByTag)
 	if c.user == nil {
 		return nil, fmt.Errorf("Must be autheticated to read the zone configuration")
@@ -407,34 +452,18 @@ func (c *Connector) getZoneByTag(tag string) (*zone, error) {
 	return z, nil
 }
 
-func (c *Connector) getPoliciesByID(ids []string) (*certificatePolicy, error) {
-	policy := new(certificatePolicy)
-	if c.user == nil {
-		return nil, fmt.Errorf("Must be autheticated to read the zone configuration")
+func (c *Connector) getTemplateByID(id string) (*certificateTemplate, error) {
+	if id == "" {
+		return nil, fmt.Errorf("Empty template id")
 	}
-	for _, id := range ids {
-		url := c.getURL(urlResourcePoliciesByID)
-		url = fmt.Sprintf(url, id)
-		statusCode, status, body, err := c.request("GET", url, nil)
-		p, err := parseCertificatePolicyResult(statusCode, status, body)
-		if err != nil {
-			return nil, err
-		}
-		switch p.CertificatePolicyType {
-		case certificatePolicyTypeIdentity:
-			policy.SubjectCNRegexes = p.SubjectCNRegexes
-			policy.SubjectORegexes = p.SubjectORegexes
-			policy.SubjectOURegexes = p.SubjectOURegexes
-			policy.SubjectSTRegexes = p.SubjectSTRegexes
-			policy.SubjectLRegexes = p.SubjectLRegexes
-			policy.SubjectCRegexes = p.SubjectCRegexes
-			policy.SANRegexes = p.SANRegexes
-		case certificatePolicyTypeUse:
-			policy.KeyTypes = p.KeyTypes
-			policy.KeyReuse = p.KeyReuse
-		}
+	url := c.getURL(urlResourceTemplate)
+	url = fmt.Sprintf(url, id)
+	statusCode, status, body, err := c.request("GET", url, nil)
+	if err != nil {
+		return nil, err
 	}
-	return policy, nil
+	t, err := parseCertificateTemplate(statusCode, status, body)
+	return t, err
 }
 
 func (c *Connector) searchCertificates(req *SearchRequest) (*CertificateSearchResponse, error) {
@@ -443,7 +472,9 @@ func (c *Connector) searchCertificates(req *SearchRequest) (*CertificateSearchRe
 
 	url := c.getURL(urlResourceCertificateSearch)
 	statusCode, _, body, err := c.request("POST", url, req)
-
+	if err != nil {
+		return nil, err
+	}
 	searchResult, err := ParseCertificateSearchResponse(statusCode, body)
 	if err != nil {
 		return nil, err
@@ -489,7 +520,7 @@ type managedCertificate struct {
 
 func (c *Connector) getManagedCertificate(managedCertId string) (*managedCertificate, error) {
 	var err error
-	url := c.getURL(urlResourceManagedCertificateById)
+	url := c.getURL(urlResourceManagedCertificateByID)
 	url = fmt.Sprintf(url, managedCertId)
 	statusCode, _, body, err := c.request("GET", url, nil)
 	if err != nil {
@@ -521,5 +552,62 @@ func (c *Connector) getManagedCertificate(managedCertId string) (*managedCertifi
 }
 
 func (c *Connector) ImportCertificate(req *certificate.ImportRequest) (*certificate.ImportResponse, error) {
-	return nil, fmt.Errorf("import is not supported")
+	pBlock, _ := pem.Decode([]byte(req.CertificateData))
+	if pBlock == nil {
+		return nil, fmt.Errorf("can`t parse certificate")
+	}
+	zone := req.PolicyDN
+	if zone == "" {
+		zone = c.zone
+	}
+	base64.StdEncoding.EncodeToString(pBlock.Bytes)
+	fingerprint := certThumprint(pBlock.Bytes)
+	e := importRequestEndpoint{
+		OCSP: 1,
+		Certificates: []importRequestEndpointCert{
+			{
+				Certificate: base64.StdEncoding.EncodeToString(pBlock.Bytes),
+				Fingerprint: fingerprint,
+			},
+		},
+		Protocols: []importRequestEndpointProtocol{
+			{
+				Certificates: []string{fingerprint},
+			},
+		},
+	}
+	request := importRequest{
+		ZoneName:  zone,
+		Endpoints: []importRequestEndpoint{e},
+	}
+
+	url := c.getURL(urlResourceDiscovery)
+	statusCode, status, body, err := c.request("POST", url, request)
+	if err != nil {
+		return nil, err
+	}
+	var r struct {
+		CreatedCertificates int
+		CreatedInstances    int
+		UpdatedCertificates int
+		UpdatedInstances    int
+	}
+	err = json.Unmarshal(body, &r)
+	if statusCode != http.StatusCreated {
+		return nil, fmt.Errorf("bad server status responce %d %s", statusCode, status)
+	} else if err != nil {
+		return nil, fmt.Errorf("can`t unmarshal json response %s", err)
+	} else if !(r.CreatedCertificates == 1 || r.UpdatedCertificates == 1) {
+		return nil, fmt.Errorf("certificate was not imported on unknown reason")
+	}
+	foundCert, err := c.searchCertificatesByFingerprint(fingerprint)
+	if err != nil {
+		return nil, err
+	}
+	if len(foundCert.Certificates) != 1 {
+		return nil, fmt.Errorf("certificate has been imported but could not be found on platform after that")
+	}
+	cert := foundCert.Certificates[0]
+	resp := &certificate.ImportResponse{CertificateDN: cert.SubjectCN[0], CertId: cert.Id}
+	return resp, nil
 }
