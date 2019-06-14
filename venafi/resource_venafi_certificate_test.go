@@ -26,6 +26,20 @@ const (
               zone = "${var.TPPZONE}"
               trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }`
+	tpp_provider_ecdsa = `variable "TPPUSER" {}
+            variable "TPPPASSWORD" {}
+            variable "TPPURL" {}
+            variable "TPPZONE" {}
+            variable "TRUST_BUNDLE" {}
+            variable "TPPZONE_ECDSA" {}
+            provider "venafi" {
+              alias = "tpp"
+              url = "${var.TPPURL}"
+              tpp_username = "${var.TPPUSER}"
+              tpp_password = "${var.TPPPASSWORD}"
+              zone = "${var.TPPZONE_ECDSA}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
+            }`
 
 	cloud_provider = `variable "CLOUDURL" {}
             variable "CLOUDAPIKEY" {}
@@ -41,9 +55,7 @@ const (
 
 	ecdsa521 = `algorithm = "ECDSA"
             ecdsa_curve = "P521"`
-)
 
-var (
 	dev_config = `
             provider "venafi" {
               alias = "dev"
@@ -170,7 +182,7 @@ func TestCloudSignedCert(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 168
+	data.expiration_window = 48
 	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -217,7 +229,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 2171
+	data.expiration_window = 80
 	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -233,6 +245,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 					return nil
 
 				},
+				ExpectNonEmptyPlan: true,
 			},
 			r.TestStep{
 				Config: config,
@@ -252,6 +265,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 						}
 					}
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -279,6 +293,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandartCert(t, &data, s)
 				},
+				ExpectNonEmptyPlan: true,
 			},
 			r.TestStep{
 				Config: config,
@@ -298,6 +313,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 						}
 					}
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -360,7 +376,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	data.private_key_password = "123xxx"
 	data.key_algo = ecdsa521
 	data.expiration_window = 168
-	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	config := fmt.Sprintf(tpp_config, tpp_provider_ecdsa, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with ECDSA key  with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
