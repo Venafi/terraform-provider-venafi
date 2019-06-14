@@ -21,6 +21,7 @@ func resourceVenafiCertificate() *schema.Resource {
 		Create: resourceVenafiCertificateCreate,
 		Read:   resourceVenafiCertificateRead,
 		Delete: resourceVenafiCertificateDelete,
+		Exists: resourceVenafiCertificateExists,
 
 		Schema: map[string]*schema.Schema{
 			"common_name": &schema.Schema{
@@ -138,58 +139,46 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) error {
-
-	if certUntyped, ok := d.GetOk("certificate"); ok {
-		certPEM := certUntyped.(string)
-		block, _ := pem.Decode([]byte(certPEM))
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return fmt.Errorf("error parsing cert: %s", err)
-		}
-		//Checking Private Key
-		var pk []byte
-		if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
-			if err != nil {
-				return fmt.Errorf("error getting key: %s", err)
-			}
-		} else {
-			return fmt.Errorf("error getting key")
-		}
-		_, err = tls.X509KeyPair([]byte(certPEM), pk)
-		if err != nil {
-			return fmt.Errorf("error comparing certificate and key: %s", err)
-		}
-
-		//TODO: maybe this check should be up on CSR creation
-		renewRequired, err := checkForRenew(*cert, d.Get("expiration_window").(int))
-		if err != nil {
-			return err
-		}
-		if renewRequired {
-			//TODO: get request id from resource id
-			log.Printf("Certificate expire %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
-			cfg := meta.(*vcert.Config)
-			cl, err := vcert.NewClient(cfg)
-			if err != nil {
-				log.Printf(messageVenafiClientInitFailed + err.Error())
-				return err
-			}
-			err = cl.Ping()
-			if err != nil {
-				log.Printf(messageVenafiPingFailed + err.Error())
-				return err
-			}
-			log.Println(messageVenafiPingSucessfull)
-
-			err = enrollVenafiCertificate(d, cl)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-	}
 	return nil
+}
+func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	certUntyped, ok := d.GetOk("certificate")
+	if !ok {
+		return false, nil
+	}
+	certPEM := certUntyped.(string)
+	block, _ := pem.Decode([]byte(certPEM))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("error parsing cert: %s", err)
+	}
+	//Checking Private Key
+	var pk []byte
+	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
+		pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
+		if err != nil {
+			return false, fmt.Errorf("error getting key: %s", err)
+		}
+	} else {
+		return false, fmt.Errorf("error getting key")
+	}
+	_, err = tls.X509KeyPair([]byte(certPEM), pk)
+	if err != nil {
+		return false, fmt.Errorf("error comparing certificate and key: %s", err)
+	}
+
+	//TODO: maybe this check should be up on CSR creation
+	renewRequired, err := checkForRenew(*cert, d.Get("expiration_window").(int))
+	if err != nil {
+		return false, err
+	}
+	if renewRequired {
+		//TODO: get request id from resource id
+		log.Printf("Certificate expires %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired bool, err error) {
