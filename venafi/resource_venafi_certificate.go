@@ -174,7 +174,7 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	}
 	if renewRequired {
 		//TODO: get request id from resource id
-		log.Printf("Certificate expire %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
+		log.Printf("Certificate expires %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
 		return false, nil
 	}
 
