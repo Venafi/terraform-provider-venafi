@@ -18,18 +18,18 @@ package cloud
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 )
 
 type apiKey struct {
@@ -97,13 +97,49 @@ type CertificateStatusErrorInformation struct {
 	Args    []string `json:"args,omitempty"`
 }
 
+type importRequestEndpointCert struct {
+	Certificate string `json:"certificate"`
+	Fingerprint string `json:"fingerprint"`
+}
+
+type importRequestEndpointProtocol struct {
+	Certificates []string      `json:"certificates"`
+	Ciphers      []interface{} `json:"ciphers"` //todo: check type
+	Protocol     string        `json:"protocol"`
+}
+
+type importRequestEndpoint struct {
+	Alpn                bool                            `json:"alpn"`
+	Certificates        []importRequestEndpointCert     `json:"certificates"`
+	ClientRenegotiation bool                            `json:"clientRenegotiation"`
+	Drown               bool                            `json:"drown"`
+	Heartbleed          bool                            `json:"heartbleed"`
+	Host                string                          `json:"host"`
+	HSTS                bool                            `json:"hsts"`
+	IP                  string                          `json:"ip"`
+	LogJam              int                             `json:"logJam"`
+	Npn                 bool                            `json:"npn"`
+	OCSP                int                             `json:"ocsp"` //default 1
+	Poodle              bool                            `json:"poodle"`
+	PoodleTls           bool                            `json:"poodleTls"`
+	Port                int                             `json:"port"`
+	Protocols           []importRequestEndpointProtocol `json:"protocols"`
+	SecureRenegotiation bool                            `json:"secureRenegotiation"`
+	Sloth               bool                            `json:"sloth"`
+}
+
+type importRequest struct {
+	ZoneName  string                  `json:"zoneName"`
+	NetworkID string                  `json:"networkId"`
+	Endpoints []importRequestEndpoint `json:"endpoints"`
+}
+
 //GenerateRequest generates a CertificateRequest based on the zone configuration, and returns the request along with the private key.
 func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *certificate.Request) (err error) {
 	switch req.CsrOrigin {
 	case certificate.LocalGeneratedCSR:
-		var pk interface{}
 		if config == nil {
-			config, err = c.ReadZoneConfiguration(c.zone)
+			config, err = c.ReadZoneConfiguration()
 			if err != nil {
 				return fmt.Errorf("could not read zone configuration: %s", err)
 			}
@@ -113,60 +149,23 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 			return err
 		}
 		config.UpdateCertificateRequest(req)
-		switch req.KeyType {
-		case certificate.KeyTypeECDSA:
-			pk, err = certificate.GenerateECDSAPrivateKey(req.KeyCurve)
-		case certificate.KeyTypeRSA:
-			pk, err = certificate.GenerateRSAPrivateKey(req.KeyLength)
-		default:
-			return fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
-		}
-		if err != nil {
+		if err := req.GeneratePrivateKey(); err != nil {
 			return err
 		}
-		req.PrivateKey = pk
-		err = certificate.GenerateRequest(req, pk)
-		if err != nil {
-			return err
-		}
-		req.CSR = pem.EncodeToMemory(certificate.GetCertificateRequestPEMBlock(req.CSR))
-		return nil
-
+		err = req.GenerateCSR()
+		return
 	case certificate.UserProvidedCSR:
-		if req.CSR == nil || len(req.CSR) == 0 {
+		if len(req.GetCSR()) == 0 {
 			return fmt.Errorf("CSR was supposed to be provided by user, but it's empty")
 		}
 		return nil
 
 	case certificate.ServiceGeneratedCSR:
-		req.CSR = nil
 		return nil
 
 	default:
 		return fmt.Errorf("unrecognised req.CsrOrigin %v", req.CsrOrigin)
 	}
-}
-
-//SetBaseURL allows overriding the default URL used to communicate with Venafi Cloud
-func (c *Connector) SetBaseURL(url string) error {
-	if url == "" {
-		return fmt.Errorf("base URL cannot be empty")
-	}
-	modified := strings.ToLower(url)
-	reg := regexp.MustCompile("^http(|s)://")
-	if reg.FindStringIndex(modified) == nil {
-		modified = "https://" + modified
-	} else {
-		modified = reg.ReplaceAllString(modified, "https://")
-	}
-	reg = regexp.MustCompile("/v1(|/)$")
-	if reg.FindStringIndex(modified) == nil {
-		modified += "v1/"
-	} else {
-		modified = reg.ReplaceAllString(modified, "/v1/")
-	}
-	c.baseURL = modified
-	return nil
 }
 
 func (c *Connector) getURL(resource urlResource) string {
@@ -321,48 +320,17 @@ func parseZoneConfigurationData(b []byte) (*zone, error) {
 	return &data, nil
 }
 
-func parseCertificatePolicyResult(httpStatusCode int, httpStatus string, body []byte) (*certificatePolicy, error) {
-	switch httpStatusCode {
-	case http.StatusOK:
-		p, err := parseCertificatePolicyData(body)
-		if err != nil {
-			return nil, err
-		}
-		return p, nil
-	case http.StatusBadRequest, http.StatusPreconditionFailed, http.StatusNotFound:
-		respErrors, err := parseResponseErrors(body)
-		if err != nil {
-			return nil, err
-		}
-
-		respError := fmt.Sprintf("Unexpected status code on Venafi Cloud policy read. Status: %s\n", httpStatus)
-		for _, e := range respErrors {
-			respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
-		}
-		return nil, fmt.Errorf(respError)
-	default:
-		if body != nil {
-			respErrors, err := parseResponseErrors(body)
-			if err == nil {
-				respError := fmt.Sprintf("Unexpected status code on Venafi Cloud policy read. Status: %s\n", httpStatus)
-				for _, e := range respErrors {
-					respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
-				}
-				return nil, fmt.Errorf(respError)
-			}
-		}
-		return nil, fmt.Errorf("Unexpected status code on Venafi Cloud policy read. Status: %s", httpStatus)
+func parseCertificateTemplate(httpStatusCode int, httpStatus string, body []byte) (*certificateTemplate, error) {
+	ct := certificateTemplate{}
+	if httpStatusCode != 200 {
+		return nil, fmt.Errorf("Unexpected status code on Venafi Cloud policy read. Status: %s\n", httpStatus)
 	}
-}
-
-func parseCertificatePolicyData(b []byte) (*certificatePolicy, error) {
-	var data certificatePolicy
-	err := json.Unmarshal(b, &data)
+	// todo: better error parsing
+	err := json.Unmarshal(body, &ct)
 	if err != nil {
 		return nil, err
 	}
-
-	return &data, nil
+	return &ct, nil
 }
 
 func parseCertificateRequestResult(httpStatusCode int, httpStatus string, body []byte) (*certificateRequestResponse, error) {
@@ -411,4 +379,9 @@ func parseCertificateRequestData(b []byte) (*certificateRequestResponse, error) 
 
 func newPEMCollectionFromResponse(data []byte, chainOrder certificate.ChainOption) (*certificate.PEMCollection, error) {
 	return certificate.PEMCollectionFromBytes(data, chainOrder)
+}
+
+func certThumprint(asn1 []byte) string {
+	h := sha1.Sum(asn1)
+	return strings.ToUpper(fmt.Sprintf("%x", h))
 }

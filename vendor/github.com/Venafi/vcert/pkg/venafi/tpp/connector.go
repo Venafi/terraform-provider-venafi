@@ -20,10 +20,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
-	"net/http"
-	"time"
 )
 
 // Connector contains the base data needed to communicate with a TPP Server
@@ -36,9 +39,38 @@ type Connector struct {
 }
 
 // NewConnector creates a new TPP Connector object used to communicate with TPP
-func NewConnector(verbose bool, trust *x509.CertPool) *Connector {
-	c := Connector{trust: trust, verbose: verbose}
-	return &c
+func NewConnector(url string, zone string, verbose bool, trust *x509.CertPool) (*Connector, error) {
+	c := Connector{verbose: verbose, trust: trust, zone: zone}
+	var err error
+	c.baseURL, err = normalizeURL(url)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// normalizeURL normalizes the base URL used to communicate with TPP
+func normalizeURL(url string) (normalizedURL string, err error) {
+	var baseUrlRegex = regexp.MustCompile(`^https://[a-z\d]+[-a-z\d.]+[a-z\d][:\d]*/vedsdk/$`)
+	modified := strings.ToLower(url)
+	if strings.HasPrefix(modified, "http://") {
+		modified = "https://" + modified[7:]
+	} else if !strings.HasPrefix(modified, "https://") {
+		modified = "https://" + modified
+	}
+	if !strings.HasSuffix(modified, "/") {
+		modified = modified + "/"
+	}
+
+	if !strings.HasSuffix(modified, "vedsdk/") {
+		modified += "vedsdk/"
+	}
+	if loc := baseUrlRegex.FindStringIndex(modified); loc == nil {
+		return "", fmt.Errorf("The specified TPP URL is invalid. %s\nExpected TPP URL format 'https://tpp.company.com/vedsdk/'", url)
+	}
+
+	normalizedURL = modified
+	return normalizedURL, nil
 }
 
 func (c *Connector) SetZone(z string) {
@@ -59,11 +91,6 @@ func (c *Connector) Ping() (err error) {
 		err = fmt.Errorf(status)
 	}
 	return
-}
-
-//Register does nothing for TPP
-func (c *Connector) Register(email string) (err error) {
-	return nil
 }
 
 // Authenticate authenticates the user to the TPP
@@ -114,13 +141,15 @@ func prepareRequest(req *certificate.Request, zone string) (tppReq certificateRe
 	case certificate.LocalGeneratedCSR, certificate.UserProvidedCSR:
 		tppReq = certificateRequest{
 			PolicyDN:                getPolicyDN(zone),
-			PKCS10:                  string(req.CSR),
+			CADN:                    req.CADN,
+			PKCS10:                  string(req.GetCSR()),
 			ObjectName:              req.FriendlyName,
 			DisableAutomaticRenewal: true}
 
 	case certificate.ServiceGeneratedCSR:
 		tppReq = certificateRequest{
 			PolicyDN:                getPolicyDN(zone),
+			CADN:                    req.CADN,
 			ObjectName:              req.FriendlyName,
 			Subject:                 req.Subject.CommonName, // TODO: there is some problem because Subject is not only CN
 			SubjectAltNames:         wrapAltNames(req),
@@ -143,13 +172,9 @@ func prepareRequest(req *certificate.Request, zone string) (tppReq certificateRe
 }
 
 // RequestCertificate submits the CSR to TPP returning the DN of the requested Certificate
-func (c *Connector) RequestCertificate(req *certificate.Request, zone string) (requestID string, err error) {
+func (c *Connector) RequestCertificate(req *certificate.Request) (requestID string, err error) {
 
-	if zone == "" {
-		zone = c.zone
-	}
-
-	tppCertificateRequest, err := prepareRequest(req, zone)
+	tppCertificateRequest, err := prepareRequest(req, c.zone)
 	if err != nil {
 		return "", err
 	}
@@ -199,12 +224,18 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 
 	startTime := time.Now()
 	for {
-		retrieveResponse, err := c.retrieveCertificateOnce(certReq)
+		var retrieveResponse *certificateRetrieveResponse
+		retrieveResponse, err = c.retrieveCertificateOnce(certReq)
 		if err != nil {
 			return nil, fmt.Errorf("unable to retrieve: %s", err)
 		}
 		if retrieveResponse.CertificateData != "" {
-			return newPEMCollectionFromResponse(retrieveResponse.CertificateData, req.ChainOption)
+			certificates, err = newPEMCollectionFromResponse(retrieveResponse.CertificateData, req.ChainOption)
+			if err != nil {
+				return
+			}
+			err = req.CheckCertificate(certificates.Certificate)
+			return
 		}
 		if req.Timeout == 0 {
 			return nil, endpoint.ErrCertificatePending{CertificateID: req.PickupID, Status: retrieveResponse.Status}
@@ -252,8 +283,8 @@ func (c *Connector) RenewCertificate(renewReq *certificate.RenewalRequest) (requ
 
 	var r = certificateRenewRequest{}
 	r.CertificateDN = renewReq.CertificateDN
-	if renewReq.CertificateRequest != nil && len(renewReq.CertificateRequest.CSR) > 0 {
-		r.PKCS10 = string(renewReq.CertificateRequest.CSR)
+	if renewReq.CertificateRequest != nil && len(renewReq.CertificateRequest.GetCSR()) != 0 {
+		r.PKCS10 = string(renewReq.CertificateRequest.GetCSR())
 	}
 	statusCode, status, body, err := c.request("POST", urlResourceCertificateRenew, r)
 	if err != nil {
@@ -285,6 +316,9 @@ func (c *Connector) RevokeCertificate(revReq *certificate.RevocationRequest) (er
 		revReq.Disable,
 	}
 	statusCode, status, body, err := c.request("POST", urlResourceCertificateRevoke, r)
+	if err != nil {
+		return err
+	}
 	revokeResponse, err := parseRevokeResult(statusCode, status, body)
 	if err != nil {
 		return
@@ -295,11 +329,11 @@ func (c *Connector) RevokeCertificate(revReq *certificate.RevocationRequest) (er
 	return
 }
 
-func (c *Connector) ReadPolicyConfiguration(zone string) (policy *endpoint.Policy, err error) {
-	if zone == "" {
+func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err error) {
+	if c.zone == "" {
 		return nil, fmt.Errorf("empty zone")
 	}
-	rq := struct{ PolicyDN string }{getPolicyDN(zone)}
+	rq := struct{ PolicyDN string }{getPolicyDN(c.zone)}
 	statusCode, status, body, err := c.request("POST", urlResourceCertificatePolicy, rq)
 	if err != nil {
 		return
@@ -312,19 +346,19 @@ func (c *Connector) ReadPolicyConfiguration(zone string) (policy *endpoint.Polic
 		p := r.Policy.toPolicy()
 		policy = &p
 	} else {
-		return nil, fmt.Errorf("Invalid status: %s", status)
+		return nil, fmt.Errorf("Invalid status: %s Server data: %s", status, body)
 	}
 	return
 }
 
 //ReadZoneConfiguration reads the policy data from TPP to get locked and pre-configured values for certificate requests
-func (c *Connector) ReadZoneConfiguration(zone string) (config *endpoint.ZoneConfiguration, err error) {
-	if zone == "" {
+func (c *Connector) ReadZoneConfiguration() (config *endpoint.ZoneConfiguration, err error) {
+	if c.zone == "" {
 		return nil, fmt.Errorf("empty zone")
 	}
 	zoneConfig := endpoint.NewZoneConfiguration()
 	zoneConfig.HashAlgorithm = x509.SHA256WithRSA //todo: check this can have problem with ECDSA key
-	rq := struct{ PolicyDN string }{getPolicyDN(zone)}
+	rq := struct{ PolicyDN string }{getPolicyDN(c.zone)}
 	statusCode, status, body, err := c.request("POST", urlResourceCertificatePolicy, rq)
 	if err != nil {
 		return
@@ -333,9 +367,12 @@ func (c *Connector) ReadZoneConfiguration(zone string) (config *endpoint.ZoneCon
 		Policy serverPolicy
 	}
 	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("Invalid status: %s", status)
+		return nil, fmt.Errorf("Invalid status: %s Server response: %s", status, string(body))
 	}
 	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return nil, err
+	}
 	p := r.Policy.toPolicy()
 	r.Policy.toZoneConfig(zoneConfig)
 	zoneConfig.Policy = p

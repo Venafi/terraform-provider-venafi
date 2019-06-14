@@ -318,7 +318,7 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		return err
 	}
 
-	requestID, err := cl.RequestCertificate(req, "")
+	requestID, err := cl.RequestCertificate(req)
 	if err != nil {
 		return err
 	}

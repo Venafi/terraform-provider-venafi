@@ -3,7 +3,7 @@ module github.com/Venafi/terraform-provider-venafi
 go 1.12
 
 require (
-	github.com/Venafi/vcert v0.0.0-20190312132320-36e6e55f3d2f
+	github.com/Venafi/vcert v0.0.0-20190613103158-62139eb19b25
 	github.com/apparentlymart/go-cidr v1.0.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/aws/aws-sdk-go v1.15.81 // indirect
@@ -26,7 +26,6 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/posener/complete v1.2.1 // indirect
-	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
 	github.com/zclconf/go-cty v0.0.0-20181017232614-01c5aba823a6 // indirect
 	google.golang.org/genproto v0.0.0-20181109154231-b5d43981345b // indirect
 	gopkg.in/ini.v1 v1.39.0 // indirect
