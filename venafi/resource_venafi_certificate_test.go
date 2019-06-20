@@ -7,38 +7,40 @@ import (
 	"fmt"
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
-const (
-	tpp_provider = `variable "TPPUSER" {}
-variable "TPPPASSWORD" {
-
-}
-            variable "TPPURL" {}
-            variable "TPPZONE" {}
-			variable "TRUST_BUNDLE" {}
+var (
+	variables = fmt.Sprintf(`variable "TPPUSER" {default = "%s"}
+            variable "TPPPASSWORD" {default = "%s"}
+            variable "TPPURL" {default = "%s"}
+            variable "TPPZONE" {default = "%s"}
+            variable "TPPZONE_ECDSA" {default = "%s"}
+			variable "TRUST_BUNDLE" {default = "%s"}
+			variable "CLOUDURL" {default = "%s"}
+			variable "CLOUDAPIKEY" {default = "%s"}
+			variable "CLOUDZONE" {default = "%s"}
+`, os.Getenv("TPPUSER"), os.Getenv("TPPPASSWORD"), os.Getenv("TPPURL"), os.Getenv("TPPZONE"), os.Getenv("TPPZONE_ECDSA"), os.Getenv("TRUST_BUNDLE"),
+		os.Getenv("CLOUDURL"), os.Getenv("CLOUDAPIKEY"), os.Getenv("CLOUDZONE"))
+	tpp_provider = variables + `
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
-              tpp_username = var.TPPUSER
+              tpp_username = "${var.TPPUSER}"
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
               trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }
-
-terraform {
-  required_version = ">= 0.12"
-}
 `
-	tpp_provider_ecdsa = `variable "TPPUSER" {}
+	tpp_provider_ecdsa = variables + `variable "TPPUSER" {}
             variable "TPPPASSWORD" {}
             variable "TPPURL" {}
             variable "TPPZONE" {}
             variable "TRUST_BUNDLE" {}
-            variable "TPPZONE_ECDSA" {}
+
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
@@ -48,15 +50,14 @@ terraform {
               trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }`
 
-	cloud_provider = `variable "CLOUDURL" {}
-            variable "CLOUDAPIKEY" {}
-            variable "CLOUDZONE" {}
+	cloud_provider = variables + `
             provider "venafi" {
               alias = "cloud"
               url = "${var.CLOUDURL}"
               api_key = "${var.CLOUDAPIKEY}"
               zone = "${var.CLOUDZONE}"
-            }`
+            }
+`
 	rsa2048 = `algorithm = "RSA"
             rsa_bits = "2048"`
 
