@@ -35,12 +35,7 @@ var (
               trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }
 `
-	tpp_provider_ecdsa = variables + `variable "TPPUSER" {}
-            variable "TPPPASSWORD" {}
-            variable "TPPURL" {}
-            variable "TPPZONE" {}
-            variable "TRUST_BUNDLE" {}
-
+	tpp_provider_ecdsa = variables + `
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
