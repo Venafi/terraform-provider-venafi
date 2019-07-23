@@ -237,6 +237,8 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
+	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
+	// tpp signs certificates on 80 hours. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
 	data.expiration_window = 80
 	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
@@ -289,7 +291,9 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 17520
+	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
+	// tpp signs certificates on 8 years. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
+	data.expiration_window = 70080
 	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
