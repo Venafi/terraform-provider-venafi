@@ -7,17 +7,25 @@ import (
 	"fmt"
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
-const (
-	tpp_provider = `variable "TPPUSER" {}
-            variable "TPPPASSWORD" {}
-            variable "TPPURL" {}
-            variable "TPPZONE" {}
-			variable "TRUST_BUNDLE" {}
+var (
+	variables = fmt.Sprintf(`variable "TPPUSER" {default = "%s"}
+            variable "TPPPASSWORD" {default = "%s"}
+            variable "TPPURL" {default = "%s"}
+            variable "TPPZONE" {default = "%s"}
+            variable "TPPZONE_ECDSA" {default = "%s"}
+			variable "TRUST_BUNDLE" {default = "%s"}
+			variable "CLOUDURL" {default = "%s"}
+			variable "CLOUDAPIKEY" {default = "%s"}
+			variable "CLOUDZONE" {default = "%s"}
+`, os.Getenv("TPPUSER"), os.Getenv("TPPPASSWORD"), os.Getenv("TPPURL"), os.Getenv("TPPZONE"), os.Getenv("TPPZONE_ECDSA"), os.Getenv("TRUST_BUNDLE"),
+		os.Getenv("CLOUDURL"), os.Getenv("CLOUDAPIKEY"), os.Getenv("CLOUDZONE"))
+	tpp_provider = variables + `
             provider "venafi" {
               alias = "tpp"
               url = "${var.TPPURL}"
@@ -25,25 +33,32 @@ const (
               tpp_password = "${var.TPPPASSWORD}"
               zone = "${var.TPPZONE}"
               trust_bundle = "${file(var.TRUST_BUNDLE)}"
+            }
+`
+	tpp_provider_ecdsa = variables + `
+            provider "venafi" {
+              alias = "tpp"
+              url = "${var.TPPURL}"
+              tpp_username = "${var.TPPUSER}"
+              tpp_password = "${var.TPPPASSWORD}"
+              zone = "${var.TPPZONE_ECDSA}"
+              trust_bundle = "${file(var.TRUST_BUNDLE)}"
             }`
 
-	cloud_provider = `variable "CLOUDURL" {}
-            variable "CLOUDAPIKEY" {}
-            variable "CLOUDZONE" {}
+	cloud_provider = variables + `
             provider "venafi" {
               alias = "cloud"
               url = "${var.CLOUDURL}"
               api_key = "${var.CLOUDAPIKEY}"
               zone = "${var.CLOUDZONE}"
-            }`
+            }
+`
 	rsa2048 = `algorithm = "RSA"
             rsa_bits = "2048"`
 
 	ecdsa521 = `algorithm = "ECDSA"
             ecdsa_curve = "P521"`
-)
 
-var (
 	dev_config = `
             provider "venafi" {
               alias = "dev"
@@ -170,7 +185,7 @@ func TestCloudSignedCert(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 168
+	data.expiration_window = 48
 	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -217,7 +232,9 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 2171
+	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
+	// tpp signs certificates on 80 hours. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
+	data.expiration_window = 80
 	config := fmt.Sprintf(cloud_config, cloud_provider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -233,6 +250,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 					return nil
 
 				},
+				ExpectNonEmptyPlan: true,
 			},
 			r.TestStep{
 				Config: config,
@@ -252,6 +270,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 						}
 					}
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -267,7 +286,9 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 17520
+	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
+	// tpp signs certificates on 8 years. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
+	data.expiration_window = 70080
 	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -279,6 +300,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandartCert(t, &data, s)
 				},
+				ExpectNonEmptyPlan: true,
 			},
 			r.TestStep{
 				Config: config,
@@ -298,6 +320,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 						}
 					}
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -360,7 +383,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	data.private_key_password = "123xxx"
 	data.key_algo = ecdsa521
 	data.expiration_window = 168
-	config := fmt.Sprintf(tpp_config, tpp_provider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	config := fmt.Sprintf(tpp_config, tpp_provider_ecdsa, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with ECDSA key  with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
