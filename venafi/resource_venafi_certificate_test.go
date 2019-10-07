@@ -128,7 +128,7 @@ var (
           }`
 )
 
-func TestDevSignedCert(t *testing.T) {
+func TestAccSignedCert(t *testing.T) {
 	t.Log("Testing Dev RSA certificate")
 	data := testData{}
 	data.cn = "dev-random.venafi.example.com"
