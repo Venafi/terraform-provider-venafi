@@ -128,7 +128,7 @@ var (
           }`
 )
 
-func TestAccSignedCert(t *testing.T) {
+func TestAccDevSignedCert(t *testing.T) {
 	t.Log("Testing Dev RSA certificate")
 	data := testData{}
 	data.cn = "dev-random.venafi.example.com"
@@ -153,7 +153,7 @@ func TestAccSignedCert(t *testing.T) {
 	})
 }
 
-func TestDevSignedCertECDSA(t *testing.T) {
+func TestAccDevSignedCertECDSA(t *testing.T) {
 	t.Log("Testing Dev ECDSA certificate")
 	data := testData{}
 	data.cn = "dev-random.venafi.example.com"
@@ -178,7 +178,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 	})
 }
 
-func TestCloudSignedCert(t *testing.T) {
+func TestAccCloudSignedCert(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -225,7 +225,7 @@ func TestCloudSignedCert(t *testing.T) {
 	})
 }
 
-func TestCloudSignedCertUpdate(t *testing.T) {
+func TestAccCloudSignedCertUpdate(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -276,7 +276,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	})
 }
 
-func TestTPPSignedCertUpdate(t *testing.T) {
+func TestAccTPPSignedCertUpdate(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -326,7 +326,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	})
 }
 
-func TestTPPSignedCert(t *testing.T) {
+func TestAccTPPSignedCert(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -372,7 +372,7 @@ func TestTPPSignedCert(t *testing.T) {
 	})
 }
 
-func TestTPPECDSASignedCert(t *testing.T) {
+func TestAccTPPECDSASignedCert(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
