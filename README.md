@@ -13,15 +13,15 @@ This Terraform provider is powered by the Venafi VCert library (https://github.c
 ### Download and install the Venafi provider plugin
 
 Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system. 
-Then install by downloading and unzipping package to `%APPDATA%\terraform.d\plugins` \[Windows\] or `~/.terraform.d/plugins` \[over systems\]. Make sure that binary name matches 
+Then install by downloading and unzipping package to `%APPDATA%\terraform.d\plugins` \[Windows\] or `~/.terraform.d/plugins` \[other systems\]. Make sure that binary name matches 
 [terraform plugin naming convention](https://www.terraform.io/docs/configuration/providers.html#plugin-names-and-versions). 
 Example: terraform-provider-venafi_v0.6.2
 
-For more information about installing third party plugins please look into [official documentation](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins)
+For more information about installing third party plugins please see the [Terraform documentation](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins)
 
 ### Define the Venafi provider
 
-Create a Terraform configuration file called `main.tf` with a "venafi" provider block like this:
+Create a Terraform configuration file called `main.tf` with a "venafi" provider block like this for the Venafi Platform:
 
 ```
 provider "venafi" {
@@ -32,12 +32,12 @@ provider "venafi" {
 }
 ```
 
-and example for Venafi Cloud
+and like this for Venafi Cloud:
 
 ```
 provider "venafi" {
-    api_key = "<API_KEY>"
-    zone    = "<ZONE>"
+    api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    zone    = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
 }
 ```
 
@@ -45,11 +45,11 @@ The Venafi provider has the following options:
 
 | Property       | Type    | Description                                                                            |
 | -------------- | ------- | -------------------------------------------------------------------------------------- |
-| `zone`         |string   |Venafi Platform policy folder or Venafi Cloud zone (e.g. "Default")                     |
+| `zone`         |string   |Venafi Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI)        |
 | `url`          |string   |Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                               |
 | `tpp_username` |string   |Venafi Platform WebSDK account username                                                 |
-| `tpp_password` |string   |Venafi Platfrom WebSDK account password                                                 |
-| `api_key`      |string   |Venafi Cloud API key (e.g. "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEE")                          |
+| `tpp_password` |string   |Venafi Platform WebSDK account password                                                 |
+| `api_key`      |string   |Venafi Cloud API key (e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")                      |
 | `trust_bundle` |string   |PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ) |
 | `dev_mode`     |bool     |When "true" will test the provider without connecting to Venafi Platform or Venafi Cloud|
 
@@ -168,8 +168,8 @@ Run `make all` to build the project and execute tests.  Tests depend on environm
 ```
 export TF_VAR_TPPUSER="local:admin"
 export TF_VAR_TPPPASSWORD="password"
-export TF_VAR_CLOUDAPIKEY="AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEE"
+export TF_VAR_CLOUDAPIKEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export TF_VAR_TPPURL="https://tpp.venafi.example:443/vedsdk"
 export TF_VAR_TPPZONE="DevOps\\\\Terraform"
-export TF_VAR_CLOUDZONE="Default"
+export TF_VAR_CLOUDZONE="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
 ```
