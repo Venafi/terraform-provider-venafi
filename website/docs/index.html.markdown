@@ -16,10 +16,38 @@ and certficates to be created as part of a Terraform deployment.
 
 Use the navigation to the left to read about the available resources.
 
-## Example Usage
+## Example Usage for Venafi Cloud
+
+You can sign up for a Venafi Cloud account by visiting https://www.venafi.com/platform/cloud/devops.
+Once registered, find your API key by clicking your name in the top right of the web interface.  You
+will also need to specify the ID of a `zone` to use when requesting certificates.  Zones are the part 
+of a Venafi Cloud project that define the machine identity policy applied to certificate requests and
+the certificate authority that will issue certificates.
 
 ```hcl
-# Configure the Venafi provider (Trust Protection Platform)
+# Configure the Venafi provider
+provider "venafi" {
+    api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    zone    = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+}
+
+# Generate a key pair and request a certificate
+resource "venafi_certificate" "webserver" {
+    # ...
+}
+```
+
+## Example Usage for Venafi Trust Protection Platform
+
+Your Venafi administrator can provide you with the URL for the Trust Protection Platform REST API and
+grant you permission to use it.  At the same time they'll provide you with the Distinguished Name of a
+policy folder to specify for the `zone`.  Policy folders define the machine identity policy applied
+to certificate requests and the certificate authority that will issue certificates. You may also need
+to ask them for a root CA certificate for your `trust_bundle` if the Venafi Platform URL is secured by
+a certificate your Terraform computer does not already trust.
+
+```hcl
+# Configure the Venafi provider
 provider "venafi" {
     url          = "https://tpp.venafi.example:443/vedsdk"
     trust_bundle = "${file("/opt/venafi/bundle.pem")}"
@@ -30,30 +58,7 @@ provider "venafi" {
 
 # Generate a key pair and request a certificate
 resource "venafi_certificate" "webserver" {
-    common_name = "web.venafi.example"
-    algorithm = "RSA"
-    rsa_bits = "2048"
-    san_dns = [
-        "web01.venafi.example",
-        "web02.venafi.example"
-    ]
-    key_password = "${var.pk_pass}"
-}
-
-# Output the end-entity certificate
-output "cert_certificate" {
-    value = "${venafi_certificate.webserver.certificate}"
-}
-
-# Output chain CA certificates
-output "cert_chain" {
-    value = "${venafi_certificate.webserver.chain}"
-}
-
-# Output the private key
-output "cert_private_key" {
-    value = "${venafi_certificate.webserver.private_key_pem}"
-    sensitive   = true
+    # ...
 }
 ```
 
@@ -61,7 +66,7 @@ output "cert_private_key" {
 
 The following arguments are supported:
 
-* `zone` - (Optional, string) The policy folder for Venafi Platform or zone for Venafi Cloud (e.g. "Default").
+* `zone` - (Required, string) Zone ID for Venafi Cloud or policy folder for Venafi Platform.
 
 * `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk").
 
