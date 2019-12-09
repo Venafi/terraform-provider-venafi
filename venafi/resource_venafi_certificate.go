@@ -11,7 +11,7 @@ import (
 	"encoding/pem"
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"log"
 	"strings"
 )
