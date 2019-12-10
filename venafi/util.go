@@ -52,6 +52,7 @@ func sameStringSlice(x, y []string) bool {
 	return len(diff) == 0
 }
 
+//nolint
 type testData struct {
 	cert                 string
 	private_key          string
