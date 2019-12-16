@@ -19,7 +19,7 @@ install:
   - make tools
 
 script:
-  - make lint
+  - travis_wait make lint
   - make test
   - make website-lint
   - make website-test
