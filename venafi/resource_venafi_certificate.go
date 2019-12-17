@@ -221,19 +221,10 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	} else if keyType == "ECDSA" {
 		keyCurve := d.Get("ecdsa_curve").(string)
 		req.KeyType = certificate.KeyTypeECDSA
-		switch {
-		case keyCurve == "P224":
-			req.KeyCurve = certificate.EllipticCurveP224
-		case keyCurve == "P256":
-			req.KeyCurve = certificate.EllipticCurveP256
-		case keyCurve == "P384":
-			req.KeyCurve = certificate.EllipticCurveP384
-		case keyCurve == "P521":
-			req.KeyCurve = certificate.EllipticCurveP521
-		default:
-			return fmt.Errorf("ecliptic curve not supported by vcert %s", keyCurve)
+		err = req.KeyCurve.Set(keyCurve)
+		if err != nil {
+			return err
 		}
-
 	} else {
 		return fmt.Errorf("can't determine key algorithm %s", keyType)
 	}
