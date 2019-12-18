@@ -179,6 +179,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 }
 
 func TestCloudSignedCert(t *testing.T) {
+	t.Skip("waiting fix for cloud team") //todo: remove after TRS-6826
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
