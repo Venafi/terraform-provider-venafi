@@ -45,17 +45,10 @@ test: get
 	go test -v -cover ./cmd/vcert
 
 tpp_test: get
-	go test -v $(GOFLAGS) ./pkg/venafi/tpp     \
-		-tpp-url       "${VCERT_TPP_URL}"      \
-		-tpp-user      "${VCERT_TPP_USER}"     \
-		-tpp-password  "${VCERT_TPP_PASSWORD}" \
-		-tpp-zone      "${VCERT_TPP_ZONE}"
+	go test -v $(GOFLAGS) ./pkg/venafi/tpp
 
 cloud_test: get
-	go test -v $(GOFLAGS) ./pkg/venafi/cloud   \
-		-cloud-url     "${VCERT_CLOUD_URL}"    \
-		-cloud-api-key "${VCERT_CLOUD_APIKEY}" \
-		-cloud-zone    "${VCERT_CLOUD_ZONE}"
+	go test -v $(GOFLAGS) ./pkg/venafi/cloud
 
 ifdef BUILD_NUMBER
 VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	neturl "net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -31,11 +32,13 @@ import (
 
 // Connector contains the base data needed to communicate with a TPP Server
 type Connector struct {
-	baseURL string
-	apiKey  string
-	verbose bool
-	trust   *x509.CertPool
-	zone    string
+	baseURL     string
+	apiKey      string
+	accessToken string
+	verbose     bool
+	trust       *x509.CertPool
+	zone        string
+	client      *http.Client
 }
 
 // NewConnector creates a new TPP Connector object used to communicate with TPP
@@ -51,7 +54,7 @@ func NewConnector(url string, zone string, verbose bool, trust *x509.CertPool) (
 
 // normalizeURL normalizes the base URL used to communicate with TPP
 func normalizeURL(url string) (normalizedURL string, err error) {
-	var baseUrlRegex = regexp.MustCompile(`^https://[a-z\d]+[-a-z\d.]+[a-z\d][:\d]*/vedsdk/$`)
+	var baseUrlRegex = regexp.MustCompile(`^https://[a-z\d]+[-a-z\d.]+[a-z\d][:\d]*/$`)
 	modified := strings.ToLower(url)
 	if strings.HasPrefix(modified, "http://") {
 		modified = "https://" + modified[7:]
@@ -62,15 +65,14 @@ func normalizeURL(url string) (normalizedURL string, err error) {
 		modified = modified + "/"
 	}
 
-	if !strings.HasSuffix(modified, "vedsdk/") {
-		modified += "vedsdk/"
+	if strings.HasSuffix(modified, "vedsdk/") {
+		modified = modified[:len(modified)-7]
 	}
 	if loc := baseUrlRegex.FindStringIndex(modified); loc == nil {
 		return "", fmt.Errorf("The specified TPP URL is invalid. %s\nExpected TPP URL format 'https://tpp.company.com/vedsdk/'", url)
 	}
 
-	normalizedURL = modified
-	return normalizedURL, nil
+	return modified, nil
 }
 
 func (c *Connector) SetZone(z string) {
@@ -83,7 +85,7 @@ func (c *Connector) GetType() endpoint.ConnectorType {
 
 //Ping attempts to connect to the TPP Server WebSDK API and returns an errror if it cannot
 func (c *Connector) Ping() (err error) {
-	statusCode, status, _, err := c.request("GET", "", nil)
+	statusCode, status, _, err := c.request("GET", "vedsdk/", nil)
 	if err != nil {
 		return
 	}
@@ -98,17 +100,143 @@ func (c *Connector) Authenticate(auth *endpoint.Authentication) (err error) {
 	if auth == nil {
 		return fmt.Errorf("failed to authenticate: missing credentials")
 	}
-	statusCode, status, body, err := c.request("POST", urlResourceAuthorize, authorizeResquest{Username: auth.User, Password: auth.Password})
-	if err != nil {
-		return
+
+	if auth.ClientId == "" {
+		auth.ClientId = defaultClientID
 	}
 
-	key, err := parseAuthorizeResult(statusCode, status, body)
-	if err != nil {
-		return
+	if auth.User != "" && auth.Password != "" {
+		data := authorizeResquest{Username: auth.User, Password: auth.Password}
+		result, err := processAuthData(c, urlResourceAuthorize, data)
+		if err != nil {
+			return err
+		}
+
+		resp := result.(authorizeResponse)
+		c.apiKey = resp.APIKey
+		return nil
+
+	} else if auth.RefreshToken != "" {
+		data := oauthRefreshAccessTokenRequest{Client_id: auth.ClientId, Refresh_token: auth.RefreshToken}
+		result, err := processAuthData(c, urlResourceRefreshAccessToken, data)
+		if err != nil {
+			return err
+		}
+
+		resp := result.(oauthRefreshAccessTokenResponse)
+		c.accessToken = resp.Access_token
+		auth.RefreshToken = resp.Refresh_token
+		return nil
+
+	} else if auth.AccessToken != "" {
+		c.accessToken = auth.AccessToken
+		return nil
 	}
-	c.apiKey = key
-	return
+	return fmt.Errorf("failed to authenticate: can't determin valid credentials set")
+}
+
+// Get OAuth refresh and access token
+func (c *Connector) GetRefreshToken(auth *endpoint.Authentication) (resp oauthGetRefreshTokenResponse, err error) {
+
+	if auth == nil {
+		return resp, fmt.Errorf("failed to authenticate: missing credentials")
+	}
+
+	if auth.Scope == "" {
+		auth.Scope = defaultScope
+	}
+	if auth.ClientId == "" {
+		auth.ClientId = defaultClientID
+	}
+
+	if auth.User != "" && auth.Password != "" {
+		data := oauthGetRefreshTokenRequest{Username: auth.User, Password: auth.Password, Scope: auth.Scope, Client_id: auth.ClientId}
+		result, err := processAuthData(c, urlResourceAuthorizeOAuth, data)
+		if err != nil {
+			return resp, err
+		}
+		resp = result.(oauthGetRefreshTokenResponse)
+		return resp, nil
+
+	} else if auth.ClientPKCS12 {
+		data := oauthCertificateTokenRequest{Client_id: auth.ClientId, Scope: auth.Scope}
+		result, err := processAuthData(c, urlResourceAuthorizeCertificate, data)
+		if err != nil {
+			return resp, err
+		}
+
+		resp = result.(oauthGetRefreshTokenResponse)
+		return resp, nil
+	}
+
+	return resp, fmt.Errorf("failed to authenticate: missing credentials")
+}
+
+// Refresh OAuth access token
+func (c *Connector) RefreshAccessToken(auth *endpoint.Authentication) (resp oauthRefreshAccessTokenResponse, err error) {
+
+	if auth == nil {
+		return resp, fmt.Errorf("failed to authenticate: missing credentials")
+	}
+
+	if auth.RefreshToken != "" {
+		data := oauthRefreshAccessTokenRequest{Client_id: auth.ClientId, Refresh_token: auth.RefreshToken}
+		result, err := processAuthData(c, urlResourceRefreshAccessToken, data)
+		if err != nil {
+			return resp, err
+		}
+		resp = result.(oauthRefreshAccessTokenResponse)
+		return resp, nil
+	} else {
+		return resp, fmt.Errorf("failed to authenticate: missing refresh token")
+	}
+}
+
+func processAuthData(c *Connector, url urlResource, data interface{}) (resp interface{}, err error) {
+
+	statusCode, status, body, err := c.request("POST", url, data)
+	if err != nil {
+		return resp, err
+	}
+
+	var getRefresh oauthGetRefreshTokenResponse
+	var refreshAccess oauthRefreshAccessTokenResponse
+	var authorize authorizeResponse
+
+	if statusCode == http.StatusOK {
+		switch data.(type) {
+		case oauthGetRefreshTokenRequest:
+			err = json.Unmarshal(body, &getRefresh)
+			if err != nil {
+				return resp, err
+			}
+			resp = getRefresh
+		case oauthRefreshAccessTokenRequest:
+			err = json.Unmarshal(body, &refreshAccess)
+			if err != nil {
+				return resp, err
+			}
+			resp = refreshAccess
+		case authorizeResquest:
+			err = json.Unmarshal(body, &authorize)
+			if err != nil {
+				return resp, err
+			}
+			resp = authorize
+		case oauthCertificateTokenRequest:
+			err = json.Unmarshal(body, &getRefresh)
+			if err != nil {
+				return resp, err
+			}
+			resp = getRefresh
+		default:
+			return resp, fmt.Errorf("can not determine data type")
+		}
+	} else {
+		return resp, fmt.Errorf("unexpected status code on TPP Authorize. Status: %s", status)
+	}
+
+	return resp, nil
 }
 
 func wrapAltNames(req *certificate.Request) (items []sanItem) {
@@ -122,18 +250,6 @@ func wrapAltNames(req *certificate.Request) (items []sanItem) {
 		items = append(items, sanItem{7, name.String()})
 	}
 	return items
-}
-
-//todo:remove unused
-func wrapKeyType(kt certificate.KeyType) string {
-	switch kt {
-	case certificate.KeyTypeRSA:
-		return "RSA"
-	case certificate.KeyTypeECDSA:
-		return "ECC"
-	default:
-		return kt.String()
-	}
 }
 
 func prepareRequest(req *certificate.Request, zone string) (tppReq certificateRequest, err error) {
@@ -329,6 +445,8 @@ func (c *Connector) RevokeCertificate(revReq *certificate.RevocationRequest) (er
 	return
 }
 
+var zoneNonFoundregexp = regexp.MustCompile("PolicyDN: .+ does not exist")
+
 func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err error) {
 	if c.zone == "" {
 		return nil, fmt.Errorf("empty zone")
@@ -340,11 +458,23 @@ func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err erro
 	}
 	var r struct {
 		Policy serverPolicy
+		Error  string
 	}
 	if statusCode == http.StatusOK {
 		err = json.Unmarshal(body, &r)
+		if err != nil {
+			return nil, err
+		}
 		p := r.Policy.toPolicy()
 		policy = &p
+	} else if statusCode == http.StatusBadRequest {
+		err = json.Unmarshal(body, &r)
+		if err != nil {
+			return nil, err
+		}
+		if zoneNonFoundregexp.Match([]byte(r.Error)) {
+			return nil, endpoint.VenafiErrorZoneNotFound
+		}
 	} else {
 		return nil, fmt.Errorf("Invalid status: %s Server data: %s", status, body)
 	}
@@ -365,18 +495,28 @@ func (c *Connector) ReadZoneConfiguration() (config *endpoint.ZoneConfiguration,
 	}
 	var r struct {
 		Policy serverPolicy
+		Error  string
 	}
-	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("Invalid status: %s Server response: %s", status, string(body))
+	if statusCode == http.StatusOK {
+		err = json.Unmarshal(body, &r)
+		if err != nil {
+			return nil, err
+		}
+		p := r.Policy.toPolicy()
+		r.Policy.toZoneConfig(zoneConfig)
+		zoneConfig.Policy = p
+		return zoneConfig, nil
+	} else if statusCode == http.StatusBadRequest {
+		err = json.Unmarshal(body, &r)
+		if err != nil {
+			return nil, err
+		}
+		if zoneNonFoundregexp.Match([]byte(r.Error)) {
+			return nil, endpoint.VenafiErrorZoneNotFound
+		}
 	}
-	err = json.Unmarshal(body, &r)
-	if err != nil {
-		return nil, err
-	}
-	p := r.Policy.toPolicy()
-	r.Policy.toZoneConfig(zoneConfig)
-	zoneConfig.Policy = p
-	return zoneConfig, nil
+	return nil, fmt.Errorf("Invalid status: %s Server response: %s", status, string(body))
+
 }
 
 func (c *Connector) ImportCertificate(r *certificate.ImportRequest) (*certificate.ImportResponse, error) {
@@ -409,4 +549,82 @@ func (c *Connector) ImportCertificate(r *certificate.ImportRequest) (*certificat
 	default:
 		return nil, fmt.Errorf("unexpected response status %d: %s", statusCode, string(body))
 	}
+}
+
+func (c *Connector) SetHTTPClient(client *http.Client) {
+	c.client = client
+}
+
+func (c *Connector) ListCertificates(filter endpoint.Filter) ([]certificate.CertificateInfo, error) {
+	if c.zone == "" {
+		return nil, fmt.Errorf("empty zone")
+	}
+	min := func(i, j int) int {
+		if i < j {
+			return i
+		}
+		return j
+	}
+	const batchSize = 500
+	limit := 100000000
+	if filter.Limit != nil {
+		limit = *filter.Limit
+	}
+	var buf [][]certificate.CertificateInfo
+	for offset := 0; limit > 0; limit, offset = limit-batchSize, offset+batchSize {
+		var b []certificate.CertificateInfo
+		var err error
+		b, err = c.getCertsBatch(offset, min(limit, batchSize), filter.WithExpired)
+		if err != nil {
+			return nil, err
+		}
+		buf = append(buf, b)
+		if len(b) < min(limit, batchSize) {
+			break
+		}
+	}
+	sumLen := 0
+	for _, b := range buf {
+		sumLen += len(b)
+	}
+	infos := make([]certificate.CertificateInfo, sumLen)
+	offset := 0
+	for _, b := range buf {
+		copy(infos[offset:], b[:])
+		offset += len(b)
+	}
+	return infos, nil
+}
+
+func (c *Connector) getCertsBatch(offset, limit int, withExpired bool) ([]certificate.CertificateInfo, error) {
+	url := urlResourceCertificatesList + urlResource(
+		"?ParentDNRecursive="+neturl.QueryEscape(getPolicyDN(c.zone))+
+			"&limit="+fmt.Sprintf("%d", limit)+
+			"&offset="+fmt.Sprintf("%d", offset))
+	if !withExpired {
+		url += urlResource("&ValidToGreater=" + neturl.QueryEscape(time.Now().Format(time.RFC3339)))
+	}
+	statusCode, status, body, err := c.request("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if statusCode != 200 {
+		return nil, fmt.Errorf("can`t get certificates list: %d %s\n%s", statusCode, status, string(body))
+	}
+	var r struct {
+		Certificates []struct {
+			DN   string
+			X509 certificate.CertificateInfo
+		}
+	}
+	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]certificate.CertificateInfo, len(r.Certificates))
+	for i, c := range r.Certificates {
+		c.X509.ID = c.DN
+		infos[i] = c.X509
+	}
+	return infos, nil
 }

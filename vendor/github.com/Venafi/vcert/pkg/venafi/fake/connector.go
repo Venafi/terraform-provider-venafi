@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -186,7 +187,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 		csr      *x509.CertificateRequest
 	)
 	csrBlock, _ = pem.Decode([]byte(csrPEMbytes))
-	if csrBlock == nil || csrBlock.Type != "CERTIFICATE REQUEST" {
+	if csrBlock == nil || !strings.HasSuffix(csrBlock.Type, "CERTIFICATE REQUEST") {
 		return nil, fmt.Errorf("Test-mode: could not parse requestID as base64 encoded certificate request block")
 	}
 
@@ -261,4 +262,12 @@ func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err erro
 		true,
 	}
 	return
+}
+
+func (c *Connector) SetHTTPClient(client *http.Client) {
+	return
+}
+
+func (c *Connector) ListCertificates(filter endpoint.Filter) ([]certificate.CertificateInfo, error) {
+	return nil, nil
 }

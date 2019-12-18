@@ -45,7 +45,7 @@ const (
 	urlResourceCertificateRetrieveViaCSR             = urlResourceCertificateRequests + "/%s/certificate"
 	urlResourceCertificateRetrieve                   = "certificates/%s"
 	urlResourceCertificateRetrievePem                = urlResourceCertificateRetrieve + "/encoded"
-	urlResourceCertificateSearch                     = "certificatesearch"
+	urlResourceManagedCertificateSearch              = "managedcertificatesearch"
 	urlResourceManagedCertificates                   = "managedcertificates"
 	urlResourceManagedCertificateByID                = urlResourceManagedCertificates + "/%s"
 	urlResourceDiscovery                             = "discovery"
@@ -67,6 +67,7 @@ type Connector struct {
 	user    *userDetails
 	trust   *x509.CertPool
 	zone    string
+	client  *http.Client
 }
 
 // NewConnector creates a new Venafi Cloud Connector object used to communicate with Venafi Cloud
@@ -92,6 +93,9 @@ func normalizeURL(url string) (normalizedURL string, err error) {
 		modified = "https://" + modified
 	} else {
 		modified = reg.ReplaceAllString(modified, "https://")
+	}
+	if !strings.HasSuffix(modified, "/") {
+		modified = modified + "/"
 	}
 	reg = regexp.MustCompile("/v1(|/)$")
 	if reg.FindStringIndex(modified) == nil {
@@ -242,15 +246,15 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 		reqIds := []string{}
 		isOnlyOneCertificateRequestId := true
 		for _, c := range searchResult.Certificates {
-			reqIds = append(reqIds, c.CertificateRequestId)
-			if certificateRequestId != "" && certificateRequestId != c.CertificateRequestId {
+			reqIds = append(reqIds, c.CurrentCertificateData.CertificateRequestId)
+			if certificateRequestId != "" && certificateRequestId != c.CurrentCertificateData.CertificateRequestId {
 				isOnlyOneCertificateRequestId = false
 			}
-			if c.CertificateRequestId != "" {
-				certificateRequestId = c.CertificateRequestId
+			if c.CurrentCertificateData.CertificateRequestId != "" {
+				certificateRequestId = c.CurrentCertificateData.CertificateRequestId
 			}
 			if c.Id != "" {
-				req.CertID = c.Id
+				req.CertID = c.CurrentCertificateData.ID
 			}
 		}
 		if !isOnlyOneCertificateRequestId {
@@ -359,11 +363,11 @@ func (c *Connector) RenewCertificate(renewReq *certificate.RenewalRequest) (requ
 		reqIds := []string{}
 		isOnlyOneCertificateRequestId := true
 		for _, c := range searchResult.Certificates {
-			reqIds = append(reqIds, c.CertificateRequestId)
-			if certificateRequestId != "" && certificateRequestId != c.CertificateRequestId {
+			reqIds = append(reqIds, c.CurrentCertificateData.CertificateRequestId)
+			if certificateRequestId != "" && certificateRequestId != c.CurrentCertificateData.CertificateRequestId {
 				isOnlyOneCertificateRequestId = false
 			}
-			certificateRequestId = c.CertificateRequestId
+			certificateRequestId = c.CurrentCertificateData.CertificateRequestId
 		}
 		if !isOnlyOneCertificateRequestId {
 			return "", fmt.Errorf("Error: more than one CertificateRequestId was found with the same Fingerprint: %s", reqIds)
@@ -470,7 +474,7 @@ func (c *Connector) searchCertificates(req *SearchRequest) (*CertificateSearchRe
 
 	var err error
 
-	url := c.getURL(urlResourceCertificateSearch)
+	url := c.getURL(urlResourceManagedCertificateSearch)
 	statusCode, _, body, err := c.request("POST", url, req)
 	if err != nil {
 		return nil, err
@@ -608,6 +612,76 @@ func (c *Connector) ImportCertificate(req *certificate.ImportRequest) (*certific
 		return nil, fmt.Errorf("certificate has been imported but could not be found on platform after that")
 	}
 	cert := foundCert.Certificates[0]
-	resp := &certificate.ImportResponse{CertificateDN: cert.SubjectCN[0], CertId: cert.Id}
+	resp := &certificate.ImportResponse{CertificateDN: cert.CurrentCertificateData.SubjectCN[0], CertId: cert.Id}
 	return resp, nil
+}
+
+func (c *Connector) SetHTTPClient(client *http.Client) {
+	c.client = client
+}
+
+func (c *Connector) ListCertificates(filter endpoint.Filter) ([]certificate.CertificateInfo, error) {
+	if c.zone == "" {
+		return nil, fmt.Errorf("empty zone")
+	}
+	const batchSize = 100
+	limit := 100000000
+	if filter.Limit != nil {
+		limit = *filter.Limit
+	}
+	var buf [][]certificate.CertificateInfo
+	for page := 0; limit > 0; limit, page = limit-batchSize, page+1 {
+		var b []certificate.CertificateInfo
+		var err error
+		b, err = c.getCertsBatch(page, batchSize, filter.WithExpired)
+		if limit < batchSize {
+			b = b[:limit]
+		}
+		if err != nil {
+			return nil, err
+		}
+		buf = append(buf, b)
+		if len(b) < batchSize {
+			break
+		}
+	}
+	sumLen := 0
+	for _, b := range buf {
+		sumLen += len(b)
+	}
+	infos := make([]certificate.CertificateInfo, sumLen)
+	offset := 0
+	for _, b := range buf {
+		copy(infos[offset:], b[:])
+		offset += len(b)
+	}
+	return infos, nil
+}
+
+func (c *Connector) getCertsBatch(page, pageSize int, withExpired bool) ([]certificate.CertificateInfo, error) {
+	req := &SearchRequest{
+		Expression: &Expression{
+			Operands: []Operand{
+				{"issuanceZoneId", EQ, c.zone},
+			},
+			Operator: AND,
+		},
+		Paging: &Paging{PageSize: pageSize, PageNumber: page},
+	}
+	if !withExpired {
+		req.Expression.Operands = append(req.Expression.Operands, Operand{
+			"validityEnd",
+			GTE,
+			time.Now().Format(time.RFC3339),
+		})
+	}
+	r, err := c.searchCertificates(req)
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]certificate.CertificateInfo, len(r.Certificates))
+	for i, c := range r.Certificates {
+		infos[i] = c.ToCertificateInfo()
+	}
+	return infos, nil
 }
