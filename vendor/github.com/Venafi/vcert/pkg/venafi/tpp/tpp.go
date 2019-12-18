@@ -26,9 +26,11 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
@@ -36,6 +38,8 @@ import (
 
 const defaultKeySize = 2048
 const defaultSignatureAlgorithm = x509.SHA256WithRSA
+const defaultClientID = "vcert-go"
+const defaultScope = "certificate:manage,revoke;"
 
 type certificateRequest struct {
 	PolicyDN                string          `json:",omitempty"`
@@ -131,7 +135,7 @@ type certificateRequestResponse struct {
 
 type authorizeResponse struct {
 	APIKey     string `json:",omitempty"`
-	ValidUntil string `json:",omitempty"`
+	ValidUntil string `json:",omitempty"` //todo: add usage
 }
 
 type authorizeResquest struct {
@@ -139,6 +143,43 @@ type authorizeResquest struct {
 	Password string `json:",omitempty"`
 }
 
+type refreshAccessTokenResquest struct {
+	Client_id     string `json:"client_id"`
+	Refresh_token string `json:"refresh_token"`
+}
+
+type oauthGetRefreshTokenRequest struct {
+	Client_id string `json:"client_id"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Scope     string `json:"scope"`
+}
+type oauthGetRefreshTokenResponse struct {
+	Access_token  string `json:"access_token,omitempty"`
+	Expires       int    `json:"expires,omitempty"`
+	Identity      string `json:"identity,omitempty"`
+	Refresh_token string `json:"refresh_token,omitempty"`
+	Scope         string `json:"scope,omitempty"`
+	Token_type    string `json:"token_type,omitempty"`
+}
+
+type oauthRefreshAccessTokenRequest struct {
+	Refresh_token string `json:"refresh_token,omitempty"`
+	Client_id     string `json:"client_id"`
+}
+
+type oauthCertificateTokenRequest struct {
+	Client_id string `json:"client_id"`
+	Scope     string `json:"scope,omitempty"`
+}
+
+type oauthRefreshAccessTokenResponse struct {
+	Access_token  string `json:"access_token,omitempty"`
+	Expires       int    `json:"expires,omitempty"`
+	Identity      string `json:"identity,omitempty"`
+	Refresh_token string `json:"refresh_token,omitempty"`
+	Token_type    string `json:"token_type,omitempty"`
+}
 type policyRequest struct {
 	ObjectDN      string `json:",omitempty"`
 	Class         string `json:",omitempty"`
@@ -148,15 +189,19 @@ type policyRequest struct {
 type urlResource string
 
 const (
-	urlResourceAuthorize           urlResource = "authorize/"
-	urlResourceCertificateRequest  urlResource = "certificates/request"
-	urlResourceCertificateRetrieve urlResource = "certificates/retrieve"
-	urlResourceFindPolicy          urlResource = "config/findpolicy"
-	urlResourceCertificateRevoke   urlResource = "certificates/revoke"
-	urlResourceCertificateRenew    urlResource = "certificates/renew"
-	urlResourceCertificateSearch   urlResource = "certificates/"
-	urlResourceCertificateImport   urlResource = "certificates/import"
-	urlResourceCertificatePolicy   urlResource = "certificates/checkpolicy"
+	urlResourceRefreshAccessToken   urlResource = "vedauth/authorize/token"
+	urlResourceAuthorizeOAuth       urlResource = "vedauth/authorize/oauth"
+	urlResourceAuthorizeCertificate urlResource = "vedauth/Authorize/Certificate"
+	urlResourceAuthorize            urlResource = "vedsdk/authorize/"
+	urlResourceCertificateRequest   urlResource = "vedsdk/certificates/request"
+	urlResourceCertificateRetrieve  urlResource = "vedsdk/certificates/retrieve"
+	urlResourceFindPolicy           urlResource = "vedsdk/config/findpolicy"
+	urlResourceCertificateRevoke    urlResource = "vedsdk/certificates/revoke"
+	urlResourceCertificateRenew     urlResource = "vedsdk/certificates/renew"
+	urlResourceCertificateSearch    urlResource = "vedsdk/certificates/"
+	urlResourceCertificateImport    urlResource = "vedsdk/certificates/import"
+	urlResourceCertificatePolicy    urlResource = "vedsdk/certificates/checkpolicy"
+	urlResourceCertificatesList     urlResource = "vedsdk/certificates/"
 )
 
 const (
@@ -226,7 +271,9 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 	}
 
 	r, _ := http.NewRequest(method, url, payload)
-	if c.apiKey != "" {
+	if c.accessToken != "" {
+		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
+	} else if c.apiKey != "" {
 		r.Header.Add("x-venafi-api-key", c.apiKey)
 	}
 	r.Header.Add("content-type", "application/json")
@@ -248,6 +295,7 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 	// I hope you know what are you doing
 	if trace {
 		log.Println("#################")
+		log.Printf("Headers are:\n%s", r.Header)
 		if method == "POST" {
 			log.Printf("JSON sent for %s\n%s\n", url, string(b))
 		} else {
@@ -261,16 +309,36 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 }
 
 func (c *Connector) getHTTPClient() *http.Client {
+	if c.client != nil {
+		return c.client
+	}
+	var netTransport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
 	if c.trust != nil {
-		tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
 		if tlsConfig == nil {
 			tlsConfig = &tls.Config{}
+		} else {
+			tlsConfig = tlsConfig.Clone()
 		}
 		tlsConfig.RootCAs = c.trust
-		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
 	}
-
-	return http.DefaultClient
+	netTransport.TLSClientConfig = tlsConfig
+	c.client = &http.Client{
+		Timeout:   time.Second * 10,
+		Transport: netTransport,
+	}
+	return c.client
 }
 
 // GenerateRequest creates a new certificate request, based on the zone/policy configuration and the user data
@@ -326,24 +394,6 @@ func getPolicyDN(zone string) string {
 		modified = "\\VED\\Policy" + modified
 	}
 	return modified
-}
-
-func parseAuthorizeResult(httpStatusCode int, httpStatus string, body []byte) (string, error) {
-	switch httpStatusCode {
-	case http.StatusOK:
-		auth, err := parseAuthorizeData(body)
-		if err != nil {
-			return "", err
-		}
-		return auth.APIKey, nil
-	default:
-		return "", fmt.Errorf("Unexpected status code on TPP Authorize. Status: %s", httpStatus)
-	}
-}
-
-func parseAuthorizeData(b []byte) (data authorizeResponse, err error) {
-	err = json.Unmarshal(b, &data)
-	return
 }
 
 func parseConfigResult(httpStatusCode int, httpStatus string, body []byte) (tppData tppPolicyData, err error) {
@@ -525,9 +575,9 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		p.SubjectCNRegexes = make([]string, len(sp.WhitelistedDomains))
 		for i, d := range sp.WhitelistedDomains {
 			if sp.WildcardsAllowed {
-				p.SubjectCNRegexes[i] = addStartEnd(".*" + regexp.QuoteMeta("."+d))
+				p.SubjectCNRegexes[i] = addStartEnd(`[\p{L}\p{N}-*]+` + regexp.QuoteMeta("."+d))
 			} else {
-				p.SubjectCNRegexes[i] = escapeOne(d)
+				p.SubjectCNRegexes[i] = addStartEnd(`[\p{L}\p{N}-]+` + regexp.QuoteMeta("."+d))
 			}
 		}
 	}
@@ -562,11 +612,7 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		} else {
 			p.DnsSanRegExs = make([]string, len(sp.WhitelistedDomains))
 			for i, d := range sp.WhitelistedDomains {
-				if sp.WildcardsAllowed {
-					p.DnsSanRegExs[i] = addStartEnd(".*" + regexp.QuoteMeta("."+d))
-				} else {
-					p.DnsSanRegExs[i] = escapeOne(d)
-				}
+				p.DnsSanRegExs[i] = addStartEnd(`[\p{L}\p{N}-]+` + regexp.QuoteMeta("."+d))
 			}
 		}
 	} else {
@@ -622,12 +668,28 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		}
 		p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, key)
 	} else {
+		var ks []int
+		for _, s := range certificate.AllSupportedKeySizes() {
+			if !sp.KeyPair.KeySize.Locked || s >= sp.KeyPair.KeySize.Value {
+				ks = append(ks, s)
+			}
+		}
 		p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
-			KeyType: certificate.KeyTypeRSA, KeySizes: certificate.AllSupportedKeySizes(),
+			KeyType: certificate.KeyTypeRSA, KeySizes: ks,
 		})
-		p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
-			KeyType: certificate.KeyTypeECDSA, KeyCurves: certificate.AllSupportedCurves(),
-		})
+		if sp.KeyPair.EllipticCurve.Locked {
+			var curve certificate.EllipticCurve
+			if err := curve.Set(sp.KeyPair.EllipticCurve.Value); err != nil {
+				panic(err)
+			}
+			p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
+				KeyType: certificate.KeyTypeECDSA, KeyCurves: []certificate.EllipticCurve{curve},
+			})
+		} else {
+			p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
+				KeyType: certificate.KeyTypeECDSA, KeyCurves: certificate.AllSupportedCurves(),
+			})
+		}
 	}
 	p.AllowWildcards = sp.WildcardsAllowed
 	p.AllowKeyReuse = sp.PrivateKeyReuseAllowed

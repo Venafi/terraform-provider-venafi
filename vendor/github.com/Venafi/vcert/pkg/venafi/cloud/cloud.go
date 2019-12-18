@@ -19,11 +19,13 @@ package cloud
 import (
 	"bytes"
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -69,7 +71,7 @@ type certificateRequestResponseData struct {
 	DER                    string    `json:"der,omitempty"`
 }
 
-type certificateRequest struct { // TODO: this is actually certificate request object (sent with POST)
+type certificateRequest struct {
 	//CompanyID      string `json:"companyId,omitempty"`
 	CSR                          string `json:"certificateSigningRequest,omitempty"`
 	ZoneID                       string `json:"zoneId,omitempty"`
@@ -78,7 +80,7 @@ type certificateRequest struct { // TODO: this is actually certificate request o
 	//DownloadFormat string `json:"downloadFormat,omitempty"`
 }
 
-type certificateStatus struct { // TODO: this is actually the same certificate request object (received with GET)
+type certificateStatus struct {
 	Id                        string                            `json:"Id,omitempty"`
 	ManagedCertificateId      string                            `json:"managedCertificateId,omitempty"`
 	ZoneId                    string                            `json:"zoneId,omitempty"`
@@ -144,10 +146,6 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 				return fmt.Errorf("could not read zone configuration: %s", err)
 			}
 		}
-		err = config.ValidateCertificateRequest(req)
-		if err != nil {
-			return err
-		}
 		config.UpdateCertificateRequest(req)
 		if err := req.GeneratePrivateKey(); err != nil {
 			return err
@@ -170,6 +168,39 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 
 func (c *Connector) getURL(resource urlResource) string {
 	return fmt.Sprintf("%s%s", c.baseURL, resource)
+}
+
+func (c *Connector) getHTTPClient() *http.Client {
+	if c.client != nil {
+		return c.client
+	}
+	var netTransport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
+	if c.trust != nil {
+		if tlsConfig == nil {
+			tlsConfig = &tls.Config{}
+		} else {
+			tlsConfig = tlsConfig.Clone()
+		}
+		tlsConfig.RootCAs = c.trust
+	}
+	netTransport.TLSClientConfig = tlsConfig
+	c.client = &http.Client{
+		Timeout:   time.Second * 10,
+		Transport: netTransport,
+	}
+	return c.client
 }
 
 func (c *Connector) request(method string, url string, data interface{}, authNotRequired ...bool) (statusCode int, statusText string, body []byte, err error) {
@@ -202,7 +233,9 @@ func (c *Connector) request(method string, url string, data interface{}, authNot
 	}
 	r.Header.Add("cache-control", "no-cache")
 
-	res, err := http.DefaultClient.Do(r)
+	var httpClient = c.getHTTPClient()
+
+	res, err := httpClient.Do(r)
 	if res != nil {
 		statusCode = res.StatusCode
 		statusText = res.Status
@@ -284,7 +317,9 @@ func parseZoneConfigurationResult(httpStatusCode int, httpStatus string, body []
 			return nil, err
 		}
 		return z, nil
-	case http.StatusBadRequest, http.StatusPreconditionFailed, http.StatusNotFound:
+	case http.StatusBadRequest:
+		return nil, endpoint.VenafiErrorZoneNotFound
+	case http.StatusNotFound, http.StatusPreconditionFailed:
 		respErrors, err := parseResponseErrors(body)
 		if err != nil {
 			return nil, err
@@ -292,6 +327,9 @@ func parseZoneConfigurationResult(httpStatusCode int, httpStatus string, body []
 
 		respError := fmt.Sprintf("Unexpected status code on Venafi Cloud zone read. Status: %s\n", httpStatus)
 		for _, e := range respErrors {
+			if e.Code == 10051 {
+				return nil, endpoint.VenafiErrorZoneNotFound
+			}
 			respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
 		}
 		return nil, fmt.Errorf(respError)

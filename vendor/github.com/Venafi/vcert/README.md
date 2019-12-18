@@ -6,6 +6,9 @@ VCert is a Go library, SDK, and command line utility designed to simplify key ge
 (also known as SSL/TLS certificates and keys) that comply with enterprise security policy by using the
 [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi Cloud](https://pki.venafi.com/venafi-cloud/).
 
+#### Compatibility
+VCert releases are tested using the latest version of Trust Protection Platform.  The [latest VCert release](../../releases/latest) should be compatible with Trust Protection Platform 17.3 or higher based on the subset of API methods it consumes.
+
 ## Installation
 
 1. Configure your Go environment according to https://golang.org/doc/install.
@@ -62,7 +65,7 @@ For command line examples, please see the [Knowledge Base at support.venafi.com]
     7. (Recommended) Key Bit Strength set to 2048 or higher
     8. (Recommended) Domain Whitelisting policy appropriately assigned
 
-The requirement for the CA Template to be assigned by policy follows a long standing Venafi best practice which also met our design objective to keep the certificate request process simple for VCert users. If you require the abilty to specify the CA Template with the request you can use the TPP REST APIs but please be advised this goes against Venafi recommendations.
+The requirement for the CA Template to be assigned by policy follows a long standing Venafi best practice which also met our design objective to keep the certificate request process simple for VCert users. If you require the ability to specify the CA Template with the request you can use the TPP REST APIs but please be advised this goes against Venafi recommendations.
 
 ## Testing with Trust Protection Platform and Cloud
 
@@ -72,7 +75,7 @@ Unit tests:
 make test
 ```
 
-Integration tests for Trust Protection Platform and Cloud products require endpoint connection variables:
+Integration tests for Trust Protection Platform and Cloud products require endpoint connection variables (Venafi Cloud products display the API key and Zone values in the user interface):
 
 ```sh
 export VCERT_TPP_URL=https://tpp.venafi.example/vedsdk
@@ -86,7 +89,7 @@ make tpp_test
 ```sh
 export VCERT_CLOUD_URL=https://api.venafi.cloud/v1
 export VCERT_CLOUD_APIKEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-export VCERT_CLOUD_ZONE=Default
+export VCERT_CLOUD_ZONE=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 
 make cloud_test
 ```
@@ -110,18 +113,15 @@ The completed test run will report on the number of test "scenarios" and "steps"
 
 ## Contributing to VCert
 
+Venafi welcomes contributions from the developer community.
+
 1. Fork it to your account (https://github.com/Venafi/vcert/fork)
 2. Clone your fork (`git clone git@github.com:youracct/vcert.git`)
 3. Create a feature branch (`git checkout -b your-branch-name`)
 4. Implement and test your changes
 5. Commit your changes (`git commit -am 'Added some cool functionality'`)
 6. Push to the branch (`git push origin your-branch-name`)
-7. Create a new Pull Request (https://github.com/youracct/vcert/pull/new/working-branch)
-
-## Release History
-
-- 3.18.3.1
-  - First open source release
+7. Create a new Pull Request (https://github.com/youracct/vcert/pull/new/your-branch-name)
 
 ## License
 
