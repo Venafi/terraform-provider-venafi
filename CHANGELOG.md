@@ -1,3 +1,6 @@
+## 0.9.0 (December 19, 2019)
+Provider migrated to the Terraform Plugin SDK
+
 ## 0.8.1 (Unreleased)
 ## 0.8.0 (October 08, 2019)
 
