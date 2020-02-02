@@ -89,9 +89,10 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 			},
 			"private_key_pem": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"chain": &schema.Schema{
 				Type:     schema.TypeString,
