@@ -16,6 +16,8 @@ const (
 	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer: "
 	messageUseDevMode             = "Using dev mode to issue certificate"
 	messageUseCloud               = "Using Cloud to issue certificate"
+
+	utilityName = "HashiCorp Terraform"
 )
 
 // Provider returns a terraform.ResourceProvider.

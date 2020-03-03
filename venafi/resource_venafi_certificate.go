@@ -200,7 +200,8 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) error {
 
 	req := &certificate.Request{
-		CsrOrigin: certificate.LocalGeneratedCSR,
+		CsrOrigin:    certificate.LocalGeneratedCSR,
+		CustomFields: []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: utilityName}},
 	}
 
 	//Configuring keys
