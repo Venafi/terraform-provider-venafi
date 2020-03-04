@@ -18,9 +18,11 @@ package certificate
 
 import (
 	"crypto"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/verror"
 	"strings"
 )
 
@@ -146,7 +148,7 @@ func PEMCollectionFromBytes(certBytes []byte, chainOrder ChainOption) (*PEMColle
 //AddPrivateKey adds a Private Key to the PEMCollection. Note that the collection can only contain one private key
 func (col *PEMCollection) AddPrivateKey(privateKey crypto.Signer, privateKeyPassword []byte) error {
 	if col.PrivateKey != "" {
-		return fmt.Errorf("The PEM Collection can only contain one private key")
+		return fmt.Errorf("%w: the PEM Collection can only contain one private key", verror.VcertError)
 	}
 	var p *pem.Block
 	var err error
@@ -165,10 +167,29 @@ func (col *PEMCollection) AddPrivateKey(privateKey crypto.Signer, privateKeyPass
 //AddChainElement adds a chain element to the collection
 func (col *PEMCollection) AddChainElement(certificate *x509.Certificate) error {
 	if certificate == nil {
-		return fmt.Errorf("Certificate cannot be nil")
+		return fmt.Errorf("%w: certificate cannot be nil", verror.VcertError)
 	}
 	pemChain := col.Chain
 	pemChain = append(pemChain, string(pem.EncodeToMemory(GetCertificatePEMBlock(certificate.Raw))))
 	col.Chain = pemChain
 	return nil
+}
+
+func (col *PEMCollection) ToTLSCertificate() tls.Certificate {
+	cert := tls.Certificate{}
+	b, _ := pem.Decode([]byte(col.Certificate))
+	cert.Certificate = append(cert.Certificate, b.Bytes)
+	for _, c := range col.Chain {
+		b, _ := pem.Decode([]byte(c))
+		cert.Certificate = append(cert.Certificate, b.Bytes)
+	}
+	b, _ = pem.Decode([]byte(col.PrivateKey))
+
+	switch b.Type {
+	case "EC PRIVATE KEY":
+		cert.PrivateKey, _ = x509.ParseECPrivateKey(b.Bytes)
+	case "RSA PRIVATE KEY":
+		cert.PrivateKey, _ = x509.ParsePKCS1PrivateKey(b.Bytes)
+	}
+	return cert
 }

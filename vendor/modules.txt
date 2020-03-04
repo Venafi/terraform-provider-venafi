@@ -10,13 +10,14 @@ cloud.google.com/go/storage
 github.com/BurntSushi/toml
 # github.com/OpenPeeDeeP/depguard v1.0.1
 github.com/OpenPeeDeeP/depguard
-# github.com/Venafi/vcert v0.0.0-20191212144505-783a62b71cb3
+# github.com/Venafi/vcert v0.0.0-20200303154944-36a5e0b9e614
 github.com/Venafi/vcert
 github.com/Venafi/vcert/pkg/certificate
 github.com/Venafi/vcert/pkg/endpoint
 github.com/Venafi/vcert/pkg/venafi/cloud
 github.com/Venafi/vcert/pkg/venafi/fake
 github.com/Venafi/vcert/pkg/venafi/tpp
+github.com/Venafi/vcert/pkg/verror
 # github.com/agext/levenshtein v1.2.2
 github.com/agext/levenshtein
 # github.com/apparentlymart/go-cidr v1.0.1
