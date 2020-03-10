@@ -23,10 +23,13 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
+	"log"
 	"net/http"
 	"regexp"
 	"sort"
 )
+
+const SDKName = "Venafi VCert-Go"
 
 // ConnectorType represents the available connectors
 type ConnectorType int
@@ -40,6 +43,10 @@ const (
 	// ConnectorTypeTPP represents the TPP connector type
 	ConnectorTypeTPP
 )
+
+func init() {
+	log.SetPrefix("vCert: ")
+}
 
 func (t ConnectorType) String() string {
 	switch t {
@@ -102,6 +109,7 @@ type Authentication struct {
 	ClientPKCS12 bool
 }
 
+//todo: replace with verror
 // ErrRetrieveCertificateTimeout provides a common error structure for a timeout while retrieving a certificate
 type ErrRetrieveCertificateTimeout struct {
 	CertificateID string
@@ -111,6 +119,7 @@ func (err ErrRetrieveCertificateTimeout) Error() string {
 	return fmt.Sprintf("Operation timed out. You may try retrieving the certificate later using Pickup ID: %s", err.CertificateID)
 }
 
+//todo: replace with verror
 // ErrCertificatePending provides a common error structure for a timeout while retrieving a certificate
 type ErrCertificatePending struct {
 	CertificateID string
@@ -355,18 +364,17 @@ func curveInSlice(i certificate.EllipticCurve, s []certificate.EllipticCurve) bo
 	return false
 }
 
-func checkStringByRegexp(s string, regexs []string) (matched bool) {
-	var err error
+func checkStringByRegexp(s string, regexs []string) bool {
 	for _, r := range regexs {
-		matched, err = regexp.MatchString(r, s)
+		matched, err := regexp.MatchString(r, s)
 		if err == nil && matched {
 			return true
 		}
 	}
-	return
+	return false
 }
 
-func isComponentValid(ss []string, regexs []string, optional bool) (matched bool) {
+func isComponentValid(ss []string, regexs []string, optional bool) bool {
 	if optional && len(ss) == 0 {
 		return true
 	}
@@ -464,12 +472,4 @@ func (z *ZoneConfiguration) UpdateCertificateRequest(request *certificate.Reques
 			request.KeyLength = 2048
 		}
 	}
-}
-
-type VenafiError string
-
-const VenafiErrorZoneNotFound VenafiError = "Zone not found"
-
-func (e VenafiError) Error() string {
-	return string(e)
 }

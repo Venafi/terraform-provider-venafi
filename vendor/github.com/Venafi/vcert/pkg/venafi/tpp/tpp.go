@@ -40,6 +40,27 @@ const defaultKeySize = 2048
 const defaultSignatureAlgorithm = x509.SHA256WithRSA
 const defaultClientID = "vcert-go"
 const defaultScope = "certificate:manage,revoke;"
+const defaultWorkloadName = "Default"
+
+type customField struct {
+	Name   string
+	Values []string
+}
+
+type application struct {
+	ObjectName     string
+	Class          string
+	DriverName     string
+	ValidationHost string `json:",omitempty"`
+	ValidationPort string `json:",omitempty"`
+}
+
+type device struct {
+	PolicyDN     string
+	ObjectName   string
+	Host         string
+	Applications []application
+}
 
 type certificateRequest struct {
 	PolicyDN                string          `json:",omitempty"`
@@ -54,11 +75,14 @@ type certificateRequest struct {
 	SubjectAltNames         []sanItem       `json:",omitempty"`
 	Contact                 string          `json:",omitempty"`
 	CASpecificAttributes    []nameValuePair `json:",omitempty"`
+	Origin                  string          `json:",omitempty"`
 	PKCS10                  string          `json:",omitempty"`
 	KeyAlgorithm            string          `json:",omitempty"`
 	KeyBitSize              int             `json:",omitempty"`
 	EllipticCurve           string          `json:",omitempty"`
 	DisableAutomaticRenewal bool            `json:",omitempty"`
+	CustomFields            []customField   `json:",omitempty"`
+	Devices                 []device        `json:",omitempty"`
 }
 
 type certificateRetrieveRequest struct {
@@ -154,7 +178,7 @@ type oauthGetRefreshTokenRequest struct {
 	Password  string `json:"password"`
 	Scope     string `json:"scope"`
 }
-type oauthGetRefreshTokenResponse struct {
+type OauthGetRefreshTokenResponse struct {
 	Access_token  string `json:"access_token,omitempty"`
 	Expires       int    `json:"expires,omitempty"`
 	Identity      string `json:"identity,omitempty"`
@@ -173,7 +197,7 @@ type oauthCertificateTokenRequest struct {
 	Scope     string `json:"scope,omitempty"`
 }
 
-type oauthRefreshAccessTokenResponse struct {
+type OauthRefreshAccessTokenResponse struct {
 	Access_token  string `json:"access_token,omitempty"`
 	Expires       int    `json:"expires,omitempty"`
 	Identity      string `json:"identity,omitempty"`
@@ -189,19 +213,24 @@ type policyRequest struct {
 type urlResource string
 
 const (
-	urlResourceRefreshAccessToken   urlResource = "vedauth/authorize/token"
-	urlResourceAuthorizeOAuth       urlResource = "vedauth/authorize/oauth"
-	urlResourceAuthorizeCertificate urlResource = "vedauth/Authorize/Certificate"
-	urlResourceAuthorize            urlResource = "vedsdk/authorize/"
-	urlResourceCertificateRequest   urlResource = "vedsdk/certificates/request"
-	urlResourceCertificateRetrieve  urlResource = "vedsdk/certificates/retrieve"
-	urlResourceFindPolicy           urlResource = "vedsdk/config/findpolicy"
-	urlResourceCertificateRevoke    urlResource = "vedsdk/certificates/revoke"
-	urlResourceCertificateRenew     urlResource = "vedsdk/certificates/renew"
-	urlResourceCertificateSearch    urlResource = "vedsdk/certificates/"
-	urlResourceCertificateImport    urlResource = "vedsdk/certificates/import"
-	urlResourceCertificatePolicy    urlResource = "vedsdk/certificates/checkpolicy"
-	urlResourceCertificatesList     urlResource = "vedsdk/certificates/"
+	urlResourceAuthorize              urlResource = "vedsdk/authorize/"
+	urlResourceAuthorizeCertificate   urlResource = "vedauth/Authorize/Certificate"
+	urlResourceAuthorizeOAuth         urlResource = "vedauth/authorize/oauth"
+	urlResourceCertificateImport      urlResource = "vedsdk/certificates/import"
+	urlResourceCertificatePolicy      urlResource = "vedsdk/certificates/checkpolicy"
+	urlResourceCertificateRenew       urlResource = "vedsdk/certificates/renew"
+	urlResourceCertificateRequest     urlResource = "vedsdk/certificates/request"
+	urlResourceCertificateRetrieve    urlResource = "vedsdk/certificates/retrieve"
+	urlResourceCertificateRevoke      urlResource = "vedsdk/certificates/revoke"
+	urlResourceCertificatesAssociate  urlResource = "vedsdk/Certificates/Associate"
+	urlResourceCertificatesDissociate urlResource = "vedsdk/Certificates/Dissociate"
+	urlResourceCertificate            urlResource = "vedsdk/certificates/"
+	urlResourceCertificateSearch                  = urlResourceCertificate
+	urlResourceCertificatesList                   = urlResourceCertificate
+	urlResourceConfigDnToGuid         urlResource = "vedsdk/Config/DnToGuid"
+	urlResourceConfigReadDn           urlResource = "vedsdk/Config/ReadDn"
+	urlResourceFindPolicy             urlResource = "vedsdk/config/findpolicy"
+	urlResourceRefreshAccessToken     urlResource = "vedauth/authorize/token"
 )
 
 const (
@@ -265,12 +294,13 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 	}
 	var payload io.Reader
 	var b []byte
-	if method == "POST" {
+	if method == "POST" || method == "PUT" {
 		b, _ = json.Marshal(data)
 		payload = bytes.NewReader(b)
 	}
 
 	r, _ := http.NewRequest(method, url, payload)
+	r.Close = true
 	if c.accessToken != "" {
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 	} else if c.apiKey != "" {
@@ -296,7 +326,7 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 	if trace {
 		log.Println("#################")
 		log.Printf("Headers are:\n%s", r.Header)
-		if method == "POST" {
+		if method == "POST" || method == "PUT" {
 			log.Printf("JSON sent for %s\n%s\n", url, string(b))
 		} else {
 			log.Printf("%s request sent to %s\n", method, url)
@@ -396,6 +426,26 @@ func getPolicyDN(zone string) string {
 	return modified
 }
 
+func getDeviceDN(zone string, location certificate.Location) string {
+	workload := location.Workload
+	if workload == "" {
+		workload = "Default"
+	}
+	return getPolicyDN(zone + "\\" + location.Instance + "\\" + workload)
+}
+
+func getCertificateDN(zone, cn string) string {
+	return getPolicyDN(zone + "\\" + cn)
+}
+
+func stripBackSlashes(s string) string {
+
+	var r = regexp.MustCompile(`\\+`)
+
+	result := r.ReplaceAll([]byte(s), []byte("\\"))
+	return string(result)
+}
+
 func parseConfigResult(httpStatusCode int, httpStatus string, body []byte) (tppData tppPolicyData, err error) {
 	tppData = tppPolicyData{}
 	switch httpStatusCode {
@@ -424,7 +474,7 @@ func parseRequestResult(httpStatusCode int, httpStatus string, body []byte) (str
 		}
 		return reqData.CertificateDN, nil
 	default:
-		return "", fmt.Errorf("Unexpected status code on TPP Certificate Request. Status: %s. Body: %s", httpStatus, body)
+		return "", fmt.Errorf("Unexpected status code on TPP Certificate Request.\n Status:\n %s. \n Body:\n %s\n", httpStatus, body)
 	}
 }
 
@@ -575,9 +625,9 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		p.SubjectCNRegexes = make([]string, len(sp.WhitelistedDomains))
 		for i, d := range sp.WhitelistedDomains {
 			if sp.WildcardsAllowed {
-				p.SubjectCNRegexes[i] = addStartEnd(`[\p{L}\p{N}-*]+` + regexp.QuoteMeta("."+d))
+				p.SubjectCNRegexes[i] = addStartEnd(`([\p{L}\p{N}-*]+\.)*` + regexp.QuoteMeta(d))
 			} else {
-				p.SubjectCNRegexes[i] = addStartEnd(`[\p{L}\p{N}-]+` + regexp.QuoteMeta("."+d))
+				p.SubjectCNRegexes[i] = addStartEnd(`([\p{L}\p{N}-]+\.)*` + regexp.QuoteMeta(d))
 			}
 		}
 	}
@@ -612,7 +662,11 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		} else {
 			p.DnsSanRegExs = make([]string, len(sp.WhitelistedDomains))
 			for i, d := range sp.WhitelistedDomains {
-				p.DnsSanRegExs[i] = addStartEnd(`[\p{L}\p{N}-]+` + regexp.QuoteMeta("."+d))
+				if sp.WildcardsAllowed {
+					p.DnsSanRegExs[i] = addStartEnd(`([\p{L}\p{N}-*]+\.)*` + regexp.QuoteMeta(d))
+				} else {
+					p.DnsSanRegExs[i] = addStartEnd(`([\p{L}\p{N}-]+\.)*` + regexp.QuoteMeta(d))
+				}
 			}
 		}
 	} else {

@@ -14,6 +14,7 @@ get: gofmt
 
 build_quick: get
 	env GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -o bin/linux/vcert         ./cmd/vcert
+	cp bin/linux/vcert aruba/bin/vcert
 
 build: get
 	env GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -o bin/linux/vcert         ./cmd/vcert
@@ -41,7 +42,6 @@ test: get
 	go test -v -cover ./pkg/certificate
 	go test -v -cover ./pkg/endpoint
 	go test -v -cover ./pkg/venafi/fake
-	go test -v -cover ./cmd/vcert/output
 	go test -v -cover ./cmd/vcert
 
 tpp_test: get
