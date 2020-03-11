@@ -1,4 +1,10 @@
-## 0.9.1 (Unreleased)
+## 0.9.2 (Unreleased)
+## 0.9.1 (March 10, 2020)
+
+Add `Origin` value for issued certificates.
+
+Update to new vcert version with few bug fixes.
+
 ## 0.9.0 (December 18, 2019)
 
 Provider migrated to the Terraform Plugin SDK
