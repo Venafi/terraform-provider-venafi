@@ -12,7 +12,7 @@ This Terraform provider is powered by the Venafi VCert library (https://github.c
 
 ### Download and install the Venafi provider plugin
 
-Go to [releases](https://github.com/Venafi/terraform-provider-venafi/releases) and select the latest package for your operating system. 
+Go to [releases](https://github.com/terraform-providers/terraform-provider-venafi/releases) and select the latest package for your operating system. 
 Then install by downloading and unzipping package to `%APPDATA%\terraform.d\plugins` \[Windows\] or `~/.terraform.d/plugins` \[other systems\]. Make sure that binary name matches 
 [terraform plugin naming convention](https://www.terraform.io/docs/configuration/providers.html#plugin-names-and-versions). 
 Example: terraform-provider-venafi_v0.6.2
