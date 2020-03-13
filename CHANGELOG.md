@@ -1,5 +1,4 @@
 ## 0.9.2 (Unreleased)
-## 0.9.1 (March 10, 2020)
 
 Add `Origin` value for issued certificates.
 
