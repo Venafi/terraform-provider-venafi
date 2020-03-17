@@ -166,10 +166,10 @@ Run `make build` to build the project.  This will create a provider binary calle
 Run `make all` to build the project and execute tests.  Tests depend on environment variables which should be exported like this beforehand:
 
 ```
-export TF_VAR_TPPUSER="local:admin"
-export TF_VAR_TPPPASSWORD="password"
-export TF_VAR_CLOUDAPIKEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export TF_VAR_TPPURL="https://tpp.venafi.example:443/vedsdk"
-export TF_VAR_TPPZONE="DevOps\\\\Terraform"
-export TF_VAR_CLOUDZONE="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+export TPP_USER="local:admin"
+export TPP_PASSWORD="password"
+export CLOUD_APIKEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+export TPP_URL="https://tpp.venafi.example:443/vedsdk"
+export TPP_ZONE="DevOps\\\\Terraform"
+export CLOUD_ZONE="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
 ```

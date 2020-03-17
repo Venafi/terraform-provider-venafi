@@ -2,34 +2,24 @@
 This is an example terrafrom file to show capabilities of vcert integration.
 */
 
-/*
-Setting the provider variables for authentication. You need to add the TF_VAR_ prefix to variables so they can be seen inside Terraform.
-Example:
-export TF_VAR_TPPUSER='admin'
-export TF_VAR_TPPPASSWORD='secret'
-export TF_VAR_CLOUDAPIKEY='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx'
-export TF_VAR_TPPURL="https://venafi.example.com:5008/vedsdk"
-export TF_VAR_TPPZONE="example\\\\zone"
-export TF_VAR_CLOUDZONE="Default"
-*/
 
-variable "CLOUDAPIKEY" {
+variable "CLOUD_APIKEY" {
 }
 
-variable "CLOUDZONE" {
+variable "CLOUD_ZONE" {
 }
 
-variable "TPPUSER" {
+variable "TPP_USER" {
 }
 
-variable "TPPPASSWORD" {
+variable "TPP_PASSWORD" {
 
 }
 
-variable "TPPURL" {
+variable "TPP_URL" {
 }
 
-variable "TPPZONE" {
+variable "TPP_ZONE" {
 }
 
 variable "TRUST_BUNDLE" {
@@ -58,20 +48,19 @@ Here we are getting credentials from variables TF_VAR_CLOUDAPIKEY and TF_VAR_CLO
 */
 provider "venafi" {
   alias   = "cloud"
-  api_key = var.CLOUDAPIKEY
-  zone    = var.CLOUDZONE
+  api_key = var.CLOUD_APIKEY
+  zone    = var.CLOUD_ZONE
 }
 
 /*
 Platfrom provider configuration (alias = "tpp")
-Here we are getting credentials from variables TF_VAR_TPPUSER, TF_VAR_TPPPASSWORD, TF_VAR_TPPURL and TF_VAR_TPPZONE
 */
 provider "venafi" {
   alias        = "tpp"
-  url          = var.TPPURL
-  tpp_username = var.TPPUSER
-  tpp_password = var.TPPPASSWORD
-  zone         = var.TPPZONE
+  url          = var.TPP_URL
+  tpp_username = var.TPP_USER
+  tpp_password = var.TPP_PASSWORD
+  zone         = var.TPP_ZONE
   trust_bundle = file(var.TRUST_BUNDLE)
 }
 
