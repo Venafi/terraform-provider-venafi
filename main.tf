@@ -9,6 +9,10 @@ variable "CLOUD_APIKEY" {
 variable "CLOUD_ZONE" {
 }
 
+variable "CLOUD_URL" {
+  
+}
+
 variable "TPP_USER" {
 }
 
@@ -50,6 +54,7 @@ provider "venafi" {
   alias   = "cloud"
   api_key = var.CLOUD_APIKEY
   zone    = var.CLOUD_ZONE
+  url     = var.CLOUD_URL
 }
 
 /*
