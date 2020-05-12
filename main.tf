@@ -1,5 +1,5 @@
 /*
-This is an example terrafrom file to show capabilities of vcert integration.
+This is an example Terraform file to show capabilities of the VCert integration.
 */
 
 
@@ -10,7 +10,7 @@ variable "CLOUD_ZONE" {
 }
 
 variable "CLOUD_URL" {
-  
+  default = ""
 }
 
 variable "TPP_USER" {
@@ -39,7 +39,7 @@ resource "random_string" "cn" {
 /*
 Here we are configuring thre providers using provider aliases.
 
-Dev provider configuration (alias = "dev") for testing, it don't need any external sources configured.
+Dev provider configuration (alias = "dev") for testing; it doesn't need any external sources configured.
 */
 provider "venafi" {
   alias    = "dev"
@@ -47,7 +47,7 @@ provider "venafi" {
 }
 
 /*
-Cloud profivder configuration (alias = "cloud")
+Cloud provider configuration (alias = "cloud")
 Here we are getting credentials from variables TF_VAR_CLOUDAPIKEY and TF_VAR_CLOUDZONE
 */
 provider "venafi" {
@@ -58,7 +58,7 @@ provider "venafi" {
 }
 
 /*
-Platfrom provider configuration (alias = "tpp")
+Platform provider configuration (alias = "tpp")
 */
 provider "venafi" {
   alias        = "tpp"
@@ -75,7 +75,7 @@ resource "venafi_certificate" "dev_certificate" {
   provider    = venafi.dev
   common_name = "dev-${random_string.cn.result}.venafi.example.com"
 
-  //Key encription algotrythm
+  //Key encryption algorithm
   algorithm = "RSA"
 
   //DNS aliases
@@ -100,7 +100,7 @@ resource "venafi_certificate" "dev_certificate" {
   key_password = "xxxxx"
 }
 
-//outpu certificate
+//output certificate
 output "cert_certificate_dev" {
   value = venafi_certificate.dev_certificate.certificate
 }
