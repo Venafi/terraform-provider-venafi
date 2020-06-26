@@ -14,12 +14,7 @@ github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAE
 github.com/OpenPeeDeeP/depguard v1.0.1 h1:VlW4R6jmBIv3/u1JNlawEvJMM4J+dPORPaZasQee8Us=
 github.com/OpenPeeDeeP/depguard v1.0.1/go.mod h1:xsIw86fROiiwelg+jB2uM9PiKihMMmUx/1V+TNhjQvM=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/Venafi/vcert v0.0.0-20190613103158-62139eb19b25 h1:Vy4WHFF6SULSubt7vuyJRJ5AqwjJXzJQWdF37VcsyGo=
-github.com/Venafi/vcert v0.0.0-20190613103158-62139eb19b25/go.mod h1:3sXw16DKVded/kLVDma2veqEUQC7O37h98ims7cIvN4=
-github.com/Venafi/vcert v0.0.0-20191212144505-783a62b71cb3 h1:draHFFIZdhIQpkSxCsRfM/saZ2gR1vaBYSvYMb7GbRs=
-github.com/Venafi/vcert v0.0.0-20191212144505-783a62b71cb3/go.mod h1:5T4bFPhcgGXbdz8nVVRuE2gXSRDlZVL+9T5CwZZ3Yk4=
-github.com/Venafi/vcert v0.0.0-20200303154944-36a5e0b9e614 h1:PRG/ytbS/o+Czxr1iN4mpgRpdy1H1bC6VDJgkLPWqxo=
-github.com/Venafi/vcert v0.0.0-20200303154944-36a5e0b9e614/go.mod h1:9EegQjmRoMqVT/ydgd54mJj5rTd7ym0qMgEfhnPsce0=
+github.com/Venafi/vcert v0.0.0-20200618191126-30909cbeac22/go.mod h1:9EegQjmRoMqVT/ydgd54mJj5rTd7ym0qMgEfhnPsce0=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=
 github.com/agext/levenshtein v1.2.1/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/agext/levenshtein v1.2.2 h1:0S/Yg6LYmFJ5stwQeRp6EeOcCbj7xiqQSdNelsXvaqE=
