@@ -1,4 +1,7 @@
-## 0.10.0 (Unreleased)
+## 0.9.3 (Unreleased)
+
+Enable Source Application Tagging for Venafi Cloud via new VCert version.
+
 ## 0.9.2 (March 13, 2020)
 
 Add `Origin` value for issued certificates.
