@@ -1,4 +1,4 @@
-## 0.9.3 (Unreleased)
+## 0.9.3 (June 29, 2020)
 
 Enable Source Application Tagging for Venafi Cloud via new VCert version.
 
