@@ -19,8 +19,8 @@ package tpp
 import (
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/verror"
 	"log"
 	"net/http"
 	neturl "net/url"
@@ -30,6 +30,7 @@ import (
 
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
+	"github.com/Venafi/vcert/pkg/verror"
 )
 
 // Connector contains the base data needed to communicate with a TPP Server
@@ -49,7 +50,7 @@ func NewConnector(url string, zone string, verbose bool, trust *x509.CertPool) (
 	var err error
 	c.baseURL, err = normalizeURL(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: failed to normalize URL: %v", verror.UserDataError, err)
 	}
 	return &c, nil
 }
@@ -99,6 +100,12 @@ func (c *Connector) Ping() (err error) {
 
 // Authenticate authenticates the user to the TPP
 func (c *Connector) Authenticate(auth *endpoint.Authentication) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("%w: %s", verror.AuthError, err)
+		}
+	}()
+
 	if auth == nil {
 		return fmt.Errorf("failed to authenticate: missing credentials")
 	}
@@ -258,6 +265,109 @@ func wrapAltNames(req *certificate.Request) (items []sanItem) {
 	return items
 }
 
+func prepareLegacyMetadata(c *Connector, metaItems []customField, dn string) ([]guidData, error) {
+	metadataItems, err := c.requestAllMetadataItems(dn)
+	if nil != err {
+		return nil, err
+	}
+	customFieldsGUIDMap := make(map[string]string)
+	for _, item := range metadataItems {
+		customFieldsGUIDMap[item.Label] = item.Guid
+	}
+
+	var requestGUIDData []guidData
+	for _, item := range metaItems {
+		guid, prs := customFieldsGUIDMap[item.Name]
+		if prs {
+			requestGUIDData = append(requestGUIDData, guidData{guid, item.Values})
+		}
+	}
+	return requestGUIDData, nil
+}
+
+//RequestAllMetadataItems returns all possible metadata items for a DN
+func (c *Connector) requestAllMetadataItems(dn string) ([]metadataItem, error) {
+	statusCode, status, body, err := c.request("POST", urlResourceAllMetadataGet, metadataGetItemsRequest{dn})
+	if err != nil {
+		return nil, err
+	}
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("Unexpected http status code while fetching metadata items. %d-%s", statusCode, status)
+	}
+
+	var response metadataGetItemsResponse
+	err = json.Unmarshal(body, &response)
+	return response.Items, err
+}
+
+//RequestMetadataItems returns metadata items for a DN that have a value stored
+func (c *Connector) requestMetadataItems(dn string) ([]metadataKeyValueSet, error) {
+	statusCode, status, body, err := c.request("POST", urlResourceMetadataGet, metadataGetItemsRequest{dn})
+	if err != nil {
+		return nil, err
+	}
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("Unexpected http status code while fetching certificate metadata items. %d-%s", statusCode, status)
+	}
+	var response metadataGetResponse
+	err = json.Unmarshal(body, &response)
+	return response.Data, err
+}
+
+//RequestSystemVersion returns the TPP system version of the connector context
+func (c *Connector) requestSystemVersion() (string, error) {
+	statusCode, status, body, err := c.request("GET", urlResourceSystemStatusVersion, "")
+	if err != nil {
+		return "", err
+	}
+	//Put in hint for authentication scope 'configuration'
+	switch statusCode {
+	case 200:
+	case 401:
+		return "", fmt.Errorf("http status code '%s' was returned by the server. Hint: OAuth scope 'configuration' is required when using custom fields", status)
+	default:
+		return "", fmt.Errorf("Unexpected http status code while fetching TPP version. %s", status)
+	}
+
+	var response struct{ Version string }
+	err = json.Unmarshal(body, &response)
+	return response.Version, err
+}
+
+//SetCertificateMetadata submits the metadata to TPP for storage returning the lock status of the metadata stored
+func (c *Connector) setCertificateMetadata(metadataRequest metadataSetRequest) (bool, error) {
+	if metadataRequest.DN == "" {
+		return false, fmt.Errorf("DN must be provided to setCertificateMetaData")
+	}
+	if len(metadataRequest.GuidData) == 0 && metadataRequest.KeepExisting {
+		return false, nil
+	} //Not an error, but there is nothing to do
+
+	statusCode, status, body, err := c.request("POST", urlResourceMetadataSet, metadataRequest)
+	if err != nil {
+		return false, err
+	}
+	if statusCode != http.StatusOK {
+		return false, fmt.Errorf("Unexpected http status code while setting metadata items. %d-%s", statusCode, status)
+	}
+
+	var result = metadataSetResponse{}
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return false, err
+	}
+
+	switch result.Result {
+	case 0:
+		break
+	case 17:
+		return false, fmt.Errorf("custom field value not a valid list item. Server returned error %v", result.Result)
+	default:
+		return false, fmt.Errorf("return code %v was returned while adding metadata to %v. Please refer to the Metadata Result Codes in the TPP WebSDK API documentation to determine if further action is needed", result.Result, metadataRequest.DN)
+	}
+	return result.Locked, nil
+}
+
 func prepareRequest(req *certificate.Request, zone string) (tppReq certificateRequest, err error) {
 	switch req.CsrOrigin {
 	case certificate.LocalGeneratedCSR, certificate.UserProvidedCSR:
@@ -394,11 +504,66 @@ func (c *Connector) RequestCertificate(req *certificate.Request) (requestID stri
 	}
 	requestID, err = parseRequestResult(statusCode, status, body)
 	if err != nil {
-		return "", fmt.Errorf("%s", err)
+		return "", err
+	}
+	req.PickupID = requestID
+
+	if len(req.CustomFields) == 0 {
+		return
 	}
 
-	req.PickupID = requestID
-	return requestID, nil
+	// Handle legacy TPP custom field API
+	//Get the saved metadata for the current certificate, deep compare the
+	//saved metadata to the requested metadata. If all items match then no further
+	//changes need to be made. If they do not match, they try to update them using
+	//the 19.2 WebSDK calls
+	metadataItems, err := c.requestMetadataItems(requestID)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	//prepare struct for search
+	metadata := make(map[string]map[string]struct{})
+	for _, item := range metadataItems {
+		metadata[item.Key.Label] = make(map[string]struct{})
+		for _, v := range item.Value {
+			metadata[item.Key.Label][v] = struct{}{} //empty struct has zero size
+		}
+	}
+	//Deep compare the request metadata to the fetched metadata
+	var allItemsFound = true
+	for _, cf := range tppCertificateRequest.CustomFields {
+		values, prs := metadata[cf.Name]
+		if !prs {
+			allItemsFound = false
+			break
+		}
+		for _, value := range cf.Values {
+			_, prs := values[value]
+			if !prs {
+				//Found the field by name, but couldn't find one of the values
+				allItemsFound = false
+			}
+		}
+	}
+
+	if allItemsFound {
+		return
+	}
+	log.Println("Saving metadata custom field using 19.2 method")
+	//Create a metadata/set command with the metadata from tppCertificateRequest
+	guidItems, err := prepareLegacyMetadata(c, tppCertificateRequest.CustomFields, requestID)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	requestData := metadataSetRequest{requestID, guidItems, true}
+	//c.request with the metadata request
+	_, err = c.setCertificateMetadata(requestData)
+	if err != nil {
+		log.Println(err)
+	}
+	return
 }
 
 // RetrieveCertificate attempts to retrieve the requested certificate
@@ -470,9 +635,52 @@ func (c *Connector) retrieveCertificateOnce(certReq certificateRetrieveRequest) 
 	return &retrieveResponse, nil
 }
 
+func (c *Connector) putCertificateInfo(dn string, attributes []nameSliceValuePair) error {
+	guid, err := c.configDNToGuid(dn)
+	if err != nil {
+		return err
+	}
+	statusCode, _, _, err := c.request("PUT", urlResourceCertificate+urlResource(guid), struct{ AttributeData []nameSliceValuePair }{attributes})
+	if err != nil {
+		return err
+	}
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %v", statusCode)
+	}
+	return nil
+}
+
+func (c *Connector) prepareRenewalRequest(renewReq *certificate.RenewalRequest) error {
+	if renewReq.CertificateRequest != nil && len(renewReq.CertificateRequest.GetCSR()) != 0 {
+		return nil
+	}
+
+	searchReq := &certificate.Request{
+		PickupID: renewReq.CertificateDN,
+	}
+
+	// here we fetch old cert anyway
+	oldPcc, err := c.RetrieveCertificate(searchReq)
+	if err != nil {
+		return fmt.Errorf("Failed to fetch old certificate by id %s: %s", renewReq.CertificateDN, err)
+	}
+	oldCertBlock, _ := pem.Decode([]byte(oldPcc.Certificate))
+	if oldCertBlock == nil || oldCertBlock.Type != "CERTIFICATE" {
+		return fmt.Errorf("Failed to fetch old certificate by id %s: PEM parse error", renewReq.CertificateDN)
+	}
+	oldCert, err := x509.ParseCertificate([]byte(oldCertBlock.Bytes))
+	if err != nil {
+		return fmt.Errorf("Failed to fetch old certificate by id %s: %s", renewReq.CertificateDN, err)
+	}
+	if renewReq.CertificateRequest == nil {
+		renewReq.CertificateRequest = certificate.NewRequest(oldCert)
+	}
+	err = c.GenerateRequest(&endpoint.ZoneConfiguration{}, renewReq.CertificateRequest)
+	return err
+}
+
 // RenewCertificate attempts to renew the certificate
 func (c *Connector) RenewCertificate(renewReq *certificate.RenewalRequest) (requestID string, err error) {
-
 	if renewReq.Thumbprint != "" && renewReq.CertificateDN == "" {
 		// search by Thumbprint and fill *renewReq.CertificateDN
 		searchResult, err := c.searchCertificatesByFingerprint(renewReq.Thumbprint)
@@ -494,31 +702,21 @@ func (c *Connector) RenewCertificate(renewReq *certificate.RenewalRequest) (requ
 	if renewReq.CertificateRequest != nil && renewReq.CertificateRequest.OmitSANs {
 		// if OmitSANSs flag is presented we need to clean SANs values in TPP
 		// for preventing adding them to renew request on TPP side
-		type field struct {
-			Name  string
-			Value *string
-		}
-		r := struct {
-			AttributeData []field
-		}{[]field{
+		err = c.putCertificateInfo(renewReq.CertificateDN, []nameSliceValuePair{
 			{"X509 SubjectAltName DNS", nil},
 			{"X509 SubjectAltName IPAddress", nil},
 			{"X509 SubjectAltName RFC822", nil},
 			{"X509 SubjectAltName URI", nil},
 			{"X509 SubjectAltName OtherName UPN", nil},
-		}}
-		guid, err := c.configDNToGuid(renewReq.CertificateDN)
+		})
 		if err != nil {
-			return "", err
-		}
-		statusCode, _, _, err := c.request("PUT", urlResourceCertificate+urlResource(guid), r)
-		if err != nil {
-			return "", err
-		}
-		if statusCode != http.StatusOK {
-			return "", fmt.Errorf("can't clean SANs values for certificate on server side")
+			return "", fmt.Errorf("can't clean SANs values for certificate on server side: %v", err)
 		}
 	}
+	//err = c.prepareRenewalRequest(renewReq) todo: uncomment on refactoring
+	//if err != nil {
+	//	return "", err
+	//}
 	var r = certificateRenewRequest{}
 	r.CertificateDN = renewReq.CertificateDN
 	if renewReq.CertificateRequest != nil && len(renewReq.CertificateRequest.GetCSR()) != 0 {
@@ -641,12 +839,26 @@ func (c *Connector) ReadZoneConfiguration() (config *endpoint.ZoneConfiguration,
 
 }
 
-func (c *Connector) ImportCertificate(r *certificate.ImportRequest) (*certificate.ImportResponse, error) {
+func (c *Connector) ImportCertificate(req *certificate.ImportRequest) (*certificate.ImportResponse, error) {
+	r := importRequest{
+		PolicyDN:        req.PolicyDN,
+		ObjectName:      req.ObjectName,
+		CertificateData: req.CertificateData,
+		PrivateKeyData:  req.PrivateKeyData,
+		Password:        req.Password,
+		Reconcile:       req.Reconcile,
+	}
 
 	if r.PolicyDN == "" {
 		r.PolicyDN = getPolicyDN(c.zone)
 	}
 
+	origin := endpoint.SDKName + " (+)" // standard suffix needed to differentiate certificates imported from enrolled in TPP
+	for _, f := range req.CustomFields {
+		if f.Type == certificate.CustomFieldOrigin {
+			origin = f.Value + " (+)"
+		}
+	}
 	statusCode, _, body, err := c.request("POST", urlResourceCertificateImport, r)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", verror.ServerTemporaryUnavailableError, err)
@@ -657,6 +869,10 @@ func (c *Connector) ImportCertificate(r *certificate.ImportRequest) (*certificat
 		err := json.Unmarshal(body, response)
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to decode import response message: %s", verror.ServerError, err)
+		}
+		err = c.putCertificateInfo(response.CertificateDN, []nameSliceValuePair{{Name: "Origin", Value: []string{origin}}})
+		if err != nil {
+			log.Println(err)
 		}
 		return response, nil
 	case http.StatusBadRequest:

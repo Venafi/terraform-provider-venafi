@@ -38,8 +38,8 @@ import (
 
 const defaultKeySize = 2048
 const defaultSignatureAlgorithm = x509.SHA256WithRSA
-const defaultClientID = "vcert-go"
-const defaultScope = "certificate:manage,revoke;"
+const defaultClientID = "vcert-sdk"
+const defaultScope = "certificate:manage,revoke"
 const defaultWorkloadName = "Default"
 
 type customField struct {
@@ -152,9 +152,23 @@ type nameValuePair struct {
 	Value string `json:",omitempty"`
 }
 
+type nameSliceValuePair struct {
+	Name  string
+	Value []string
+}
+
 type certificateRequestResponse struct {
 	CertificateDN string `json:",omitempty"`
 	Error         string `json:",omitempty"`
+}
+
+type importRequest struct {
+	PolicyDN        string `json:",omitempty"`
+	ObjectName      string `json:",omitempty"`
+	CertificateData string `json:",omitempty"`
+	PrivateKeyData  string `json:",omitempty"`
+	Password        string `json:",omitempty"`
+	Reconcile       bool   `json:",omitempty"`
 }
 
 type authorizeResponse struct {
@@ -209,6 +223,53 @@ type policyRequest struct {
 	Class         string `json:",omitempty"`
 	AttributeName string `json:",omitempty"`
 }
+type metadataItem struct {
+	AllowedValues     []string `json:",omitempty"`
+	Classes           []string `json:",omitempty"`
+	ConfigAttribute   string   `json:",omitempty"`
+	DefaultValues     []string `json:",omitempty"`
+	DN                string   `json:",omitempty"`
+	ErrorMessage      string   `json:",omitempty"`
+	Guid              string   `json:",omitempty"`
+	Help              string   `json:",omitempty"`
+	Label             string   `json:",omitempty"`
+	Name              string   `json:",omitempty"`
+	Policyable        bool     `json:",omitempty"`
+	RegularExpression string   `json:",omitempty"`
+	RenderHidden      bool     `json:",omitempty"`
+	RenderReadOnly    bool     `json:",omitempty"`
+	Type              int      `json:",omitempty"`
+}
+type metadataKeyValueSet struct {
+	Key   metadataItem `json:",omitempty"`
+	Value []string     `json:",omitempty"`
+}
+
+type metadataGetItemsRequest struct {
+	ObjectDN string `json:"DN"`
+}
+type metadataGetItemsResponse struct {
+	Items  []metadataItem `json:",omitempty"`
+	Locked bool           `json:",omitempty"`
+}
+type metadataGetResponse struct {
+	Data   []metadataKeyValueSet
+	Locked bool `json:",omitempty"`
+}
+type guidData struct {
+	ItemGuid string   `json:",omitempty"`
+	List     []string `json:",omitempty"`
+}
+type metadataSetRequest struct {
+	DN           string     `json:"DN"`
+	GuidData     []guidData `json:"GuidData"`
+	KeepExisting bool       `json:"KeepExisting"`
+}
+type metadataSetResponse struct {
+	Locked bool `json:",omitempty"`
+	Result int  `json:",omitempty"`
+}
+type systemStatusVersionResponse string
 
 type urlResource string
 
@@ -230,7 +291,11 @@ const (
 	urlResourceConfigDnToGuid         urlResource = "vedsdk/Config/DnToGuid"
 	urlResourceConfigReadDn           urlResource = "vedsdk/Config/ReadDn"
 	urlResourceFindPolicy             urlResource = "vedsdk/config/findpolicy"
-	urlResourceRefreshAccessToken     urlResource = "vedauth/authorize/token"
+	urlResourceRefreshAccessToken     urlResource = "vedauth/authorize/token" // #nosec
+	urlResourceMetadataSet            urlResource = "vedsdk/metadata/set"
+	urlResourceAllMetadataGet         urlResource = "vedsdk/metadata/getitems"
+	urlResourceMetadataGet            urlResource = "vedsdk/metadata/get"
+	urlResourceSystemStatusVersion    urlResource = "vedsdk/SystemStatus/Version"
 )
 
 const (
@@ -280,18 +345,8 @@ func retrieveChainOptionFromString(order string) retrieveChainOption {
 	}
 }
 
-func (c *Connector) getURL(resource urlResource) (string, error) {
-	if c.baseURL == "" {
-		return "", fmt.Errorf("The Host URL has not been set")
-	}
-	return fmt.Sprintf("%s%s", c.baseURL, resource), nil
-}
-
 func (c *Connector) request(method string, resource urlResource, data interface{}) (statusCode int, statusText string, body []byte, err error) {
-	url, err := c.getURL(resource)
-	if err != nil {
-		return
-	}
+	url := c.baseURL + string(resource)
 	var payload io.Reader
 	var b []byte
 	if method == "POST" || method == "PUT" {
@@ -365,7 +420,7 @@ func (c *Connector) getHTTPClient() *http.Client {
 	}
 	netTransport.TLSClientConfig = tlsConfig
 	c.client = &http.Client{
-		Timeout:   time.Second * 10,
+		Timeout:   time.Second * 30,
 		Transport: netTransport,
 	}
 	return c.client
@@ -596,6 +651,22 @@ func (sp serverPolicy) toZoneConfig(zc *endpoint.ZoneConfiguration) {
 	zc.OrganizationalUnit = sp.Subject.OrganizationalUnit.Values
 	zc.Province = sp.Subject.State.Value
 	zc.Locality = sp.Subject.City.Value
+	key := endpoint.AllowedKeyConfiguration{}
+	err := key.KeyType.Set(sp.KeyPair.KeyAlgorithm.Value)
+	if err != nil {
+		return
+	}
+	if sp.KeyPair.KeySize.Value != 0 {
+		key.KeySizes = []int{sp.KeyPair.KeySize.Value}
+	}
+	if sp.KeyPair.EllipticCurve.Value != "" {
+		curve := certificate.EllipticCurveNotSet
+		err = curve.Set(sp.KeyPair.EllipticCurve.Value)
+		if err == nil {
+			key.KeyCurves = append(key.KeyCurves, curve)
+		}
+	}
+	zc.KeyConfiguration = &key
 }
 
 func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
