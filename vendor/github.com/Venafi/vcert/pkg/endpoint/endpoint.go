@@ -22,14 +22,17 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/certificate"
 	"log"
+	"net"
 	"net/http"
 	"regexp"
-	"sort"
+
+	"github.com/Venafi/vcert/pkg/certificate"
 )
 
 const SDKName = "Venafi VCert-Go"
+
+var LocalIP string
 
 // ConnectorType represents the available connectors
 type ConnectorType int
@@ -46,6 +49,7 @@ const (
 
 func init() {
 	log.SetPrefix("vCert: ")
+	LocalIP = getPrimaryNetAddr()
 }
 
 func (t ConnectorType) String() string {
@@ -164,10 +168,9 @@ type ZoneConfiguration struct {
 	Province           string
 	Locality           string
 	Policy
-
-	HashAlgorithm x509.SignatureAlgorithm
-
+	HashAlgorithm         x509.SignatureAlgorithm
 	CustomAttributeValues map[string]string
+	KeyConfiguration      *AllowedKeyConfiguration
 }
 
 // AllowedKeyConfiguration contains an allowed key type with its sizes or curves
@@ -417,54 +420,13 @@ func (z *ZoneConfiguration) UpdateCertificateRequest(request *certificate.Reques
 		request.SignatureAlgorithm = x509.SHA256WithRSA
 	}
 
-	if len(z.AllowedKeyConfigurations) != 0 {
-		foundMatch := false
-		for _, keyConf := range z.AllowedKeyConfigurations {
-			if keyConf.KeyType == request.KeyType {
-				foundMatch = true
-				switch request.KeyType {
-				case certificate.KeyTypeECDSA:
-					if len(keyConf.KeyCurves) != 0 {
-						request.KeyCurve = keyConf.KeyCurves[0]
-					} else {
-						request.KeyCurve = certificate.EllipticCurveDefault
-					}
-				case certificate.KeyTypeRSA:
-					if len(keyConf.KeySizes) != 0 {
-						sizeOK := false
-						for _, size := range keyConf.KeySizes {
-							if size == request.KeyLength {
-								sizeOK = true
-							}
-						}
-						if !sizeOK {
-							sort.Sort(sort.Reverse(sort.IntSlice(keyConf.KeySizes)))
-							request.KeyLength = keyConf.KeySizes[0]
-						}
-					} else {
-						request.KeyLength = 2048
-					}
-				}
-			}
+	if z.KeyConfiguration != nil {
+		request.KeyType = z.KeyConfiguration.KeyType
+		if len(z.KeyConfiguration.KeySizes) != 0 && request.KeyLength == 0 {
+			request.KeyLength = z.KeyConfiguration.KeySizes[0]
 		}
-		if !foundMatch {
-			configuration := z.AllowedKeyConfigurations[0]
-			request.KeyType = configuration.KeyType
-			switch request.KeyType {
-			case certificate.KeyTypeECDSA:
-				if len(configuration.KeyCurves) != 0 {
-					request.KeyCurve = configuration.KeyCurves[0]
-				} else {
-					request.KeyCurve = certificate.EllipticCurveDefault
-				}
-			case certificate.KeyTypeRSA:
-				if len(configuration.KeySizes) != 0 {
-					sort.Sort(sort.Reverse(sort.IntSlice(configuration.KeySizes)))
-					request.KeyLength = configuration.KeySizes[0]
-				} else {
-					request.KeyLength = 2048
-				}
-			}
+		if len(z.KeyConfiguration.KeyCurves) != 0 && request.KeyCurve == certificate.EllipticCurveNotSet {
+			request.KeyCurve = z.KeyConfiguration.KeyCurves[0]
 		}
 	} else {
 		// Zone config has no key length parameters, so we just pass user's -key-size or fall to default 2048
@@ -472,4 +434,13 @@ func (z *ZoneConfiguration) UpdateCertificateRequest(request *certificate.Reques
 			request.KeyLength = 2048
 		}
 	}
+}
+
+func getPrimaryNetAddr() string {
+	conn, err := net.Dial("udp", "venafi.com:1")
+	if err != nil {
+		return "0.0.0.0"
+	}
+	defer conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }

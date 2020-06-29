@@ -1,13 +1,26 @@
+![Venafi](Venafi_logo.png)
+[![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
+![Compatible with TPP 17.3+ & Cloud](https://img.shields.io/badge/Compatibility-TPP%2017.3+%20%26%20Cloud-f9a90c)  
+_This open source project is community-supported. To report a problem or share an idea, use the
+**[Issues](../../issues)** tab; and if you have a suggestion for fixing the issue, please include those details, too.
+In addition, use the **[Pull requests](../../pulls)** tab to contribute actual bug fixes or proposed enhancements.
+We welcome and appreciate all contributions._
+
 # VCert
 
-<img src="https://www.venafi.com/sites/default/files/content/body/Light_background_logo.png" width="330px" height="69px"/>  
+[![GoDoc](https://godoc.org/github.com/Venafi/vcert?status.svg)](https://godoc.org/github.com/Venafi/vcert)  [![Go Report Card](https://goreportcard.com/badge/github.com/Venafi/vcert)](https://goreportcard.com/report/github.com/Venafi/vcert)
+[![Used By](https://sourcegraph.com/github.com/Venafi/vcert/-/badge.svg)](https://sourcegraph.com/github.com/Venafi/vcert?badge)
 
 VCert is a Go library, SDK, and command line utility designed to simplify key generation and enrollment of machine identities
 (also known as SSL/TLS certificates and keys) that comply with enterprise security policy by using the
 [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi Cloud](https://pki.venafi.com/venafi-cloud/).
 
 #### Compatibility
-VCert releases are tested using the latest version of Trust Protection Platform.  The [latest VCert release](../../releases/latest) should be compatible with Trust Protection Platform 17.3 or higher based on the subset of API methods it consumes.
+
+VCert releases are tested using the latest version of Trust Protection Platform.  General functionality of the
+[latest VCert release](../../releases/latest) should be compatible with Trust Protection Platform 17.3 or higher.
+Custom Fields and Instance Tracking require TPP 18.2 or higher, and Token Authentication requires TPP 19.2 or higher.
 
 ## Installation
 
@@ -85,18 +98,18 @@ make test
 Integration tests for Trust Protection Platform and Cloud products require endpoint connection variables (Venafi Cloud products display the API key and Zone values in the user interface):
 
 ```sh
-export VCERT_TPP_URL=https://tpp.venafi.example/vedsdk
-export VCERT_TPP_USER=tpp-user
-export VCERT_TPP_PASSWORD=tpp-password
-export VCERT_TPP_ZONE='some\policy'
+export TPP_URL=https://tpp.venafi.example/vedsdk
+export TPP_USER=tpp-user
+export TPP_PASSWORD=tpp-password
+export TPP_ZONE='some\policy'
 
 make tpp_test
 ```
 
 ```sh
-export VCERT_CLOUD_URL=https://api.venafi.cloud/v1
-export VCERT_CLOUD_APIKEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-export VCERT_CLOUD_ZONE=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
+export CLOUD_URL=https://api.venafi.cloud/v1
+export CLOUD_APIKEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+export CLOUD_ZONE=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 
 make cloud_test
 ```

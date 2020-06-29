@@ -66,8 +66,9 @@ func (ec *EllipticCurve) Set(value string) error {
 }
 
 const (
+	EllipticCurveNotSet EllipticCurve = iota
 	// EllipticCurveP521 represents the P521 curve
-	EllipticCurveP521 EllipticCurve = iota
+	EllipticCurveP521
 	// EllipticCurveP256 represents the P256 curve
 	EllipticCurveP256
 	// EllipticCurveP384 represents the P384 curve
@@ -212,13 +213,13 @@ type RenewalRequest struct {
 }
 
 type ImportRequest struct {
-	PolicyDN             string            `json:",omitempty"`
-	ObjectName           string            `json:",omitempty"`
-	CertificateData      string            `json:",omitempty"`
-	PrivateKeyData       string            `json:",omitempty"`
-	Password             string            `json:",omitempty"`
-	Reconcile            bool              `json:",omitempty"`
-	CASpecificAttributes map[string]string `json:",omitempty"`
+	PolicyDN        string
+	ObjectName      string
+	CertificateData string
+	PrivateKeyData  string
+	Password        string
+	Reconcile       bool
+	CustomFields    []CustomField
 }
 
 type ImportResponse struct {
@@ -451,7 +452,9 @@ func GenerateECDSAPrivateKey(curve EllipticCurve) (*ecdsa.PrivateKey, error) {
 	var priv *ecdsa.PrivateKey
 	var c elliptic.Curve
 	var err error
-
+	if curve == EllipticCurveNotSet {
+		curve = EllipticCurveDefault
+	}
 	switch curve {
 	case EllipticCurveP521:
 		c = elliptic.P521()
