@@ -65,3 +65,7 @@ The following attributes are exported:
   concatenated together.
 
 * `certificate` - The X509 certificate in PEM format.
+
+## Certificate Renewal
+
+The `venafi_certificate` resource handles certificate renewals as long as a terraform apply or plan is done within the `experation_window` period. Keep in mind that this experation window in Terraform needs to match the renewal window set within your CA/TPP.
