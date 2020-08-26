@@ -142,6 +142,7 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
+
 func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	certUntyped, ok := d.GetOk("certificate")
 	if !ok {

@@ -4,9 +4,11 @@ This is an example Terraform file to show capabilities of the VCert integration.
 
 
 variable "CLOUD_APIKEY" {
+  default = ""
 }
 
 variable "CLOUD_ZONE" {
+  default = ""
 }
 
 variable "CLOUD_URL" {
@@ -14,19 +16,31 @@ variable "CLOUD_URL" {
 }
 
 variable "TPP_USER" {
+  default = ""
 }
 
 variable "TPP_PASSWORD" {
-
+  default = ""
 }
 
 variable "TPP_URL" {
+  default = ""
 }
 
 variable "TPP_ZONE" {
+  default = ""
 }
 
 variable "TRUST_BUNDLE" {
+  default = ""
+}
+
+variable "ACCESS_TOKEN" {
+  default = ""
+}
+
+variable "TPP_TOKEN_URL"{
+  default = ""
 }
 
 resource "random_string" "cn" {
@@ -65,6 +79,14 @@ provider "venafi" {
   url          = var.TPP_URL
   tpp_username = var.TPP_USER
   tpp_password = var.TPP_PASSWORD
+  zone         = var.TPP_ZONE
+  trust_bundle = file(var.TRUST_BUNDLE)
+}
+
+provider "venafi"{
+  alias = "tpp_token"
+  url          = var.TPP_TOKEN_URL
+  access_token = var.ACCESS_TOKEN
   zone         = var.TPP_ZONE
   trust_bundle = file(var.TRUST_BUNDLE)
 }
@@ -195,3 +217,35 @@ output "cert_private_key_tpp" {
   value = venafi_certificate.tpp_certificate.private_key_pem
 }
 
+/////////////////////
+resource "venafi_certificate" "token_certificate" {
+  provider    = venafi.tpp_token
+  common_name = "tpp-${random_string.cn.result}.venafi.example.com"
+  algorithm   = "RSA"
+  rsa_bits    = "2048"
+  san_dns = [
+    "tpp-${random_string.cn.result}-web01.example.com",
+    "tpp-${random_string.cn.result}-web02.example.com",
+  ]
+  san_ip = [
+    "10.1.1.1",
+    "192.168.0.1",
+  ]
+  san_email = [
+    "tpp@venafi.com",
+    "tpp2@venafi.com",
+  ]
+  key_password = "xxxxx"
+}
+
+output "cert_certificate_token" {
+  value = venafi_certificate.token_certificate.certificate
+}
+
+output "cert_chain_tpp_token" {
+  value = venafi_certificate.token_certificate.chain
+}
+
+output "cert_private_key_token" {
+  value = venafi_certificate.token_certificate.private_key_pem
+}
