@@ -128,8 +128,9 @@ output "cert_private_key" {
 
 To invoke execute `terraform plan`, then `terraform apply`, and finally `terraform show` from the directory containing your Terraform configuration file (e.g. `main.tf`).
 
-## Renewing a Certificate
-The `venafi_certificate` resource handles certificate renewals as long as a terraform apply is done within the `experation_window` period. Keep in mind that this experation window in Terraform needs to match the renewal window set within your CA/TPP.
+### Renewing a Certificate
+
+The `venafi_certificate` resource handles certificate renewals as long as a terraform apply is done within the `expiration_window` period. Keep in mind that this expiration window in Terraform needs to match the renewal window set within your CA/TPP.
 
 ## Requirements for usage with Trust Protection Platform
 
