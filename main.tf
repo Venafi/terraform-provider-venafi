@@ -39,10 +39,6 @@ variable "ACCESS_TOKEN" {
   default = ""
 }
 
-variable "TPP_TOKEN_URL"{
-  default = ""
-}
-
 resource "random_string" "cn" {
   length  = 5
   special = false

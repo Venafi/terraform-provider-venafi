@@ -57,7 +57,7 @@ Example for Venafi Cloud: Default`,
 			"access_token": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VENAFI_ACCESS", nil),
+				DefaultFunc: schema.EnvDefaultFunc("VENAFI_TOKEN", nil),
 				Description: `Access token for TPP, user should use this for authentication`,
 			},
 			"api_key": &schema.Schema{

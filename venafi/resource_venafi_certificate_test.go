@@ -580,7 +580,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 	data.key_algo = ecdsa521
 	data.expiration_window = 168
 	config := fmt.Sprintf(tokenConfig, tokenProviderECDSA, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP Token certificate with ECDSA key  with config:\n %s", config)
+	t.Logf("Testing TPP Token certificate with ECDSA key with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
