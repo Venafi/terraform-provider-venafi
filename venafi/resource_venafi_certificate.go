@@ -1,10 +1,13 @@
 package venafi
 
 import (
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"net"
+	"software.sslmate.com/src/go-pkcs12"
 	"time"
 
 	"crypto/x509"
@@ -103,6 +106,11 @@ func resourceVenafiCertificate() *schema.Resource {
 				Computed: true,
 			},
 			"csr_pem": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"pkcs12": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -356,5 +364,76 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	d.SetId(req.PickupID)
 	log.Println("Setting up private key")
+
+	KeyPassword := d.Get("key_password").(string)
+	pkcs12_cert, err := AsPKCS12(pcc.Certificate, pcc.PrivateKey, pcc.Chain, KeyPassword)
+
+	if err == nil {
+		s := base64.StdEncoding.EncodeToString(pkcs12_cert)
+		if err = d.Set("pkcs12", s); err != nil {
+			return fmt.Errorf("error setting pkcs12: %s", err)
+		}
+	}
+
 	return d.Set("private_key_pem", pcc.PrivateKey)
+}
+
+func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword string) ([]byte, error) {
+
+	if len(certificate) == 0 || len(privateKey) == 0 {
+		return nil, fmt.Errorf("at least certificate and private key are required")
+	}
+	p, _ := pem.Decode([]byte(certificate))
+	if p == nil || p.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("certificate parse error(1)")
+	}
+	cert, err := x509.ParseCertificate(p.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("certificate parse error(2)")
+	}
+
+	// chain?
+	var chain_list = []*x509.Certificate{}
+	for _, chain_cert := range chain {
+		crt, _ := pem.Decode([]byte(chain_cert))
+		cert, err := x509.ParseCertificate(crt.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("chain certificate parse error")
+		}
+		chain_list = append(chain_list, cert)
+	}
+
+	// key?
+	p, _ = pem.Decode([]byte(privateKey))
+	if p == nil {
+		return nil, fmt.Errorf("missing private key PEM")
+	}
+	var privDER []byte
+	if x509.IsEncryptedPEMBlock(p) {
+		privDER, err = x509.DecryptPEMBlock(p, []byte(keyPassword))
+		if err != nil {
+			return nil, fmt.Errorf("private key PEM decryption error: %s", err)
+		}
+	} else {
+		privDER = p.Bytes
+	}
+	var privKey interface{}
+	switch p.Type {
+	case "EC PRIVATE KEY":
+		privKey, err = x509.ParseECPrivateKey(privDER)
+	case "RSA PRIVATE KEY":
+		privKey, err = x509.ParsePKCS1PrivateKey(privDER)
+	default:
+		return nil, fmt.Errorf("unexpected private key PEM type: %s", p.Type)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("private key error(3): %s", err)
+	}
+
+	bytes, err := pkcs12.Encode(rand.Reader, privKey, cert, chain_list, keyPassword)
+	if err != nil {
+		return nil, fmt.Errorf("encode error: %s", err)
+	}
+
+	return bytes, nil
 }
