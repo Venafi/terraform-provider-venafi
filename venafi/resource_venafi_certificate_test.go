@@ -24,6 +24,8 @@ variable "TRUST_BUNDLE" {default = "%s"}
 variable "CLOUD_URL" {default = "%s"}
 variable "CLOUD_APIKEY" {default = "%s"}
 variable "CLOUD_ZONE" {default = "%s"}
+variable "TPP_ACCESS_TOKEN" {default = "%s"}
+variable "TPP_TOKEN_URL" {default = "%s"}
 `,
 		os.Getenv("TPP_USER"),
 		os.Getenv("TPP_PASSWORD"),
@@ -33,7 +35,9 @@ variable "CLOUD_ZONE" {default = "%s"}
 		os.Getenv("TRUST_BUNDLE"),
 		os.Getenv("CLOUD_URL"),
 		os.Getenv("CLOUD_APIKEY"),
-		os.Getenv("CLOUD_ZONE"))
+		os.Getenv("CLOUD_ZONE"),
+		os.Getenv("TPP_ACCESS_TOKEN"),
+		os.Getenv("TPP_TOKEN_URL"))
 
 	tppProvider = environmentVariables + `
 provider "venafi" {
@@ -53,7 +57,22 @@ provider "venafi" {
 	zone = "${var.TPP_ZONE_ECDSA}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
-
+	tokenProvider = environmentVariables + `
+provider "venafi" {
+	alias = "token_tpp"
+	url = "${var.TPP_TOKEN_URL}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
+	zone = "${var.TPP_ZONE}"
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
+	tokenProviderECDSA = environmentVariables + `
+provider "venafi" {
+	alias = "token_tpp"
+	url = "${var.TPP_TOKEN_URL}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
+	zone = "${var.TPP_ZONE_ECDSA}"
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
 	cloudProvider = environmentVariables + `
 provider "venafi" {
 	alias = "cloud"
@@ -135,6 +154,30 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.tpp_certificate.private_key_pem}"
 }`
+	tokenConfig = `
+%s
+resource "venafi_certificate" "token_certificate" {
+	provider = "venafi.token_tpp"
+	common_name = "%s"
+	san_dns = [
+		"%s"
+	]
+	san_ip = [
+		"%s"
+	]
+	san_email = [
+		"%s"
+	]
+	%s
+	key_password = "%s"
+	expiration_window = %d
+}
+output "certificate" {
+	value = "${venafi_certificate.token_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}`
 )
 
 func TestDevSignedCert(t *testing.T) {
@@ -151,7 +194,7 @@ func TestDevSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -176,7 +219,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -204,7 +247,7 @@ func TestCloudSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -217,7 +260,7 @@ func TestCloudSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing Cloud certificate second run")
 					gotSerial := data.serial
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -254,7 +297,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -268,7 +311,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -309,7 +352,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandartCert(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
 			},
@@ -318,7 +361,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -357,7 +400,7 @@ func TestTPPSignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandartCert(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -365,7 +408,7 @@ func TestTPPSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -403,7 +446,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandartCert(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -411,7 +454,149 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandartCert(t, &data, s)
+					err := checkStandardCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestTokenSignedCertUpdate(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
+	// tpp signs certificates on 8 years. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
+	data.expiration_window = 70080
+	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing TPP Token certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandardCert(t, &data, s)
+				},
+				ExpectNonEmptyPlan: true,
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP Token certificate update")
+					gotSerial := data.serial
+					err := checkStandardCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare updated original certificate serial %s with updated %s", gotSerial, data.serial)
+						if gotSerial == data.serial {
+							return fmt.Errorf("serial number from updated certificate %s is the same as "+
+								"in original number %s", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+func TestTokenSignedCert(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing TPP Token certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandardCert(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate second run")
+					gotSerial := data.serial
+					err := checkStandardCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestTokenECDSASignedCert(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = ecdsa521
+	data.expiration_window = 168
+	config := fmt.Sprintf(tokenConfig, tokenProviderECDSA, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing TPP Token certificate with ECDSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandardCert(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate second run")
+					gotSerial := data.serial
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -432,7 +617,8 @@ func TestTPPECDSASignedCert(t *testing.T) {
 //TODO: make test with invalid key
 //TODO: make test on invalid options fo RSA, ECSA keys
 //TODO: make test with too big expiration window
-func checkStandartCert(t *testing.T, data *testData, s *terraform.State) error {
+
+func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Testing certificate with cn", data.cn)
 	certUntyped := s.RootModule().Outputs["certificate"].Value
 	certificate, ok := certUntyped.(string)

@@ -45,12 +45,20 @@ Example for Venafi Cloud: Default`,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_USER", nil),
 				Description: `WebSDK user for Venafi Platform. Example: admin`,
+				Deprecated:  ", please use access_token instead",
 			},
 			"tpp_password": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_PASS", nil),
 				Description: `Password for WebSDK user. Example: password`,
+				Deprecated:  ", please use access_token instead",
+			},
+			"access_token": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VENAFI_TOKEN", nil),
+				Description: `Access token for TPP, user should use this for authentication`,
 			},
 			"api_key": &schema.Schema{
 				Type:        schema.TypeString,
@@ -88,6 +96,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	url := d.Get("url").(string)
 	tppUser := d.Get("tpp_username").(string)
 	tppPassword := d.Get("tpp_password").(string)
+	accessToken := d.Get("access_token").(string)
 	zone := d.Get("zone").(string)
 	devMode := d.Get("dev_mode").(bool)
 	trustBundle := d.Get("trust_bundle").(string)
@@ -100,7 +109,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			ConnectorType: endpoint.ConnectorTypeFake,
 			LogVerbose:    true,
 		}
-	} else if tppUser != "" && tppPassword != "" {
+	} else if tppUser != "" && tppPassword != "" && accessToken == "" {
 		log.Printf("Using Platform with url %s to issue certificate\n", url)
 		cfg = vcert.Config{
 			ConnectorType: endpoint.ConnectorTypeTPP,
@@ -108,6 +117,17 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			Credentials: &endpoint.Authentication{
 				User:     tppUser,
 				Password: tppPassword,
+			},
+			Zone:       zone,
+			LogVerbose: true,
+		}
+	} else if accessToken != "" {
+		log.Printf("Using Platform with url %s to issue certificate\n", url)
+		cfg = vcert.Config{
+			ConnectorType: endpoint.ConnectorTypeTPP,
+			BaseUrl:       url,
+			Credentials: &endpoint.Authentication{
+				AccessToken: accessToken,
 			},
 			Zone:       zone,
 			LogVerbose: true,
