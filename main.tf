@@ -79,9 +79,9 @@ provider "venafi" {
   trust_bundle = file(var.TRUST_BUNDLE)
 }
 
-provider "venafi"{
-  alias = "tpp_token"
-  url          = var.TPP_TOKEN_URL
+provider "venafi" {
+  alias        = "tpp_token"
+  url          = var.TPP_URL
   access_token = var.ACCESS_TOKEN
   zone         = var.TPP_ZONE
   trust_bundle = file(var.TRUST_BUNDLE)
