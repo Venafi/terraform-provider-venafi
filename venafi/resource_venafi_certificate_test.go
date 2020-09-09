@@ -25,7 +25,6 @@ variable "CLOUD_URL" {default = "%s"}
 variable "CLOUD_APIKEY" {default = "%s"}
 variable "CLOUD_ZONE" {default = "%s"}
 variable "TPP_ACCESS_TOKEN" {default = "%s"}
-variable "TPP_TOKEN_URL" {default = "%s"}
 `,
 		os.Getenv("TPP_USER"),
 		os.Getenv("TPP_PASSWORD"),
@@ -36,8 +35,7 @@ variable "TPP_TOKEN_URL" {default = "%s"}
 		os.Getenv("CLOUD_URL"),
 		os.Getenv("CLOUD_APIKEY"),
 		os.Getenv("CLOUD_ZONE"),
-		os.Getenv("TPP_ACCESS_TOKEN"),
-		os.Getenv("TPP_TOKEN_URL"))
+		os.Getenv("TPP_ACCESS_TOKEN"))
 
 	tppProvider = environmentVariables + `
 provider "venafi" {
@@ -60,7 +58,7 @@ provider "venafi" {
 	tokenProvider = environmentVariables + `
 provider "venafi" {
 	alias = "token_tpp"
-	url = "${var.TPP_TOKEN_URL}"
+	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
@@ -68,7 +66,7 @@ provider "venafi" {
 	tokenProviderECDSA = environmentVariables + `
 provider "venafi" {
 	alias = "token_tpp"
-	url = "${var.TPP_TOKEN_URL}"
+	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE_ECDSA}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
