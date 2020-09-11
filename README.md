@@ -1,178 +1,224 @@
+![Venafi](Venafi_logo.png)
+[![MPL 2.0 License](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
+![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
+![Compatible with TPP 17.3+ & Cloud](https://img.shields.io/badge/Compatibility-TPP%2017.3+%20%26%20Cloud-f9a90c)  
+_This open source project is community-supported. To report a problem or share an idea, use the
+**[Issues](../../issues)** tab; and if you have a suggestion for fixing the issue, please include those details, too.
+In addition, use the **[Pull requests](../../pulls)** tab to contribute actual bug fixes or proposed enhancements.
+We welcome and appreciate all contributions._
+
 # Venafi Provider for HashiCorp Terraform
 
-<img src="https://www.venafi.com/sites/default/files/content/body/Light_background_logo.png" width="330px" height="69px"/>
+This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://terraform.io/) by seamlessly integrating with the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi Cloud](https://www.venafi.com/platform/cloud/devops) in a manner that ensures compliance with corporate security policy and provides visibility into certificate issuance enterprise wide.
 
-This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://www.terraform.io/) by seamlessly integrating with the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) and [Venafi Cloud](https://pki.venafi.com/venafi-cloud/) in a manner that ensures compliance with corporate security policy and provides visibility into certificate issuance across the enterprise.
+### Venafi Trust Protection Platform Requirements
 
-This Terraform provider is powered by the Venafi VCert library (https://github.com/Venafi/vcert).
+Your certificate authority (CA) must be able to issue a certificate in
+under one minute. Microsoft Active Directory Certificate Services (ADCS) is a
+popular choice. Other CA choices may have slightly different
+requirements.
+
+Within Trust Protection Platform, configure these settings. For more
+information see the _Venafi Administration Guide_.
+
+- A user account that has an authentication token for the "Venafi Provider
+  for HashiCorp Terraform" (ID "hashicorp-terraform-by-venafi") API Application
+  as of 20.1 (or scope "certificate:manage" for 19.2 through 19.4) or has been
+  granted WebSDK Access (deprecated)
+- A Policy folder where the user has the following permissions: View, Read,
+  Write, Create.
+- Enterprise compliant policies applied to the folder including:
+
+  - Subject DN values for Organizational Unit (OU), Organization (O),
+    City/Locality (L), State/Province (ST) and Country (C).
+  - CA Template that Trust Protection Platform will use to enroll general
+    certificate requests.
+  - Management Type not locked or locked to 'Enrollment'.
+  - Certificate Signing Request (CSR) Generation unlocked or not locked to
+    'Service Generated CSR'.
+  - Generate Key/CSR on Application not locked or locked to 'No'.
+  - (Recommended) Disable Automatic Renewal set to 'Yes'.
+  - (Recommended) Key Bit Strength set to 2048 or higher.
+  - (Recommended) Domain Whitelisting policy appropriately assigned.
+
+  **NOTE**: If you are using Microsoft ACDS, the CRL distribution point and
+  Authority Information Access (AIA) URIs must start with an HTTP URI
+  (non-default configuration). If an LDAP URI appears first in the X509v3
+  extensions, some applications will fail, such as NGINX ingress controllers.
+  These applications aren't able to retrieve CRL and OCSP information.
+
+#### Trust between Vault and Trust Protection Platform
+
+The Trust Protection Platform REST API (WebSDK) must be secured with a
+certificate. Generally, the certificate is issued by a CA that is not publicly
+trusted so establishing trust is a critical part of your setup.
+
+Two methods can be used to establish trust. Both require the trust anchor
+(root CA certificate) of the WebSDK certificate. If you have administrative
+access, you can import the root certificate into the trust store for your
+operating system. If you don't have administrative access, or prefer not to
+make changes to your system configuration, save the root certificate to a file
+in PEM format (e.g. /opt/venafi/bundle.pem) and reference it using the
+`trust_bundle_file` parameter whenever you create or update a PKI role in your
+Vault.
+
+### Venafi Cloud Requirements
+
+If you are using Venafi Cloud, be sure to set up an issuing template, project,
+and any other dependencies that appear in the Venafi Cloud documentation.
+
+- Set up an issuing template to link Venafi Cloud to your CA. To learn more,
+  search for "Issuing Templates" in the
+  [Venafi Cloud Help system](https://docs.venafi.cloud/help/Default.htm).
+- Create a project and zone that identifies the template and other information.
+  To learn more, search for "Projects" in the
+  [Venafi Cloud Help system](https://docs.venafi.cloud/help/Default.htm).
+
+## Setup
+
+The Venafi Provider for HashiCorp Terraform is an officially verified
+integration. As such, releases are published to the
+[Terraform Registry](https://registry.terraform.io/providers/Venafi/venafi/latest)
+where they are available for `terraform init` to automatically download
+whenever the provider is referenced by a configuration file.  No setup
+steps are required to use an official release of this provider other than to
+download and install Terraform itself.
+
+To use a pre-release or custom built version of this provider, manually install
+the plugin binary into
+[required directory](https://www.terraform.io/docs/commands/init.html#plugin-installation)
+using the prescribed
+[subdirectory structure](https://www.terraform.io/docs/configuration/provider-requirements.html#source-addresses)
+that must align with how the provider is referenced in the `required_providers`
+block of the configuration file.
 
 ## Usage
 
-[![asciicast](https://asciinema.org/a/237631.svg)](https://asciinema.org/a/237631)
+A Terraform module is a container for multiple resources that are used together
+and the steps that follow illustrate the resources required to enroll certificates
+using the Venafi Provider with HashiCorp Terraform 0.12 (and higher). 
 
-### Download and install the Venafi provider plugin
+1. Declare that the Venafi Provider is required:
 
-Go to [releases](https://github.com/terraform-providers/terraform-provider-venafi/releases) and select the latest package for your operating system. 
-Then install by downloading and unzipping package to `%APPDATA%\terraform.d\plugins` \[Windows\] or `~/.terraform.d/plugins` \[other systems\]. Make sure that binary name matches 
-[terraform plugin naming convention](https://www.terraform.io/docs/configuration/providers.html#plugin-names-and-versions). 
-Example: terraform-provider-venafi_v0.6.2
+   ```text
+   terraform {
+     required_providers {
+       venafi = {
+         source = "venafi/venafi"
+         version = "~> 0.10.0"
+       }
+     }
+     required_version = ">= 0.13"
+   }
+   ```
 
-For more information about installing third party plugins please see the [Terraform documentation](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins)
+1. Specify the connection and authentication settings for the `venafi` provider:
 
-### Define the Venafi provider
+   **Trust Protection Platform**:
 
-Create a Terraform configuration file called `main.tf` with a "venafi" provider block like this for the Venafi Platform:
+   ```text
+   provider "venafi" {
+     url          = "https://tpp.venafi.example"
+     trust_bundle = file("/path/to/bundle.pem")
+     access_token = "p0WTt3sDPbzm2BDIkoJROQ=="
+     zone         = "DevOps\\Terraform"
+   }
+   ```
 
-```
-provider "venafi" {
-    url          = "https://tpp.venafi.example:443/vedsdk"
-    tpp_username = "local:admin"
-    tpp_password = "password"
-    zone         = "DevOps\\Terraform"
-}
-```
+   **Venafi Cloud**:
 
-and like this for Venafi Cloud:
+   ```text
+   provider "venafi" {
+     api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     zone    = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+   }
+   ```
 
-```
-provider "venafi" {
-    api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    zone    = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
-}
-```
+   The `venafi` provider has the following options:
 
-The Venafi provider has the following options:
+   | Property       | Type   | Description                                                  |
+   | -------------- | ------ | ------------------------------------------------------------ |
+   | `api_key`      | string | Venafi Cloud API key                                         |
+   | `access_token` | string | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application |
+   | `tpp_username` | string | [DEPRECATED] Trust Protection Platform WebSDK username, use `access_token` if possible |
+   | `tpp_password` | string | [DEPRECATED] Trust Protection Platform WebSDK password, use `access_token` if possible |
+   | `trust_bundle` | string | Text file containing trust anchor certificates in PEM format, generally required for TPP |
+   | `url`          | string | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to TPP |
+   | `zone`         | string | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) |
+   | `dev_mode`     | bool   | When "true", the provider operates without connecting to Trust Protection Platform or Venafi Cloud |
 
-| Property       | Type    | Description                                                                            |
-| -------------- | ------- | -------------------------------------------------------------------------------------- |
-| `zone`         |string   |Venafi Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI)        |
-| `url`          |string   |Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                               |
-| `tpp_username` |string   |Venafi Platform WebSDK account username                                                 |
-| `tpp_password` |string   |Venafi Platform WebSDK account password                                                 |
-| `api_key`      |string   |Venafi Cloud API key (e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")                      |
-| `trust_bundle` |string   |PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ) |
-| `dev_mode`     |bool     |When "true" will test the provider without connecting to Venafi Platform or Venafi Cloud|
+   >:pushpin: **NOTE**: Specifying `api_key` indicates that Venafi Cloud will be
+   used so it should not be specified when using Trust Protection Platform is
+   desired and the `access_token` (or `tpp_username` and `tpp_password`)
+   parameters are specified.
 
-> Note: Specifying the 'api_key' indicates the Venafi Cloud will be used so it should not be specified when using Venafi Platform is desired and the 'tpp_username' and 'tpp_password' parameters are specified.
+1. Create a `venafi_certificate` resource that will generate a new key pair and
+   enroll the certificate needed by a "tls_server" application:
 
-### Establishing Trust between Terraform and Trust Protection Platform
+   ```text
+   resource "venafi_certificate" "tls_server" {
+     common_name = "web.venafi.example"
+     san_dns = [
+       "web01.venafi.example",
+       "web02.venafi.example"
+     ]
+     algorithm = "RSA"
+     rsa_bits = "2048"
+     key_password = "${var.pk_pass}"
+   }
+   ```
 
-It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA, therefore establishing trust for that server certificate is a critical part of your configuration.  
-Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file whenever in your `main.tf` using the 'trust_bundle' parameter like this:
+   The `venafi_certificate` resource has the following options, only
+   `common_name` is required:
 
-```
-provider "venafi" {
-    url          = "https://tpp.venafi.example:443/vedsdk"
-    trust_bundle = "${file("/opt/venafi/bundle.pem")}"
-    tpp_username = "local:admin"
-    tpp_password = "password"
-    zone         = "DevOps\\Terraform"
-}
-```
+   | Property            | Type          |  Description                                                                      | Default   |
+   | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
+   | `common_name`       | string        | Common name of certificate                                                        | `none` |
+   | `san_dns`           | string array  | List of DNS names to use as subjects of the certificate                           | `none` |
+   | `san_email`         | string array  | List of email addresses to use as subjects of the certificate                     | `none` |
+   | `san_ip`            | string array  | List of IP addresses to use as subjects of the certificate                        | `none` |
+   | `algorithm`         | string        | Key encryption algorithm. RSA or ECDSA                                            | RSA    |
+   | `rsa_bits`          | integer       | Number of bits to use when generating an RSA key. Applies when `algorithm`=RSA    | 2048   |
+   | `ecdsa_curve`       | string        | ECDSA curve to use when generating a key. Applies when `algorithm`=ECDSA          | P521   |
+   | `key_password`      | string        | Private key password                                                              | `none` |
+   | `expiration_window` | integer       | Number of hours before certificate expiry to request a new certificate            | 168    |
 
-### Creating a Certificate and Private Key pair
+   >:pushpin: **NOTE**: The `venafi_certificate` resource handles certificate
+   renewals as long as a `terraform apply` is done within the `expiration_window`
+   period. Keep in mind that the `expiration_window` in the Terraform
+   configuration needs to align with the renewal window of the issuer to achieve
+   the desired result.
 
-Certificates are created using the `venafi_certificate` resource which has only one required property, `common_name` (string). The following options may also be specified:
+   After enrollment, the `venafi_certificate` resource will expose the following:
 
-| Property            | Type          |  Description                                                                      | Default
-| ------------------- | ------------- | --------------------------------------------------------------------------------- | ---------
-| `common_name`       | string        | Common name of certificate.                                                       |`none`
-| `algorithm`         | string        | Key encryption algorithm. RSA or ECDSA. RSA is default.                           | RSA
-| `rsa_bits`          | integer       | Number of bits to use when generating an RSA key. Applies when `algorithm`=RSA.   | 2048
-| `ecdsa_curve`       | string        | ECDSA curve to use when generating a key. Applies when `algorithm`=ECDSA.         | P521
-| `san_dns`           | string array  | List of DNS names to use as subjects of the certificate.                          | `none`
-| `san_email`         | string array  | List of email addresses to use as subjects of the certificate.                    | `none`
-| `san_ip`            | string array  | List of IP addresses to use as subjects of the certificate.                       | `none`
-| `key_password`      | string        | Private key password.                                                             | `none`
-| `expiration_window` | int           | Number of hours before certificate expiry to request a new certificate.           | 168
+   | Property          | Type   |
+   | ----------------- | ------ |
+   | `private_key_pem` | string |
+   | `chain`           | string |
+   | `certificate`     | string |
+   | `pkcs12`          | string |
 
-After creation this resource will expose the following:
+1. For verification purposes, output the certificate, private key, and
+   chain in PEM format and as a PKCS#12 keystore (base64 encoded):
 
-| Property          | Type   |
-| ----------------- | ------ |
-| `private_key_pem` | string |
-| `chain`           | string |
-| `certificate`     | string |
+   ```text
+   output "my_private_key" {
+     value = "${venafi_certificate.webserver.private_key_pem}"
+     sensitive = true
+   }
 
-The following example would output a freshly generated private key and enrolled certificate with its trust chain:
+   output "my_certificate" {
+     value = "${venafi_certificate.webserver.certificate}"
+   }
 
-```
-provider "venafi" {
-    ...
-}
+   output "my_trust_chain" {
+     value = "${venafi_certificate.webserver.chain}"
+   }
 
-resource "venafi_certificate" "webserver" {
-    common_name = "web.venafi.example"
-    algorithm = "RSA"
-    rsa_bits = "2048"
-    san_dns = [
-        "web01.venafi.example",
-        "web02.venafi.example"
-    ]
-    key_password = "${var.pk_pass}"
-}
+   output "my_p12_keystore" {
+     value = "${venafi_certificate.webserver.pkcs12}"
+   }
+   ```
 
-output "cert_certificate" {
-    value = "${venafi_certificate.webserver.certificate}"
-}
-
-output "cert_chain" {
-    value = "${venafi_certificate.webserver.chain}"
-}
-
-output "cert_private_key" {
-    value = "${venafi_certificate.webserver.private_key_pem}"
-    sensitive   = true
-}
-```
-
-To invoke execute `terraform plan`, then `terraform apply`, and finally `terraform show` from the directory containing your Terraform configuration file (e.g. `main.tf`).
-
-### Renewing a Certificate
-
-The `venafi_certificate` resource handles certificate renewals as long as a terraform apply is done within the `expiration_window` period. Keep in mind that this expiration window in Terraform needs to match the renewal window set within your CA/TPP.
-
-## Requirements for usage with Trust Protection Platform
-
-> Note: The following assume certificates will be enrolled by a Microsoft Active Directory Certificate Services (ADCS) certificate authority. Other CAs will also work with this solution but may have slightly different requirements.
-
-1. The Microsoft CA template appropriate for issuing Vault certificates must be assigned by policy, and should have the "Automatically include CN as DNS SAN" option enabled.
-
-2. The WebSDK user that Vault will be using to authenticate with the Venafi Platform has been granted view, read, write, and create permission to their policy folder.
-
-3. The CRL distribution point and Authority Information Access (AIA) URIs configured for certificates issued by the Microsoft ADCS must start with an HTTP URI (non-default configuration).  If an LDAP URI appears first in the X509v3 extensions, NGINX ingress controllers will fail because they aren't able to retrieve CRL and OCSP information. Example:
-
-```
-X509v3 extensions:
-    X509v3 Subject Alternative Name: DNS:test-cert-manager1.venqa.venafi.com
-    X509v3 Subject Key Identifier: 61:5B:4D:40:F2:CF:87:D5:75:5E:58:55:EF:E8:9E:02:9D:E1:81:8E
-    X509v3 Authority Key Identifier: keyid:3C:AC:9C:A6:0D:A1:30:D4:56:A7:3D:78:BC:23:1B:EC:B4:7B:4D:75
-    X509v3 CRL Distribution Points: Full Name:
-        URI:http://qavenafica.venqa.venafi.com/CertEnroll/QA%20Venafi%20CA.crl
-        URI:ldap:///CN=QA%20Venafi%20CA,CN=qavenafica,CN=CDP,CN=Public%20Key%20Services,CN=Services,CN=Configuration,DC=venqa,DC=venafi,DC=com?certificateRevocationList?base?objectClass=cRLDistributionPoint
-    Authority Information Access:
-        CA Issuers - URI:http://qavenafica.venqa.venafi.com/CertEnroll/qavenafica.venqa.venafi.com_QA%20Venafi%20CA.crt
-        CA Issuers - URI:ldap:///CN=QA%20Venafi%20CA,CN=AIA,CN=Public%20Key%20Services,CN=Services,CN=Configuration,DC=venqa,DC=venafi,DC=com?cACertificate?base?objectClass=certificationAuthority
-```
-
-
-## Development
-
-### Prerequisites
-
-Go language 1.12 or higher.
-
-### Building
-
-Run `make build` to build the project.  This will create a provider binary called `terraform-provider-venafi`.  To have Terraform support the provider simply copy the binary to a location in your $PATH.
-
-Run `make all` to build the project and execute tests.  Tests depend on environment variables which should be exported like this beforehand:
-
-```
-export TPP_USER="local:admin"
-export TPP_PASSWORD="password"
-export CLOUD_APIKEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export TPP_URL="https://tpp.venafi.example:443/vedsdk"
-export TPP_ZONE="DevOps\\\\Terraform"
-export CLOUD_ZONE="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
-```
+1. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
+   `terraform show` from the directory containing the configuration file.
