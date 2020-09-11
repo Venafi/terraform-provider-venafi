@@ -186,8 +186,8 @@ using the Venafi Provider with HashiCorp Terraform 0.12 (and higher).
    >:pushpin: **NOTE**: The `venafi_certificate` resource handles certificate
    renewals as long as a `terraform apply` is done within the `expiration_window`
    period. Keep in mind that the `expiration_window` in the Terraform
-   configuration needs to align with the renewal window of the issuer to achieve
-   the desired result.
+   configuration needs to align with the renewal window of the issuing CA to 
+   achieve the desired result.
 
    After enrollment, the `venafi_certificate` resource will expose the following:
 
