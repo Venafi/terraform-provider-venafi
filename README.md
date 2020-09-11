@@ -136,21 +136,21 @@ using the Venafi Provider with HashiCorp Terraform 0.12 (and higher).
 
    The `venafi` provider has the following options:
 
-   | Property       | Type   | Description                                                  |
-   | -------------- | ------ | ------------------------------------------------------------ |
-   | `api_key`      | string | Venafi Cloud API key                                         |
-   | `access_token` | string | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application |
-   | `tpp_username` | string | [DEPRECATED] Trust Protection Platform WebSDK username, use `access_token` if possible |
-   | `tpp_password` | string | [DEPRECATED] Trust Protection Platform WebSDK password, use `access_token` if possible |
-   | `trust_bundle` | string | Text file containing trust anchor certificates in PEM format, generally required for TPP |
-   | `url`          | string | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to TPP |
-   | `zone`         | string | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) |
-   | `dev_mode`     | bool   | When "true", the provider operates without connecting to Trust Protection Platform or Venafi Cloud |
+   | Property       | Type   | Description                                                  | Env. Variable |
+   | -------------- | ------ | ------------------------------------------------------------ | ------------ |
+   | `api_key`      | string | Venafi Cloud API key                                         | VENAFI_API |
+   | `access_token` | string | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application | VENAFI_TOKEN |
+   | `tpp_username` | string | [DEPRECATED] Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
+   | `tpp_password` | string | [DEPRECATED] Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
+   | `trust_bundle` | string | Text file containing trust anchor certificates in PEM format, generally required for TPP | |
+   | `url`          | string | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to TPP | VENAFI_URL |
+   | `zone`         | string | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) | VENAFI_ZONE |
+   | `dev_mode`     | bool   | When "true", the provider operates without connecting to Trust Protection Platform or Venafi Cloud | VENAFI_DEVMODE |
 
-   >:pushpin: **NOTE**: Specifying `api_key` indicates that Venafi Cloud will be
-   used so it should not be specified when using Trust Protection Platform is
-   desired and the `access_token` (or `tpp_username` and `tpp_password`)
-   parameters are specified.
+   >:pushpin: **NOTE**: The indicated environment variables can be used to specify
+   values for provider settings rather than including them in a configuration 
+   file. Avoid specifying a value for `api_key` unless you are using Venafi Cloud as
+   that variable is used by the provider to decide which Venafi service to use.
 
 1. Create a `venafi_certificate` resource that will generate a new key pair and
    enroll the certificate needed by a "tls_server" application:
