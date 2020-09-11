@@ -16,12 +16,12 @@ certificate.
 ```hcl
 resource "venafi_certificate" "webserver" {
     common_name = "web.venafi.example"
-    algorithm = "RSA"
-    rsa_bits = "2048"
     san_dns = [
         "web01.venafi.example",
         "web02.venafi.example"
     ]
+    algorithm = "RSA"
+    rsa_bits = "2048"
     key_password = "${var.pk_pass}"
 }
 ```
@@ -66,9 +66,9 @@ The following attributes are exported:
 
 * `certificate` - The X509 certificate in PEM format.
 
-* `pkcs12` - A base64-encoded PKCS#12 keystore secured by the `key_password`.  Useful
-  when working with resources like 
-  [azurerm_key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html)
+* `pkcs12` - A base64-encoded PKCS#12 keystore secured by the `key_password`.
+  Useful when working with resources like 
+  [azurerm_key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html).
 
 ## Certificate Renewal
 
