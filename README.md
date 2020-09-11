@@ -222,3 +222,11 @@ using the Venafi Provider with HashiCorp Terraform 0.12 (and higher).
 
 1. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
    `terraform show` from the directory containing the configuration file.
+
+## License
+
+Copyright &copy; Venafi, Inc. All rights reserved.
+
+This solution is licensed under the Mozilla Public License, Version 2.0. See `LICENSE` for the full license text.
+
+Please direct questions/comments to opensource@venafi.com.
