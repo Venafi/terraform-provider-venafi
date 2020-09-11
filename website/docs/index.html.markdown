@@ -46,13 +46,17 @@ to certificate requests and the certificate authority that will issue certificat
 to ask them for a root CA certificate for your `trust_bundle` if the Venafi Platform URL is secured by
 a certificate your Terraform computer does not already trust.
 
+Obtain the required `access_token` for Trust Protection Platform using the 
+[VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token)
+(`getcred action` with `--client-id "hashicorp-vault-by-venafi"` and `--scope "certificate:manage"`) or
+the Platform's Authorize REST API method.
+
 ```hcl
 # Configure the Venafi provider
 provider "venafi" {
-    url          = "https://tpp.venafi.example:443/vedsdk"
+    url          = "https://tpp.venafi.example"
     trust_bundle = "${file("/opt/venafi/bundle.pem")}"
-    tpp_username = "local:terraform"
-    tpp_password = "password"
+    access_token = "p0WTt3sDPbzm2BDIkoJROQ=="
     zone         = "DevOps\\Terraform"
 }
 
@@ -68,13 +72,15 @@ The following arguments are supported:
 
 * `zone` - (Required, string) Zone ID for Venafi Cloud or policy folder for Venafi Platform.
 
-* `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk").
+* `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example").
 
-* `tpp_username` - (Optional, string) WebSDK account username for authentication (applies only to Venafi Platform).
-
-* `tpp_password` - (Optional, string) WebSDK account password for authentication (applies only to Venafi Platform).
+* `access_token` - (Optional, string) authentication token for the 'hashicorp-terraform-by-venafi' API Application (applies only to Venafi Platform).
 
 * `api_key` - (Optional, string) REST API key for authentication (applies only to Venafi Cloud).
+
+* `tpp_username` [DEPRECATED] - (Optional, string) WebSDK account username for authentication (applies only to Venafi Platform).
+
+* `tpp_password` [DEPRECATED] - (Optional, string) WebSDK account password for authentication (applies only to Venafi Platform).
 
 * `trust_bundle` - (Optional, string) PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ).
 
@@ -87,7 +93,8 @@ argument values:
 
 * VENAFI_ZONE
 * VENAFI_URL
+* VENAFI_TOKEN
+* VENAFI_API
 * VENAFI_USER
 * VENAFI_PASS
-* VENAFI_API
 * VENAFI_DEVMODE
