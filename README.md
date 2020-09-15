@@ -96,7 +96,12 @@ block of the configuration file.
 
 A Terraform module is a container for multiple resources that are used together
 and the steps that follow illustrate the resources required to enroll certificates
-using the Venafi Provider with HashiCorp Terraform 0.12 (and higher). 
+using the Venafi Provider with HashiCorp Terraform 0.13.  
+
+>:pushpin: **NOTE**: For Terraform 0.12, omit the `required_providers` block and
+specify any desired version constraints for the provider in the `provider` block
+using the
+[older way to manage provider versions](https://www.terraform.io/docs/configuration/providers.html#version-an-older-way-to-manage-provider-versions).
 
 1. Declare that the Venafi Provider is required:
 
@@ -140,8 +145,8 @@ using the Venafi Provider with HashiCorp Terraform 0.12 (and higher).
    | -------------- | ------ | ------------------------------------------------------------ | ------------ |
    | `api_key`      | string | Venafi Cloud API key                                         | VENAFI_API |
    | `access_token` | string | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application | VENAFI_TOKEN |
-   | `tpp_username` | string | [DEPRECATED] Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
-   | `tpp_password` | string | [DEPRECATED] Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
+   | `tpp_username` | string | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
+   | `tpp_password` | string | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
    | `trust_bundle` | string | Text file containing trust anchor certificates in PEM format, generally required for TPP | |
    | `url`          | string | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to TPP | VENAFI_URL |
    | `zone`         | string | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) | VENAFI_ZONE |
@@ -203,20 +208,20 @@ using the Venafi Provider with HashiCorp Terraform 0.12 (and higher).
 
    ```text
    output "my_private_key" {
-     value = "${venafi_certificate.webserver.private_key_pem}"
+     value = "${venafi_certificate.tls_server.private_key_pem}"
      sensitive = true
    }
 
    output "my_certificate" {
-     value = "${venafi_certificate.webserver.certificate}"
+     value = "${venafi_certificate.tls_server.certificate}"
    }
 
    output "my_trust_chain" {
-     value = "${venafi_certificate.webserver.chain}"
+     value = "${venafi_certificate.tls_server.chain}"
    }
 
    output "my_p12_keystore" {
-     value = "${venafi_certificate.webserver.pkcs12}"
+     value = "${venafi_certificate.tls_server.pkcs12}"
    }
    ```
 
