@@ -179,12 +179,12 @@ using the
    | Property            | Type          |  Description                                                                      | Default   |
    | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
    | `common_name`       | string        | Common name of certificate                                                        | `none` |
-   | `san_dns`           | string array  | List of DNS names to use as subjects of the certificate                           | `none` |
-   | `san_email`         | string array  | List of email addresses to use as subjects of the certificate                     | `none` |
-   | `san_ip`            | string array  | List of IP addresses to use as subjects of the certificate                        | `none` |
-   | `algorithm`         | string        | Key encryption algorithm. RSA or ECDSA                                            | RSA    |
-   | `rsa_bits`          | integer       | Number of bits to use when generating an RSA key. Applies when `algorithm`=RSA    | 2048   |
-   | `ecdsa_curve`       | string        | ECDSA curve to use when generating a key. Applies when `algorithm`=ECDSA          | P521   |
+   | `san_dns`           | string array  | List of DNS names to use as alternative subjects of the certificate               | `none` |
+   | `san_email`         | string array  | List of email addresses to use as alternative subjects of the certificate         | `none` |
+   | `san_ip`            | string array  | List of IP addresses to use as alternative subjects of the certificate            | `none` |
+   | `algorithm`         | string        | Key encryption algorithm (i.e. RSA or ECDSA)                                      | RSA    |
+   | `rsa_bits`          | integer       | Number of bits to use when generating an RSA key pair (i.e. 2048 or 4096). Applies when `algorithm`=RSA | 2048   |
+   | `ecdsa_curve`       | string        | ECDSA curve to use when generating a key pair (i.e. P256, P384, P521). Applies when `algorithm`=ECDSA | P521   |
    | `key_password`      | string        | Private key password                                                              | `none` |
    | `expiration_window` | integer       | Number of hours before certificate expiry to request a new certificate            | 168    |
 
@@ -196,15 +196,15 @@ using the
 
    After enrollment, the `venafi_certificate` resource will expose the following:
 
-   | Property          | Type   |
-   | ----------------- | ------ |
-   | `private_key_pem` | string |
-   | `chain`           | string |
-   | `certificate`     | string |
-   | `pkcs12`          | string |
+   | Property          | Type   | Description |
+   | ----------------- | ------ | ----------- |
+   | `private_key_pem` | string | Private key in PEM format encrypted using `key_password`, if specified |
+   | `chain`           | string | Trust chain CA certificate(s) in PEM format concatenated one after the other |
+   | `certificate`     | string | End-entity certificate in PEM format |
+   | `pkcs12`          | string | Base64-encoded PKCS#12 keystore encrypted using `key_password`, if specified. Useful when working with resources like   [azurerm_key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html). Base64 decode to obtain file bytes. |
 
 1. For verification purposes, output the certificate, private key, and
-   chain in PEM format and as a PKCS#12 keystore (base64 encoded):
+   chain in PEM format and as a PKCS#12 keystore (base64-encoded):
 
    ```text
    output "my_private_key" {
