@@ -146,8 +146,8 @@ using the
    | `access_token` | string | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application | VENAFI_TOKEN |
    | `tpp_username` | string | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
    | `tpp_password` | string | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
-   | `trust_bundle` | string | Text file containing trust anchor certificates in PEM format, generally required for TPP | |
-   | `url`          | string | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to TPP | VENAFI_URL |
+   | `trust_bundle` | string | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform | |
+   | `url`          | string | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to Trust Protection Platform | VENAFI_URL |
    | `zone`         | string | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) | VENAFI_ZONE |
    | `dev_mode`     | bool   | When "true", the provider operates without connecting to Trust Protection Platform or Venafi Cloud | VENAFI_DEVMODE |
 
