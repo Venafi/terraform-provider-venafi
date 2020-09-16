@@ -47,7 +47,7 @@ information see the _Venafi Administration Guide_.
   extensions, some applications will fail, such as NGINX ingress controllers.
   These applications aren't able to retrieve CRL and OCSP information.
 
-#### Trust between Vault and Trust Protection Platform
+#### Trust between Terraform and Trust Protection Platform
 
 The Trust Protection Platform REST API (WebSDK) must be secured with a
 certificate. Generally, the certificate is issued by a CA that is not publicly
@@ -58,9 +58,8 @@ Two methods can be used to establish trust. Both require the trust anchor
 access, you can import the root certificate into the trust store for your
 operating system. If you don't have administrative access, or prefer not to
 make changes to your system configuration, save the root certificate to a file
-in PEM format (e.g. /opt/venafi/bundle.pem) and reference it using the
-`trust_bundle_file` parameter whenever you create or update a PKI role in your
-Vault.
+in PEM format (e.g. /opt/venafi/bundle.pem) and include it using the
+`trust_bundle` parameter of your Venafi provider.
 
 ### Venafi Cloud Requirements
 
