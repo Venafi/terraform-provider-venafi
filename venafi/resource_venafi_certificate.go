@@ -124,7 +124,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "Data map in the form key='value1,value2,...,valueN', to be added to the certificate",
+				Description: "Data map in the form key=\"value1|value2|...|valueN\", to be added to the certificate",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
