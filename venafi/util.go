@@ -69,6 +69,7 @@ type testData struct {
 	timeCheck            string
 	key_algo             string
 	expiration_window    int
+	custom_fields        string
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {

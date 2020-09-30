@@ -120,6 +120,15 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"custom_fields": &schema.Schema{
+				Type:        schema.TypeMap,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Data map in the form key='value1,value2,...,valueN', to be added to the certificate",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -312,6 +321,24 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	if err != nil {
 		return fmt.Errorf("error generating key: %s", err)
+	}
+
+	//Adding custom fields to request
+	customFields, ok := d.GetOk("custom_fields")
+	if ok {
+		customFields := customFields.(map[string]interface{})
+		for key, values := range customFields {
+			values, ok = values.(string)
+			if !ok {
+				return fmt.Errorf("error in custom field [%s]. Expected a comma separated string, got: %s", key, values)
+			}
+			values = strings.TrimSpace(values.(string))
+			list := strings.Split(values.(string), "|")
+			for _, value := range list {
+				value = strings.TrimSpace(value)
+				req.CustomFields = append(req.CustomFields, certificate.CustomField{Name: key, Value: value})
+			}
+		}
 	}
 
 	log.Println("Making certificate request")
