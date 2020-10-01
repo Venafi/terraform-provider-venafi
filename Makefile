@@ -114,6 +114,13 @@ test_e2e_cloud:
 	cat /tmp/cert_certificate_cloud.pem
 	cat /tmp/cert_certificate_cloud.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
+test_e2e_tpp_token:
+	echo yes|terraform apply -target=venafi_certificate.token_certificate -auto-approve
+	terraform state show venafi_certificate.token_certificate
+	terraform output cert_certificate_token > /tmp/cert_certificate_tpp_token.pem
+	cat /tmp/cert_certificate_tpp_token.pem
+	cat /tmp/cert_certificate_tpp_token.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
+
 test_e2e_dev:
 	echo yes|terraform apply -target=venafi_certificate.dev_certificate -auto-approve
 	terraform state show venafi_certificate.dev_certificate
@@ -131,15 +138,6 @@ test_e2e_dev_ecdsa:
 	cat /tmp/cert_certificate_dev_ecdsa.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 	terraform output cert_private_key_dev_ecdsa > /tmp/cert_private_key_dev_ecdsa.pem
 	cat /tmp/cert_private_key_dev_ecdsa.pem
-
-test_e2e_tpp_token:
-	echo yes|terraform apply -target=venafi_certificate.token_certificate -auto-approve
-	terraform state show venafi_certificate.token_certificate
-	terraform output cert_certificate_token > /tmp/cert_certificate_tpp_token.pem
-	cat /tmp/cert_certificate_tpp_token.pem
-	cat /tmp/cert_certificate_tpp_token.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
-	terraform output cert_private_key_token > /tmp/cert_private_key_tpp_token.pem
-	cat /tmp/cert_private_key_tpp_token.pem
 
 linter:
 	golangci-lint run
