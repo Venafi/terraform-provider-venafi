@@ -176,6 +176,33 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
 }`
+	tokenConfigWithCustomFields = `
+%s
+resource "venafi_certificate" "token_certificate_custom_fields" {
+	provider = "venafi.token_tpp"
+	common_name = "%s"
+	san_dns = [
+		"%s"
+	]
+	san_ip = [
+		"%s"
+	]
+	san_email = [
+		"%s"
+	]
+	%s
+	key_password = "%s"
+	expiration_window = %d
+	custom_fields = {
+		%s
+	}
+}
+output "certificate" {
+	value = "${venafi_certificate.token_certificate_custom_fields.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.token_certificate_custom_fields.private_key_pem}"
+}`
 )
 
 func TestDevSignedCert(t *testing.T) {
@@ -610,6 +637,65 @@ func TestTokenECDSASignedCert(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestSignedCertCustomFields(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	cfEnvVarName := "TPP_CUSTOM_FIELDS"
+	data.custom_fields = getCustomFields(cfEnvVarName)
+	config := fmt.Sprintf(tokenConfigWithCustomFields, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.custom_fields)
+	t.Logf("Testing TPP Token certificate with Custom Fields with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandardCert(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate second run")
+					gotSerial := data.serial
+					err := checkStandardCert(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func getCustomFields(variableName string) string {
+	formattedData := ""
+
+	data := os.Getenv(variableName)
+	entries := strings.Split(data, ",")
+	for _, value := range entries {
+		formattedData = formattedData + value + ",\n"
+	}
+	return formattedData
 }
 
 //TODO: make test with invalid key

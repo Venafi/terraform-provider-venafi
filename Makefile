@@ -38,6 +38,8 @@ build:
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	#Build with debugging options, use it for remote debugging. Comment the above line
+	#env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build '-gcflags="all=-N -l" -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
@@ -92,7 +94,7 @@ fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 #Integration tests using real terrafomr binary
-test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_cloud
+test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_cloud test_e2e_tpp_token
 
 e2e_init:
 	terraform init
@@ -111,6 +113,13 @@ test_e2e_cloud:
 	terraform output cert_certificate_cloud > /tmp/cert_certificate_cloud.pem
 	cat /tmp/cert_certificate_cloud.pem
 	cat /tmp/cert_certificate_cloud.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
+
+test_e2e_tpp_token:
+	echo yes|terraform apply -target=venafi_certificate.token_certificate -auto-approve
+	terraform state show venafi_certificate.token_certificate
+	terraform output cert_certificate_token > /tmp/cert_certificate_tpp_token.pem
+	cat /tmp/cert_certificate_tpp_token.pem
+	cat /tmp/cert_certificate_tpp_token.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_dev:
 	echo yes|terraform apply -target=venafi_certificate.dev_certificate -auto-approve

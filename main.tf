@@ -35,7 +35,7 @@ variable "TRUST_BUNDLE" {
   default = ""
 }
 
-variable "ACCESS_TOKEN" {
+variable "TPP_ACCESS_TOKEN" {
   default = ""
 }
 
@@ -47,8 +47,7 @@ resource "random_string" "cn" {
 }
 
 /*
-Here we are configuring thre providers using provider aliases.
-
+Here we are configuring the providers using provider aliases.
 Dev provider configuration (alias = "dev") for testing; it doesn't need any external sources configured.
 */
 provider "venafi" {
@@ -79,10 +78,13 @@ provider "venafi" {
   trust_bundle = file(var.TRUST_BUNDLE)
 }
 
+/*
+Platform provider configuration with Token (alias = "tpp_token")
+*/
 provider "venafi" {
   alias        = "tpp_token"
   url          = var.TPP_URL
-  access_token = var.ACCESS_TOKEN
+  access_token = var.TPP_ACCESS_TOKEN
   zone         = var.TPP_ZONE
   trust_bundle = file(var.TRUST_BUNDLE)
 }
@@ -213,7 +215,6 @@ output "cert_private_key_tpp" {
   value = venafi_certificate.tpp_certificate.private_key_pem
 }
 
-/////////////////////
 resource "venafi_certificate" "token_certificate" {
   provider    = venafi.tpp_token
   common_name = "tpp-${random_string.cn.result}.venafi.example.com"
