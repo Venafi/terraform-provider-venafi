@@ -1,3 +1,7 @@
+## 0.10.1 (October 7, 2020)
+
+Added support for setting Custom Fields when enrolling certificates with Trust Protection Platform
+
 ## 0.10.0 (September 16, 2020)
 
 Introduced support for Trust Protection Platform Token Authentication ("hashicorp-terraform-by-venafi" API Application).
