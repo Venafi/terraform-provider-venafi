@@ -23,6 +23,10 @@ resource "venafi_certificate" "webserver" {
     algorithm = "RSA"
     rsa_bits = "2048"
     key_password = "${var.pk_pass}"
+    custom_fields = {
+        "Cost Center" = "AB1234",
+        "Environment" = "UAT|Staging"
+    }
 }
 ```
 
@@ -51,6 +55,8 @@ The following arguments are supported:
   subjects of the certificate.
 
 * `key_password` - (Optional, string) The password used to encrypt the private key.
+
+* `custom_fields` - (Optional, map) Collection of Custom Field name-value pairs to assign to the certificate.
 
 * `expiration_window` - (Optional, integer) Number of hours before certificate expiry
   to request a new certificate.
