@@ -101,10 +101,10 @@ func getIssuerHint(is string) string {
 
 	if is != "" {
 
-		issrOpt := string(is[0])
-		issrOpt = strings.ToLower(issrOpt)
+		issuerOpt := string(is[0])
+		issuerOpt = strings.ToLower(issuerOpt)
 
-		switch issrOpt {
+		switch issuerOpt {
 
 		case "m":
 			issuerHint = util.IssuerHintMicrosoft

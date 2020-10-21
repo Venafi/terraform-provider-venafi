@@ -133,7 +133,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "The maximum allowed certificate validity",
+				Description: "The desired certificate validity",
 			},
 			"issuer_hint": &schema.Schema{
 				Type:        schema.TypeString,
@@ -355,15 +355,15 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	if ttl, ok := d.GetOk("valid_days"); ok {
 
-		validDays := ttl.(int)
-		validDays = validDays * 24
+		validity := ttl.(int)
+		validity = validity * 24
 		expiration_window := d.Get("expiration_window").(int)
 
-		if validDays < expiration_window {
-			validDays = expiration_window
+		if validity < expiration_window {
+			validity = expiration_window
 		}
 
-		req.ValidityHours = validDays
+		req.ValidityHours = validity
 		issuer_hint := d.Get("issuer_hint").(string)
 		req.IssuerHint = getIssuerHint(issuer_hint)
 
