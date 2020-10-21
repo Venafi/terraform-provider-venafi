@@ -220,8 +220,8 @@ resource "venafi_certificate" "token_certificate" {
 	%s
 	key_password = "%s"
 	expiration_window = %d
-    issuer_hint = "%s"
-    valid_days =   %d
+	issuer_hint = "%s"
+	valid_days =   %d
 }
 output "certificate" {
 	value = "${venafi_certificate.token_certificate.certificate}"
