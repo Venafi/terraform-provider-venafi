@@ -26,14 +26,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/verror"
 	"net"
-	"net/url"
 	"strings"
 	"time"
 )
 
-// EllipticCurve represents the types of supported elliptic curves
+//EllipticCurve represents the types of supported elliptic curves
 type EllipticCurve int
 
 func (ec *EllipticCurve) String() string {
@@ -44,20 +42,24 @@ func (ec *EllipticCurve) String() string {
 		return "P384"
 	case EllipticCurveP256:
 		return "P256"
+	case EllipticCurveP224:
+		return "P224"
 	default:
 		return ""
 	}
 }
 
-// Set EllipticCurve value via a string
+//Set the elliptic cuve value via a string
 func (ec *EllipticCurve) Set(value string) error {
 	switch strings.ToLower(value) {
-	case "p521", "p-521":
+	case "p521":
 		*ec = EllipticCurveP521
-	case "p384", "p-384":
+	case "p384":
 		*ec = EllipticCurveP384
-	case "p256", "p-256":
+	case "p256":
 		*ec = EllipticCurveP256
+	case "p224":
+		*ec = EllipticCurveP224
 	default:
 		*ec = EllipticCurveDefault
 	}
@@ -66,26 +68,27 @@ func (ec *EllipticCurve) Set(value string) error {
 }
 
 const (
-	EllipticCurveNotSet EllipticCurve = iota
-	// EllipticCurveP521 represents the P521 curve
-	EllipticCurveP521
-	// EllipticCurveP256 represents the P256 curve
+	//EllipticCurveP521 represents the P521 curve
+	EllipticCurveP521 EllipticCurve = iota
+	//EllipticCurveP224 represents the P224 curve
+	EllipticCurveP224
+	//EllipticCurveP256 represents the P256 curve
 	EllipticCurveP256
-	// EllipticCurveP384 represents the P384 curve
+	//EllipticCurveP384 represents the P384 curve
 	EllipticCurveP384
-	EllipticCurveDefault = EllipticCurveP256
+	EllipticCurveDefault = EllipticCurveP521
 
 	defaultRSAlength int = 2048
 )
 
 func AllSupportedCurves() []EllipticCurve {
-	return []EllipticCurve{EllipticCurveP521, EllipticCurveP256, EllipticCurveP384}
+	return []EllipticCurve{EllipticCurveP521, EllipticCurveP224, EllipticCurveP256, EllipticCurveP384}
 }
 func AllSupportedKeySizes() []int {
-	return []int{1024, 2048, 4096, 8192}
+	return []int{512, 1024, 2048, 4096, 8192}
 }
 
-// KeyType represents the types of supported keys
+//KeyType represents the types of supported keys
 type KeyType int
 
 func (kt *KeyType) String() string {
@@ -109,7 +112,7 @@ func (kt *KeyType) X509Type() x509.PublicKeyAlgorithm {
 	return x509.UnknownPublicKeyAlgorithm
 }
 
-// Set the key type via a string
+//Set the key type via a string
 func (kt *KeyType) Set(value string) error {
 	switch strings.ToLower(value) {
 	case "rsa":
@@ -119,83 +122,49 @@ func (kt *KeyType) Set(value string) error {
 		*kt = KeyTypeECDSA
 		return nil
 	}
-	return fmt.Errorf("%w: unknown key type: %s", verror.VcertError, value) //todo: check all calls
+	return fmt.Errorf("unknow key type: %s", value) //todo: check all calls
 }
 
 const (
-	// KeyTypeRSA represents a key type of RSA
+	//KeyTypeRSA represents a key type of RSA
 	KeyTypeRSA KeyType = iota
-	// KeyTypeECDSA represents a key type of ECDSA
+	//KeyTypeECDSA represents a key type of ECDSA
 	KeyTypeECDSA
 )
 
 type CSrOriginOption int
 
 const (
-	// LocalGeneratedCSR - this vcert library generates CSR internally based on Request data
 	LocalGeneratedCSR CSrOriginOption = iota // local generation is default.
-	// ServiceGeneratedCSR - server generate CSR internally based on zone configuration and data from Request
 	ServiceGeneratedCSR
-	// UserProvidedCSR - client provides CSR from external resource and vcert library just check and send this CSR to server
 	UserProvidedCSR
 )
 
-type CustomFieldType int
-
-const (
-	CustomFieldPlain CustomFieldType = 0 + iota
-	CustomFieldOrigin
-)
-
-// CustomField can be used for adding additional information to certificate. For example: custom fields or Origin.
-// By default it's custom field. For adding Origin set Type: CustomFieldOrigin
-// For adding custom field with one name and few values give to request:
-//  request.CustomFields = []CustomField{
-//    {Name: "name1", Value: "value1"}
-//    {Name: "name1", Value: "value2"}
-//  }
-type CustomField struct {
-	Type  CustomFieldType
-	Name  string
-	Value string
-}
-
-type Location struct {
-	Instance, Workload, TLSAddress string
-	Replace                        bool
-}
-
-// Request contains data needed to generate a certificate request
-// CSR is a PEM-encoded Certificate Signing Request
+//Request contains data needed to generate a certificate request
+// CSR is pem encoded Certificate Signed Request
 type Request struct {
-	CADN               string
 	Subject            pkix.Name
 	DNSNames           []string
-	OmitSANs           bool
 	EmailAddresses     []string
 	IPAddresses        []net.IP
-	URIs               []*url.URL
 	Attributes         []pkix.AttributeTypeAndValueSET
 	SignatureAlgorithm x509.SignatureAlgorithm
+	PublicKeyAlgorithm x509.PublicKeyAlgorithm //deprecated
 	FriendlyName       string
 	KeyType            KeyType
 	KeyLength          int
 	KeyCurve           EllipticCurve
-	csr                []byte // should be a PEM-encoded CSR
+	CSR                []byte //should be pem encoded CSR
 	PrivateKey         crypto.Signer
 	CsrOrigin          CSrOriginOption
 	PickupID           string
-	//Cloud Certificate ID
-	CertID          string
-	ChainOption     ChainOption
-	KeyPassword     string
-	FetchPrivateKey bool
-	/*	Thumbprint is here because *Request is used in RetrieveCertificate().
-		Code should be refactored so that RetrieveCertificate() uses some abstract search object, instead of *Request{PickupID} */
-	Thumbprint   string
-	Timeout      time.Duration
-	CustomFields []CustomField
-	Location     *Location
+	ChainOption        ChainOption
+	KeyPassword        string
+	FetchPrivateKey    bool
+	Thumbprint         string /* this one is here because *Request is used in RetrieveCertificate(),
+	   it should be refactored so that RetrieveCertificate() uses
+	   some abstract search object, instead of *Request{PickupID} */
+	Timeout time.Duration
 }
 
 type RevocationRequest struct {
@@ -213,65 +182,26 @@ type RenewalRequest struct {
 }
 
 type ImportRequest struct {
-	PolicyDN        string
-	ObjectName      string
-	CertificateData string
-	PrivateKeyData  string
-	Password        string
-	Reconcile       bool
-	CustomFields    []CustomField
+	PolicyDN             string            `json:",omitempty"`
+	ObjectName           string            `json:",omitempty"`
+	CertificateData      string            `json:",omitempty"`
+	PrivateKeyData       string            `json:",omitempty"`
+	Password             string            `json:",omitempty"`
+	Reconcile            bool              `json:",omitempty"`
+	CASpecificAttributes map[string]string `json:",omitempty"`
 }
 
 type ImportResponse struct {
 	CertificateDN      string `json:",omitempty"`
-	CertId             string `json:",omitempty"`
 	CertificateVaultId int    `json:",omitempty"`
 	Guid               string `json:",omitempty"`
 	PrivateKeyVaultId  int    `json:",omitempty"`
 }
 
-type CertificateInfo struct {
-	ID   string
-	CN   string
-	SANS struct {
-		DNS, Email, IP, URI, UPN []string
-	}
-	Serial     string
-	Thumbprint string
-	ValidFrom  time.Time
-	ValidTo    time.Time
-}
-
-// SetCSR sets CSR from PEM or DER format
-func (request *Request) SetCSR(csr []byte) error {
-	pemBlock, _ := pem.Decode(csr)
-	if pemBlock != nil {
-		if strings.HasSuffix(pemBlock.Type, "CERTIFICATE REQUEST") {
-			request.csr = csr
-			return nil
-		}
-	}
-
-	//Determine CSR type and use appropriate function
-	parsedCSR, err := x509.ParseCertificateRequest(csr)
-	if err != nil {
-		return err
-	}
-	if parsedCSR != nil {
-		request.csr = pem.EncodeToMemory(GetCertificateRequestPEMBlock(csr))
-		return nil
-	}
-	return fmt.Errorf("%w: can't determine CSR type for %s", verror.UserDataError, csr)
-}
-
-// GetCSR returns CSR in PEM format
-func (request Request) GetCSR() []byte {
-	return request.csr
-}
-
-// GenerateRequest generates a certificate request
-// Please use method Request.GenerateCSR()
-// TODO: Remove usage from all libraries, deprecated
+//GenerateRequest generates a certificate request
+//please use method Request.GenerateCSR()
+// todo: remove usage from all libraries
+//deprecated
 func GenerateRequest(request *Request, privateKey crypto.Signer) error {
 	pk := request.PrivateKey
 	request.PrivateKey = privateKey
@@ -280,28 +210,23 @@ func GenerateRequest(request *Request, privateKey crypto.Signer) error {
 	return err
 }
 
-// GenerateCSR creates CSR for sending to server based on data from Request fields. It rewrites CSR field if it`s already filled.
 func (request *Request) GenerateCSR() error {
 	certificateRequest := x509.CertificateRequest{}
 	certificateRequest.Subject = request.Subject
-	if !request.OmitSANs {
-		certificateRequest.DNSNames = request.DNSNames
-		certificateRequest.EmailAddresses = request.EmailAddresses
-		certificateRequest.IPAddresses = request.IPAddresses
-		certificateRequest.URIs = request.URIs
-	}
+	certificateRequest.DNSNames = request.DNSNames
+	certificateRequest.EmailAddresses = request.EmailAddresses
+	certificateRequest.IPAddresses = request.IPAddresses
 	certificateRequest.Attributes = request.Attributes
 
 	csr, err := x509.CreateCertificateRequest(rand.Reader, &certificateRequest, request.PrivateKey)
 	if err != nil {
 		csr = nil
 	}
-	err = request.SetCSR(csr)
-	//request.CSR = pem.EncodeToMemory(GetCertificateRequestPEMBlock(csr))
+	request.CSR = csr
+	request.CSR = pem.EncodeToMemory(GetCertificateRequestPEMBlock(csr))
 	return err
 }
 
-// GeneratePrivateKey creates private key (if it doesn`t already exist) based on request.KeyType, request.KeyLength and request.KeyCurve fileds
 func (request *Request) GeneratePrivateKey() error {
 	if request.PrivateKey != nil {
 		return nil
@@ -314,24 +239,20 @@ func (request *Request) GeneratePrivateKey() error {
 		if request.KeyLength == 0 {
 			request.KeyLength = defaultRSAlength
 		}
-		if request.KeyLength < AllSupportedKeySizes()[0] {
-			return fmt.Errorf("key Size must be %d or greater. But it is %d", AllSupportedKeySizes()[0], request.KeyLength)
-		}
 		request.PrivateKey, err = GenerateRSAPrivateKey(request.KeyLength)
 	default:
-		return fmt.Errorf("%w: unable to generate certificate request, key type %s is not supported", verror.VcertError, request.KeyType.String())
+		return fmt.Errorf("Unable to generate certificate request, key type %s is not supported", request.KeyType.String())
 	}
 	return err
 }
 
-// CheckCertificate validate that certificate returned by server matches data in request object. It can be used for control server.
 func (request *Request) CheckCertificate(certPEM string) error {
 	pemBlock, _ := pem.Decode([]byte(certPEM))
 	if pemBlock == nil {
-		return fmt.Errorf("%w: invalid pem format certificate %s", verror.CertificateCheckError, certPEM)
+		return fmt.Errorf("invalid pem format certificate %s", certPEM)
 	}
 	if pemBlock.Type != "CERTIFICATE" {
-		return fmt.Errorf("%w: invalid pem type %s (expect CERTIFICATE)", verror.CertificateCheckError, pemBlock.Type)
+		return fmt.Errorf("invalid pem type %s (expect CERTIFICATE)", pemBlock.Type)
 	}
 	cert, err := x509.ParseCertificate(pemBlock.Bytes)
 	if err != nil {
@@ -339,55 +260,55 @@ func (request *Request) CheckCertificate(certPEM string) error {
 	}
 	if request.PrivateKey != nil {
 		if request.KeyType.X509Type() != cert.PublicKeyAlgorithm {
-			return fmt.Errorf("%w: unmatched key type: %s, %s", verror.CertificateCheckError, request.KeyType.X509Type(), cert.PublicKeyAlgorithm)
+			return fmt.Errorf("unmatched key type: %s, %s", request.KeyType.X509Type(), cert.PublicKeyAlgorithm)
 		}
 		switch cert.PublicKeyAlgorithm {
 		case x509.RSA:
 			certPubKey := cert.PublicKey.(*rsa.PublicKey)
 			reqPubkey, ok := request.PrivateKey.Public().(*rsa.PublicKey)
 			if !ok {
-				return fmt.Errorf("%w: request KeyType not matched with real PrivateKey type", verror.CertificateCheckError)
+				return fmt.Errorf("request KeyType not matched with real PrivateKey type")
 			}
 
 			if certPubKey.N.Cmp(reqPubkey.N) != 0 {
-				return fmt.Errorf("%w: unmatched key modulus", verror.CertificateCheckError)
+				return fmt.Errorf("unmatched key modules")
 			}
 		case x509.ECDSA:
 			certPubkey := cert.PublicKey.(*ecdsa.PublicKey)
 			reqPubkey, ok := request.PrivateKey.Public().(*ecdsa.PublicKey)
 			if !ok {
-				return fmt.Errorf("%w: request KeyType not matched with real PrivateKey type", verror.CertificateCheckError)
+				return fmt.Errorf("request KeyType not matched with real PrivateKey type")
 			}
 			if certPubkey.X.Cmp(reqPubkey.X) != 0 {
-				return fmt.Errorf("%w: unmatched X for elliptic keys", verror.CertificateCheckError)
+				return fmt.Errorf("unmatched X for eliptic keys")
 			}
 		default:
-			return fmt.Errorf("%w: unknown key algorythm %d", verror.CertificateCheckError, cert.PublicKeyAlgorithm)
+			return fmt.Errorf("unknown key algorythm %d", cert.PublicKeyAlgorithm)
 		}
-	} else if len(request.csr) != 0 {
-		pemBlock, _ := pem.Decode(request.csr)
+	} else if len(request.CSR) != 0 {
+		pemBlock, _ := pem.Decode(request.CSR)
 		if pemBlock == nil {
-			return fmt.Errorf("%w: bad CSR: %s", verror.CertificateCheckError, string(request.csr))
+			return fmt.Errorf("bad csr: %s", string(request.CSR))
 		}
 		csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 		if err != nil {
 			return err
 		}
 		if cert.PublicKeyAlgorithm != csr.PublicKeyAlgorithm {
-			return fmt.Errorf("%w: unmatched key type: %s, %s", verror.CertificateCheckError, cert.PublicKeyAlgorithm, csr.PublicKeyAlgorithm)
+			return fmt.Errorf("unmatched key type: %s, %s", cert.PublicKeyAlgorithm, csr.PublicKeyAlgorithm)
 		}
 		switch csr.PublicKeyAlgorithm {
 		case x509.RSA:
 			certPubKey := cert.PublicKey.(*rsa.PublicKey)
 			reqPubKey := csr.PublicKey.(*rsa.PublicKey)
 			if certPubKey.N.Cmp(reqPubKey.N) != 0 {
-				return fmt.Errorf("%w: unmatched key modulus", verror.CertificateCheckError)
+				return fmt.Errorf("unmatched key modules")
 			}
 		case x509.ECDSA:
 			certPubKey := cert.PublicKey.(*ecdsa.PublicKey)
 			reqPubKey := csr.PublicKey.(*ecdsa.PublicKey)
 			if certPubKey.X.Cmp(reqPubKey.X) != 0 {
-				return fmt.Errorf("%w: unmatched X for elliptic keys", verror.CertificateCheckError)
+				return fmt.Errorf("unmatched X for eliptic keys")
 			}
 		}
 	}
@@ -405,8 +326,8 @@ func PublicKey(priv crypto.Signer) crypto.PublicKey {
 	return publicKey(priv)
 }
 
-// GetPrivateKeyPEMBock gets the private key as a PEM data block
-func GetPrivateKeyPEMBock(key crypto.Signer) (*pem.Block, error) {
+//GetPrivateKeyPEMBock gets the private key as a PEM data block
+func GetPrivateKeyPEMBock(key interface{}) (*pem.Block, error) { //todo: change to crypto.Signer type
 	switch k := key.(type) {
 	case *rsa.PrivateKey:
 		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}, nil
@@ -417,12 +338,12 @@ func GetPrivateKeyPEMBock(key crypto.Signer) (*pem.Block, error) {
 		}
 		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}, nil
 	default:
-		return nil, fmt.Errorf("%w: unable to format Key", verror.VcertError)
+		return nil, fmt.Errorf("Unable to format Key")
 	}
 }
 
-// GetEncryptedPrivateKeyPEMBock gets the private key as an encrypted PEM data block
-func GetEncryptedPrivateKeyPEMBock(key crypto.Signer, password []byte) (*pem.Block, error) {
+//GetEncryptedPrivateKeyPEMBock gets the private key as an encrypted PEM data block
+func GetEncryptedPrivateKeyPEMBock(key interface{}, password []byte) (*pem.Block, error) { //todo: change to crypto.Signer type
 	switch k := key.(type) {
 	case *rsa.PrivateKey:
 		return x509.EncryptPEMBlock(rand.Reader, "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(k), password, x509.PEMCipherAES256)
@@ -433,28 +354,26 @@ func GetEncryptedPrivateKeyPEMBock(key crypto.Signer, password []byte) (*pem.Blo
 		}
 		return x509.EncryptPEMBlock(rand.Reader, "EC PRIVATE KEY", b, password, x509.PEMCipherAES256)
 	default:
-		return nil, fmt.Errorf("%w: unable to format Key", verror.VcertError)
+		return nil, fmt.Errorf("Unable to format Key")
 	}
 }
 
-// GetCertificatePEMBlock gets the certificate as a PEM data block
+//GetCertificatePEMBlock gets the certificate as a PEM data block
 func GetCertificatePEMBlock(cert []byte) *pem.Block {
 	return &pem.Block{Type: "CERTIFICATE", Bytes: cert}
 }
 
-// GetCertificateRequestPEMBlock gets the certificate request as a PEM data block
+//GetCertificateRequestPEMBlock gets the certificate request as a PEM data block
 func GetCertificateRequestPEMBlock(request []byte) *pem.Block {
 	return &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: request}
 }
 
-// GenerateECDSAPrivateKey generates a new ecdsa private key using the curve specified
+//GenerateECDSAPrivateKey generates a new ecdsa private key using the curve specified
 func GenerateECDSAPrivateKey(curve EllipticCurve) (*ecdsa.PrivateKey, error) {
 	var priv *ecdsa.PrivateKey
 	var c elliptic.Curve
 	var err error
-	if curve == EllipticCurveNotSet {
-		curve = EllipticCurveDefault
-	}
+
 	switch curve {
 	case EllipticCurveP521:
 		c = elliptic.P521()
@@ -462,6 +381,8 @@ func GenerateECDSAPrivateKey(curve EllipticCurve) (*ecdsa.PrivateKey, error) {
 		c = elliptic.P384()
 	case EllipticCurveP256:
 		c = elliptic.P256()
+	case EllipticCurveP224:
+		c = elliptic.P224()
 	}
 
 	priv, err = ecdsa.GenerateKey(c, rand.Reader)
@@ -472,7 +393,7 @@ func GenerateECDSAPrivateKey(curve EllipticCurve) (*ecdsa.PrivateKey, error) {
 	return priv, nil
 }
 
-// GenerateRSAPrivateKey generates a new rsa private key using the size specified
+//GenerateRSAPrivateKey generates a new rsa private key using the size specified
 func GenerateRSAPrivateKey(size int) (*rsa.PrivateKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, size)
 	if err != nil {
@@ -482,16 +403,16 @@ func GenerateRSAPrivateKey(size int) (*rsa.PrivateKey, error) {
 	return priv, nil
 }
 
-// NewRequest duplicates new Request object based on issued certificate
 func NewRequest(cert *x509.Certificate) *Request {
 	req := &Request{}
+	// 1st fill with *cert content
 
-	// First populate with *cert content
 	req.Subject = cert.Subject
 	req.DNSNames = cert.DNSNames
 	req.EmailAddresses = cert.EmailAddresses
 	req.IPAddresses = cert.IPAddresses
 	req.SignatureAlgorithm = cert.SignatureAlgorithm
+	req.PublicKeyAlgorithm = cert.PublicKeyAlgorithm
 	switch pub := cert.PublicKey.(type) {
 	case *rsa.PublicKey:
 		req.KeyType = KeyTypeRSA
@@ -499,8 +420,8 @@ func NewRequest(cert *x509.Certificate) *Request {
 	case *ecdsa.PublicKey:
 		req.KeyType = KeyTypeECDSA
 		req.KeyLength = pub.Curve.Params().BitSize
-		// TODO: req.KeyCurve = pub.Curve.Params().Name ...
-	default: // case *dsa.PublicKey
+		// TODO: req.KeyCurve = pub.Curve.Params().Name...
+	default: // case *dsa.PublicKey:
 		// vcert only works with RSA & ECDSA
 	}
 	return req

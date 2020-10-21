@@ -4,8 +4,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4/pkg/util"
 	"github.com/pkg/errors"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -70,6 +72,8 @@ type testData struct {
 	key_algo             string
 	expiration_window    int
 	custom_fields        string
+	issuer_hint          string
+	valid_days           int
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
@@ -89,4 +93,29 @@ func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
 	}
 
 	return keyBytes, nil
+}
+
+func getIssuerHint(is string) string {
+
+	issuerHint := ""
+
+	if is != "" {
+
+		issrOpt := string(is[0])
+		issrOpt = strings.ToLower(issrOpt)
+
+		switch issrOpt {
+
+		case "m":
+			issuerHint = util.IssuerHintMicrosoft
+		case "d":
+			issuerHint = util.IssuerHintDigicert
+		case "e":
+			issuerHint = util.IssuerHintEntrust
+		}
+
+	}
+
+	return issuerHint
+
 }

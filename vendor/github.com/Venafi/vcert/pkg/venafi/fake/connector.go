@@ -24,13 +24,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"math/big"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
+	"math/big"
+	"strings"
+	"time"
 )
 
 type Connector struct {
@@ -47,9 +45,14 @@ func (c *Connector) GetType() endpoint.ConnectorType {
 }
 
 func (c *Connector) SetZone(z string) {
+	return
 }
 
 func (c *Connector) Ping() (err error) {
+	return
+}
+
+func (c *Connector) Register(email string) (err error) {
 	return
 }
 
@@ -69,7 +72,8 @@ func validateRequest(req *certificate.Request) error {
 	return nil
 }
 
-func (c *Connector) RequestCertificate(req *certificate.Request) (requestID string, err error) {
+func (c *Connector) RequestCertificate(req *certificate.Request, zone string) (requestID string, err error) {
+
 	err = validateRequest(req)
 	if err != nil {
 		return "", fmt.Errorf("certificate request validation fail: %s", err)
@@ -80,7 +84,7 @@ func (c *Connector) RequestCertificate(req *certificate.Request) (requestID stri
 	switch req.CsrOrigin {
 	case certificate.LocalGeneratedCSR, certificate.UserProvidedCSR:
 		// should return CSR as requestID payload
-		fakeRequest.CSR = base64.StdEncoding.EncodeToString(req.GetCSR())
+		fakeRequest.CSR = base64.StdEncoding.EncodeToString(req.CSR)
 
 	case certificate.ServiceGeneratedCSR:
 		// should return certificate.Request as requestID payload
@@ -111,7 +115,7 @@ func issueCertificate(csr *x509.CertificateRequest) ([]byte, error) {
 			nameSet[name] = true
 		}
 		uniqNames := []string{}
-		for name := range nameSet {
+		for name, _ := range nameSet {
 			uniqNames = append(uniqNames, name)
 		}
 		csr.DNSNames = uniqNames
@@ -160,9 +164,6 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 
 	if fakeRequest.CSR != "" {
 		csrPEMbytes, err = base64.StdEncoding.DecodeString(fakeRequest.CSR)
-		if err != nil {
-			return nil, err
-		}
 
 	} else {
 		req := fakeRequest.Req
@@ -178,7 +179,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 		if err != nil {
 			return
 		}
-		csrPEMbytes = req.GetCSR()
+		csrPEMbytes = req.CSR
 		pk = req.PrivateKey
 	}
 
@@ -187,7 +188,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 		csr      *x509.CertificateRequest
 	)
 	csrBlock, _ = pem.Decode([]byte(csrPEMbytes))
-	if csrBlock == nil || !strings.HasSuffix(csrBlock.Type, "CERTIFICATE REQUEST") {
+	if csrBlock == nil || csrBlock.Type != "CERTIFICATE REQUEST" {
 		return nil, fmt.Errorf("Test-mode: could not parse requestID as base64 encoded certificate request block")
 	}
 
@@ -204,20 +205,14 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 	var certBytes []byte
 	switch req.ChainOption {
 	case certificate.ChainOptionRootFirst:
-		certBytes = append([]byte(CaCertPEM+"\n"), cert_pem...)
+		certBytes = append([]byte(caCertPEM+"\n"), cert_pem...)
 	default:
-		certBytes = append(cert_pem, []byte(CaCertPEM)...)
+		certBytes = append(cert_pem, []byte(caCertPEM)...)
 	}
 	pcc, err = certificate.PEMCollectionFromBytes(certBytes, req.ChainOption)
-	if err != nil {
-		return nil, err
-	}
 	// no key password -- no key
 	if pk != nil && req.KeyPassword != "" {
-		err = pcc.AddPrivateKey(pk, []byte(req.KeyPassword))
-		if err != nil {
-			return
-		}
+		pcc.AddPrivateKey(pk, []byte(req.KeyPassword))
 	}
 	err = req.CheckCertificate(pcc.Certificate)
 	return
@@ -228,11 +223,8 @@ func (c *Connector) RevokeCertificate(revReq *certificate.RevocationRequest) (er
 	return fmt.Errorf("revocation is not supported in -test-mode")
 }
 
-func (c *Connector) ReadZoneConfiguration() (config *endpoint.ZoneConfiguration, err error) {
-	config = endpoint.NewZoneConfiguration()
-	policy, err := c.ReadPolicyConfiguration()
-	config.Policy = *policy
-	return
+func (c *Connector) ReadZoneConfiguration(zone string) (config *endpoint.ZoneConfiguration, err error) {
+	return endpoint.NewZoneConfiguration(), nil
 }
 
 // RenewCertificate attempts to renew the certificate
@@ -244,7 +236,7 @@ func (c *Connector) ImportCertificate(req *certificate.ImportRequest) (*certific
 	return nil, fmt.Errorf("import is not supported in -test-mode")
 }
 
-func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err error) {
+func (c *Connector) ReadPolicyConfiguration(zone string) (policy *endpoint.Policy, err error) {
 	policy = &endpoint.Policy{
 		[]string{".*"},
 		[]string{".*"},
@@ -265,11 +257,4 @@ func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err erro
 		true,
 	}
 	return
-}
-
-func (c *Connector) SetHTTPClient(client *http.Client) {
-}
-
-func (c *Connector) ListCertificates(filter endpoint.Filter) ([]certificate.CertificateInfo, error) {
-	return nil, nil
 }

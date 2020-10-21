@@ -18,57 +18,46 @@ package cloud
 
 import (
 	"github.com/Venafi/vcert/pkg/endpoint"
+	"regexp"
 	"strings"
 	"time"
 )
 
-type certificateTemplate struct {
-	ID                                  string `json:"id,omitempty"`
-	CompanyID                           string `json:"companyId,omitempty"`
-	CertificateAuthority                string `json:"certificateAuthority"`
-	Name                                string `json:"name,omitempty"`
-	CertificateAuthorityAccountId       string `json:"certificateAuthorityAccountId"`
-	CertificateAuthorityProductOptionId string `json:"certificateAuthorityProductOptionId"`
-	Product                             struct {
-		CertificateAuthority string `json:"certificateAuthority"`
-		ProductName          string `json:"productName"`
-	} `json:"product"`
-	Priority               int              `json:"priority"`
-	SystemGenerated        bool             `json:"systemGenerated,omitempty"`
-	CreationDateString     string           `json:"creationDate,omitempty"`
-	CreationDate           time.Time        `json:"-"`
-	ModificationDateString string           `json:"modificationDate"`
-	ModificationDate       time.Time        `json:"-"`
-	Status                 string           `json:"status"`
-	Reason                 string           `json:"reason"`
-	SubjectCNRegexes       []string         `json:"subjectCNRegexes,omitempty"`
-	SubjectORegexes        []string         `json:"subjectORegexes,omitempty"`
-	SubjectOURegexes       []string         `json:"subjectOURegexes,omitempty"`
-	SubjectSTRegexes       []string         `json:"subjectSTRegexes,omitempty"`
-	SubjectLRegexes        []string         `json:"subjectLRegexes,omitempty"`
-	SubjectCValues         []string         `json:"subjectCValues,omitempty"`
-	SANRegexes             []string         `json:"sanRegexes,omitempty"`
-	KeyTypes               []allowedKeyType `json:"keyTypes,omitempty"`
-	KeyReuse               bool             `json:"keyReuse,omitempty"`
-	RecommendedSettings    struct {
-		SubjectOValue, SubjectOUValue,
-		SubjectSTValue, SubjectLValue,
-		SubjectCValue string
-		Key struct {
-			Type   string
-			Length int
-		}
-		keyReuse bool
-	}
+type certificatePolicy struct {
+	CertificatePolicyType certificatePolicyType `json:"certificatePolicyType,omitempty"`
+	ID                    string                `json:"id,omitempty"`
+	CompanyID             string                `json:"companyId,omitempty"`
+	Name                  string                `json:"name,omitempty"`
+	SystemGenerated       bool                  `json:"systemGeneratedate,omitempty"`
+	CreationDateString    string                `json:"creationDate,omitempty"`
+	CreationDate          time.Time             `json:"-"`
+	CertificateProviderID string                `json:"certificateProviderId,omitempty"`
+	SubjectCNRegexes      []string              `json:"subjectCNRegexes,omitempty"`
+	SubjectORegexes       []string              `json:"subjectORegexes,omitempty"`
+	SubjectOURegexes      []string              `json:"subjectOURegexes,omitempty"`
+	SubjectSTRegexes      []string              `json:"subjectSTRegexes,omitempty"`
+	SubjectLRegexes       []string              `json:"subjectLRegexes,omitempty"`
+	SubjectCRegexes       []string              `json:"subjectCValues,omitempty"`
+	SANRegexes            []string              `json:"sanRegexes,omitempty"`
+	KeyTypes              []allowedKeyType      `json:"keyTypes,omitempty"`
+	KeyReuse              bool                  `json:"keyReuse,omitempty"`
 }
+
 type allowedKeyType struct {
 	KeyType    keyType
 	KeyLengths []int
 }
 
+type certificatePolicyType string
+
+const (
+	certificatePolicyTypeIdentity certificatePolicyType = "CERTIFICATE_IDENTITY"
+	certificatePolicyTypeUse                            = "CERTIFICATE_USE"
+)
+
 type keyType string
 
-func (ct certificateTemplate) toPolicy() (p endpoint.Policy) {
+func (cp certificatePolicy) toPolicy() (p endpoint.Policy) {
 	addStartEnd := func(s string) string {
 		if !strings.HasPrefix(s, "^") {
 			s = "^" + s
@@ -85,25 +74,29 @@ func (ct certificateTemplate) toPolicy() (p endpoint.Policy) {
 		}
 		return a
 	}
-	if len(ct.SubjectCValues) == 0 {
-		ct.SubjectCValues = []string{".*"}
-	}
-	p.SubjectCNRegexes = addStartEndToArray(ct.SubjectCNRegexes)
-	p.SubjectOURegexes = addStartEndToArray(ct.SubjectOURegexes)
-	p.SubjectCRegexes = addStartEndToArray(ct.SubjectCValues)
-	p.SubjectSTRegexes = addStartEndToArray(ct.SubjectSTRegexes)
-	p.SubjectLRegexes = addStartEndToArray(ct.SubjectLRegexes)
-	p.SubjectORegexes = addStartEndToArray(ct.SubjectORegexes)
-	p.DnsSanRegExs = addStartEndToArray(ct.SANRegexes)
-	p.AllowKeyReuse = ct.KeyReuse
+	p.SubjectCNRegexes = addStartEndToArray(cp.SubjectCNRegexes)
+	p.SubjectOURegexes = addStartEndToArray(cp.SubjectOURegexes)
+	p.SubjectCRegexes = addStartEndToArray(cp.SubjectCRegexes)
+	p.SubjectSTRegexes = addStartEndToArray(cp.SubjectSTRegexes)
+	p.SubjectLRegexes = addStartEndToArray(cp.SubjectLRegexes)
+	p.SubjectORegexes = addStartEndToArray(cp.SubjectORegexes)
+	p.DnsSanRegExs = addStartEndToArray(cp.SANRegexes)
+	p.AllowKeyReuse = cp.KeyReuse
 	allowWildCards := false
 	for _, s := range p.SubjectCNRegexes {
-		if strings.HasPrefix(s, `^.*`) {
+		if strings.HasPrefix(s, "^.*") {
 			allowWildCards = true
 		}
 	}
+	if !allowWildCards {
+		for _, s := range p.DnsSanRegExs {
+			if strings.HasPrefix(s, "^.*") {
+				allowWildCards = true
+			}
+		}
+	}
 	p.AllowWildcards = allowWildCards
-	for _, kt := range ct.KeyTypes {
+	for _, kt := range cp.KeyTypes {
 		keyConfiguration := endpoint.AllowedKeyConfiguration{}
 		if err := keyConfiguration.KeyType.Set(string(kt.KeyType)); err != nil {
 			panic(err)
@@ -114,26 +107,42 @@ func (ct certificateTemplate) toPolicy() (p endpoint.Policy) {
 	return
 }
 
-func (ct certificateTemplate) toZoneConfig(zc *endpoint.ZoneConfiguration) {
-	r := ct.RecommendedSettings
-	zc.Country = r.SubjectCValue
-	zc.Province = r.SubjectSTValue
-	zc.Locality = r.SubjectLValue
-	zc.Organization = r.SubjectOValue
-	if r.SubjectOUValue != "" {
-		zc.OrganizationalUnit = []string{r.SubjectOUValue}
+func isNotRegexp(s string) bool {
+	matched, err := regexp.MatchString(`[a-zA-Z0-9 ]+`, s)
+	if !matched || err != nil {
+		return false
 	}
-	key := endpoint.AllowedKeyConfiguration{}
-	err := key.KeyType.Set(r.Key.Type)
-	if err != nil {
-		return
-	}
-	if r.Key.Length == 0 {
-		return
-	}
-	key.KeySizes = []int{r.Key.Length}
-	zc.KeyConfiguration = &key
+	return true
 }
+func (cp certificatePolicy) toZoneConfig(zc *endpoint.ZoneConfiguration) {
+	if len(cp.SubjectCRegexes) > 0 && isNotRegexp(cp.SubjectCRegexes[0]) {
+		zc.Country = cp.SubjectCRegexes[0]
+	}
+	if len(cp.SubjectORegexes) > 0 && isNotRegexp(cp.SubjectORegexes[0]) {
+		zc.Organization = cp.SubjectORegexes[0]
+	}
+	if len(cp.SubjectSTRegexes) > 0 && isNotRegexp(cp.SubjectSTRegexes[0]) {
+		zc.Province = cp.SubjectSTRegexes[0]
+	}
+	if len(cp.SubjectLRegexes) > 0 && isNotRegexp(cp.SubjectLRegexes[0]) {
+		zc.Locality = cp.SubjectLRegexes[0]
+	}
+	for _, ou := range cp.SubjectOURegexes {
+		if isNotRegexp(ou) {
+			zc.OrganizationalUnit = append(zc.OrganizationalUnit, ou)
+		}
+	}
+}
+
+const (
+	keyTypeRSA        keyType = "RSA"
+	keyTypeDSA                = "DSA"
+	keyTypeEC                 = "EC"
+	keyTypeGost3410           = "GOST3410"
+	keyTypeECGost3410         = "ECGOST3410"
+	keyTypeReserved3          = "RESERVED3"
+	keyTypeUnknown            = "UNKNOWN"
+)
 
 /*
 "signatureAlgorithm":{"type":"string","enum":["MD2_WITH_RSA_ENCRYPTION","MD5_WITH_RSA_ENCRYPTION","SHA1_WITH_RSA_ENCRYPTION","SHA1_WITH_RSA_ENCRYPTION2","SHA256_WITH_RSA_ENCRYPTION","SHA384_WITH_RSA_ENCRYPTION","SHA512_WITH_RSA_ENCRYPTION","ID_DSA_WITH_SHA1","dsaWithSHA1","EC_DSA_WITH_SHA1","EC_DSA_WITH_SHA224","EC_DSA_WITH_SHA256","EC_DSA_WITH_SHA384","EC_DSA_WITH_SHA512","UNKNOWN","SHA1_WITH_RSAandMGF1","GOST_R3411_94_WITH_GOST_R3410_2001","GOST_R3411_94_WITH_GOST_R3410_94"]},
