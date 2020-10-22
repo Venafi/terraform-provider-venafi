@@ -360,7 +360,9 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		expiration_window := d.Get("expiration_window").(int)
 
 		if validity < expiration_window {
-			validity = expiration_window
+			if err = d.Set("expiration_window", validity); err != nil {
+				return fmt.Errorf("error setting expiration_window: %s", err)
+			}
 		}
 
 		req.ValidityHours = validity
