@@ -22,6 +22,10 @@ import (
 	"github.com/Venafi/vcert/pkg/endpoint"
 )
 
+func (c *Connector) SetBaseURL(url string) error {
+	return nil
+}
+
 //GenerateRequest creates a new certificate request, based on the zone/policy configuration and the user data
 func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *certificate.Request) (err error) {
 
@@ -37,12 +41,12 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 		}
 
 	case certificate.UserProvidedCSR:
-		if req.GetCSR() == nil {
+		if req.CSR == nil {
 			return fmt.Errorf("CSR was supposed to be provided by user, but it's empty")
 		}
 
 	case certificate.ServiceGeneratedCSR:
-		return nil
+		req.CSR = nil
 
 	default:
 		return fmt.Errorf("Unexpected option in PrivateKeyOrigin")

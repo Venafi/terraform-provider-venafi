@@ -203,6 +203,37 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.token_certificate_custom_fields.private_key_pem}"
 }`
+	tokenValidDaysConfig = `
+%s
+resource "venafi_certificate" "token_certificate" {
+	provider = "venafi.token_tpp"
+	common_name = "%s"
+	san_dns = [
+		"%s"
+	]
+	san_ip = [
+		"%s"
+	]
+	san_email = [
+		"%s"
+	]
+	%s
+	key_password = "%s"
+	expiration_window = %d
+	issuer_hint = "%s"
+	valid_days =   %d
+}
+output "certificate" {
+	value = "${venafi_certificate.token_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}`
+)
+
+const (
+	issuer_hint = "MICROSOFT"
+	valid_days  = 30
 )
 
 func TestDevSignedCert(t *testing.T) {
@@ -687,6 +718,50 @@ func TestSignedCertCustomFields(t *testing.T) {
 	})
 }
 
+func TestTokenSignedCertValidDays(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	data.issuer_hint = issuer_hint
+	data.valid_days = valid_days
+
+	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
+	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
+					return checkCertValidDays(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+
+					t.Log("Testing TPP certificate second run")
+
+					err := checkCertValidDays(t, &data, s)
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+			},
+		},
+	})
+}
+
 func getCustomFields(variableName string) string {
 	formattedData := ""
 
@@ -747,6 +822,39 @@ func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEM)
 	if err != nil {
 		return fmt.Errorf("error comparing certificate and key: %s", err)
+	}
+
+	return nil
+}
+
+func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error {
+	t.Log("Testing certificate with cn", data.cn)
+	certUntyped := s.RootModule().Outputs["certificate"].Value
+	certificate, ok := certUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"certificate\" is not a string")
+	}
+
+	t.Logf("Testing certificate PEM:\n %s", certificate)
+	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+		return fmt.Errorf("key is missing cert PEM preamble")
+	}
+	block, _ := pem.Decode([]byte(certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+
+	certValidUntil := cert.NotAfter.Format("2006-01-02")
+
+	//need to convert local date on utc, since the certificate' NotAfter value we got on previous step, is on utc
+	//so for comparing them we need to have both dates on utc.
+	loc, _ := time.LoadLocation("UTC")
+	utcNow := time.Now().In(loc)
+	expectedValidDate := utcNow.AddDate(0, 0, valid_days).Format("2006-01-02")
+
+	if expectedValidDate != certValidUntil {
+		return fmt.Errorf("Expiration date is different than expected, expected: %s, but got %s: ", expectedValidDate, certValidUntil)
 	}
 
 	return nil

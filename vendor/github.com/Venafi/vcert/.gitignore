@@ -13,4 +13,3 @@ aruba/features/step_definitions/0.endpoints.rb
 aruba/log.log
 /vars
 /exec
-credentials

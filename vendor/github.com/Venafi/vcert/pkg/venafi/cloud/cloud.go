@@ -19,21 +19,17 @@ package cloud
 import (
 	"bytes"
 	"crypto/sha1"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
-
-	"github.com/Venafi/vcert/pkg/verror"
-
-	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
 )
 
 type apiKey struct {
@@ -73,20 +69,16 @@ type certificateRequestResponseData struct {
 	DER                    string    `json:"der,omitempty"`
 }
 
-type certificateRequestClientInfo struct {
-	Type       string `json:"type"`
-	Identifier string `json:"identifier"`
+type certificateRequest struct { // TODO: this is actually certificate request object (sent with POST)
+	//CompanyID      string `json:"companyId,omitempty"`
+	CSR                          string `json:"certificateSigningRequest,omitempty"`
+	ZoneID                       string `json:"zoneId,omitempty"`
+	ExistingManagedCertificateId string `json:"existingManagedCertificateId,omitempty"`
+	ReuseCSR                     bool   `json:"reuseCSR,omitempty"`
+	//DownloadFormat string `json:"downloadFormat,omitempty"`
 }
 
-type certificateRequest struct {
-	CSR                          string                       `json:"certificateSigningRequest,omitempty"`
-	ZoneID                       string                       `json:"zoneId,omitempty"`
-	ExistingManagedCertificateId string                       `json:"existingManagedCertificateId,omitempty"`
-	ReuseCSR                     bool                         `json:"reuseCSR,omitempty"`
-	ApiClientInformation         certificateRequestClientInfo `json:"apiClientInformation,omitempty"`
-}
-
-type certificateStatus struct {
+type certificateStatus struct { // TODO: this is actually the same certificate request object (received with GET)
 	Id                        string                            `json:"Id,omitempty"`
 	ManagedCertificateId      string                            `json:"managedCertificateId,omitempty"`
 	ZoneId                    string                            `json:"zoneId,omitempty"`
@@ -105,48 +97,41 @@ type CertificateStatusErrorInformation struct {
 	Args    []string `json:"args,omitempty"`
 }
 
-type importRequestClientInfo struct {
-	Type       string `json:"type"`
-	Identifier string `json:"identifier"`
+type importRequestEndpointCert struct {
+	Certificate string `json:"certificate"`
+	Fingerprint string `json:"fingerprint"`
 }
 
-type importRequestInstanceInfo struct {
-	AppName            string `json:"appName,omitempty"`
-	NodeName           string `json:"nodeName,omitempty"`
-	AutomationMetadata string `json:"automationMetadata,omitempty"`
+type importRequestEndpointProtocol struct {
+	Certificates []string      `json:"certificates"`
+	Ciphers      []interface{} `json:"ciphers"` //todo: check type
+	Protocol     string        `json:"protocol"`
+}
+
+type importRequestEndpoint struct {
+	Alpn                bool                            `json:"alpn"`
+	Certificates        []importRequestEndpointCert     `json:"certificates"`
+	ClientRenegotiation bool                            `json:"clientRenegotiation"`
+	Drown               bool                            `json:"drown"`
+	Heartbleed          bool                            `json:"heartbleed"`
+	Host                string                          `json:"host"`
+	HSTS                bool                            `json:"hsts"`
+	IP                  string                          `json:"ip"`
+	LogJam              int                             `json:"logJam"`
+	Npn                 bool                            `json:"npn"`
+	OCSP                int                             `json:"ocsp"` //default 1
+	Poodle              bool                            `json:"poodle"`
+	PoodleTls           bool                            `json:"poodleTls"`
+	Port                int                             `json:"port"`
+	Protocols           []importRequestEndpointProtocol `json:"protocols"`
+	SecureRenegotiation bool                            `json:"secureRenegotiation"`
+	Sloth               bool                            `json:"sloth"`
 }
 
 type importRequest struct {
-	Certificate              string                      `json:"certificate"`
-	IssuerCertificates       []string                    `json:"issuerCertificates,omitempty"`
-	ZoneId                   string                      `json:"zoneId"`
-	CertificateName          string                      `json:"certificateName"`
-	ApiClientInformation     importRequestClientInfo     `json:"apiClientInformation,omitempty"`
-	CertificateUsageMetadata []importRequestInstanceInfo `json:"certificateUsageMetadata,omitempty"`
-}
-
-type importResponseClientInfo struct {
-	Type       string `json:"type"`
-	Identifier string `json:"identifier"`
-}
-
-type importResponseCertInfo struct {
-	Id                      string                   `json:"id"`
-	ManagedCertificateId    string                   `json:"managedCertificateId"`
-	CompanyId               string                   `json:"companyId"`
-	Fingerprint             string                   `json:"fingerprint"`
-	CertificateSource       string                   `json:"certificateSource"`
-	OwnerUserId             string                   `json:"ownerUserId"`
-	IssuanceZoneId          string                   `json:"issuanceZoneId"`
-	ValidityStartDateString string                   `json:"validityStartDate"`
-	ValidityStartDate       time.Time                `json:"-"`
-	ValidityEndDateString   string                   `json:"validityEndDate"`
-	ValidityEndDate         time.Time                `json:"-"`
-	ApiClientInformation    importResponseClientInfo `json:"apiClientInformation,omitempty"`
-}
-
-type importResponse struct {
-	CertificateInformations []importResponseCertInfo `json:"certificateInformations"`
+	ZoneName  string                  `json:"zoneName"`
+	NetworkID string                  `json:"networkId"`
+	Endpoints []importRequestEndpoint `json:"endpoints"`
 }
 
 //GenerateRequest generates a CertificateRequest based on the zone configuration, and returns the request along with the private key.
@@ -154,10 +139,14 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 	switch req.CsrOrigin {
 	case certificate.LocalGeneratedCSR:
 		if config == nil {
-			config, err = c.ReadZoneConfiguration()
+			config, err = c.ReadZoneConfiguration(c.zone)
 			if err != nil {
-				return fmt.Errorf("could not read zone configuration: %w", err)
+				return fmt.Errorf("could not read zone configuration: %s", err)
 			}
+		}
+		err = config.ValidateCertificateRequest(req)
+		if err != nil {
+			return err
 		}
 		config.UpdateCertificateRequest(req)
 		if err := req.GeneratePrivateKey(); err != nil {
@@ -166,60 +155,50 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 		err = req.GenerateCSR()
 		return
 	case certificate.UserProvidedCSR:
-		if len(req.GetCSR()) == 0 {
-			return fmt.Errorf("%w: CSR was supposed to be provided by user, but it's empty", verror.UserDataError)
+		if len(req.CSR) == 0 {
+			return fmt.Errorf("CSR was supposed to be provided by user, but it's empty")
 		}
 		return nil
 
 	case certificate.ServiceGeneratedCSR:
+		req.CSR = nil
 		return nil
 
 	default:
-		return fmt.Errorf("%w: unrecognised req.CsrOrigin %v", verror.UserDataError, req.CsrOrigin)
+		return fmt.Errorf("unrecognised req.CsrOrigin %v", req.CsrOrigin)
 	}
+}
+
+//SetBaseURL allows overriding the default URL used to communicate with Venafi Cloud
+func (c *Connector) SetBaseURL(url string) error {
+	if url == "" {
+		return fmt.Errorf("base URL cannot be empty")
+	}
+	modified := strings.ToLower(url)
+	reg := regexp.MustCompile("^http(|s)://")
+	if reg.FindStringIndex(modified) == nil {
+		modified = "https://" + modified
+	} else {
+		modified = reg.ReplaceAllString(modified, "https://")
+	}
+	reg = regexp.MustCompile("/v1(|/)$")
+	if reg.FindStringIndex(modified) == nil {
+		modified += "v1/"
+	} else {
+		modified = reg.ReplaceAllString(modified, "/v1/")
+	}
+	c.baseURL = modified
+	return nil
 }
 
 func (c *Connector) getURL(resource urlResource) string {
 	return fmt.Sprintf("%s%s", c.baseURL, resource)
 }
 
-func (c *Connector) getHTTPClient() *http.Client {
-	if c.client != nil {
-		return c.client
-	}
-	var netTransport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).DialContext,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-	tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
-	if c.trust != nil {
-		if tlsConfig == nil {
-			tlsConfig = &tls.Config{}
-		} else {
-			tlsConfig = tlsConfig.Clone()
-		}
-		tlsConfig.RootCAs = c.trust
-	}
-	netTransport.TLSClientConfig = tlsConfig
-	c.client = &http.Client{
-		Timeout:   time.Second * 30,
-		Transport: netTransport,
-	}
-	return c.client
-}
-
 func (c *Connector) request(method string, url string, data interface{}, authNotRequired ...bool) (statusCode int, statusText string, body []byte, err error) {
 	if c.user == nil || c.user.Company == nil {
 		if !(len(authNotRequired) == 1 && authNotRequired[0]) {
-			err = fmt.Errorf("%w: must be autheticated to retieve certificate", verror.VcertError)
+			err = fmt.Errorf("Must be autheticated to retieve certificate")
 			return
 		}
 	}
@@ -233,7 +212,6 @@ func (c *Connector) request(method string, url string, data interface{}, authNot
 
 	r, err := http.NewRequest(method, url, payload)
 	if err != nil {
-		err = fmt.Errorf("%w: %v", verror.VcertError, err)
 		return
 	}
 	if c.apiKey != "" {
@@ -247,21 +225,17 @@ func (c *Connector) request(method string, url string, data interface{}, authNot
 	}
 	r.Header.Add("cache-control", "no-cache")
 
-	var httpClient = c.getHTTPClient()
-
-	res, err := httpClient.Do(r)
+	res, err := http.DefaultClient.Do(r)
+	if res != nil {
+		statusCode = res.StatusCode
+		statusText = res.Status
+	}
 	if err != nil {
-		err = fmt.Errorf("%w: %v", verror.ServerUnavailableError, err)
 		return
 	}
-	statusCode = res.StatusCode
-	statusText = res.Status
 
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
-	if err != nil {
-		err = fmt.Errorf("%w: %v", verror.ServerError, err)
-	}
 	// Do not enable trace in production
 	trace := false // IMPORTANT: sensitive information can be diclosured
 	// I hope you know what are you doing
@@ -281,24 +255,45 @@ func (c *Connector) request(method string, url string, data interface{}, authNot
 
 func parseUserDetailsResult(expectedStatusCode int, httpStatusCode int, httpStatus string, body []byte) (*userDetails, error) {
 	if httpStatusCode == expectedStatusCode {
-		return parseUserDetailsData(body)
+		resp, err := parseUserDetailsData(body)
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
 	}
-	respErrors, err := parseResponseErrors(body)
-	if err != nil {
-		return nil, err // parseResponseErrors always return verror.ServerError
+
+	switch httpStatusCode {
+	case http.StatusConflict, http.StatusPreconditionFailed:
+		respErrors, err := parseResponseErrors(body)
+		if err != nil {
+			return nil, err
+		}
+
+		respError := fmt.Sprintf("Unexpected status code on Venafi Cloud registration. Status: %s\n", httpStatus)
+		for _, e := range respErrors {
+			respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
+		}
+		return nil, fmt.Errorf(respError)
+	default:
+		if body != nil {
+			respErrors, err := parseResponseErrors(body)
+			if err == nil {
+				respError := fmt.Sprintf("Unexpected status code on Venafi Cloud registration. Status: %s\n", httpStatus)
+				for _, e := range respErrors {
+					respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
+				}
+				return nil, fmt.Errorf(respError)
+			}
+		}
+		return nil, fmt.Errorf("Unexpected status code on Venafi Cloud registration. Status: %s", httpStatus)
 	}
-	respError := fmt.Sprintf("unexpected status code on Venafi Cloud registration. Status: %s\n", httpStatus)
-	for _, e := range respErrors {
-		respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
-	}
-	return nil, fmt.Errorf("%w: %v", verror.ServerError, respError)
 }
 
 func parseUserDetailsData(b []byte) (*userDetails, error) {
 	var data userDetails
 	err := json.Unmarshal(b, &data)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", verror.ServerError, err)
+		return nil, err
 	}
 
 	return &data, nil
@@ -307,10 +302,12 @@ func parseUserDetailsData(b []byte) (*userDetails, error) {
 func parseZoneConfigurationResult(httpStatusCode int, httpStatus string, body []byte) (*zone, error) {
 	switch httpStatusCode {
 	case http.StatusOK:
-		return parseZoneConfigurationData(body)
-	case http.StatusBadRequest:
-		return nil, verror.ZoneNotFoundError
-	default:
+		z, err := parseZoneConfigurationData(body)
+		if err != nil {
+			return nil, err
+		}
+		return z, nil
+	case http.StatusBadRequest, http.StatusPreconditionFailed, http.StatusNotFound:
 		respErrors, err := parseResponseErrors(body)
 		if err != nil {
 			return nil, err
@@ -318,12 +315,21 @@ func parseZoneConfigurationResult(httpStatusCode int, httpStatus string, body []
 
 		respError := fmt.Sprintf("Unexpected status code on Venafi Cloud zone read. Status: %s\n", httpStatus)
 		for _, e := range respErrors {
-			if e.Code == 10051 {
-				return nil, verror.ZoneNotFoundError
-			}
 			respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
 		}
-		return nil, fmt.Errorf("%w: %v", verror.ServerError, respError)
+		return nil, fmt.Errorf(respError)
+	default:
+		if body != nil {
+			respErrors, err := parseResponseErrors(body)
+			if err == nil {
+				respError := fmt.Sprintf("Unexpected status code on Venafi Cloud zone read. Status: %s\n", httpStatus)
+				for _, e := range respErrors {
+					respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
+				}
+				return nil, fmt.Errorf(respError)
+			}
+		}
+		return nil, fmt.Errorf("Unexpected status code on Venafi Cloud zone read. Status: %s", httpStatus)
 	}
 }
 
@@ -331,40 +337,87 @@ func parseZoneConfigurationData(b []byte) (*zone, error) {
 	var data zone
 	err := json.Unmarshal(b, &data)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", verror.ServerError, err)
+		return nil, err
 	}
 
 	return &data, nil
 }
 
-func parseCertificateTemplate(httpStatusCode int, httpStatus string, body []byte) (*certificateTemplate, error) {
-	ct := certificateTemplate{}
-	if httpStatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%w: unexpected status code on Venafi Cloud policy read. Status: %s\n", verror.ServerError, httpStatus)
-	}
-	// todo: better error parsing
-	err := json.Unmarshal(body, &ct)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", verror.ServerError, err)
-	}
-	return &ct, nil
-}
-
-func parseCertificateRequestResult(httpStatusCode int, httpStatus string, body []byte) (*certificateRequestResponse, error) {
+func parseCertificatePolicyResult(httpStatusCode int, httpStatus string, body []byte) (*certificatePolicy, error) {
 	switch httpStatusCode {
-	case http.StatusCreated:
-		return parseCertificateRequestData(body)
-	default:
+	case http.StatusOK:
+		p, err := parseCertificatePolicyData(body)
+		if err != nil {
+			return nil, err
+		}
+		return p, nil
+	case http.StatusBadRequest, http.StatusPreconditionFailed, http.StatusNotFound:
 		respErrors, err := parseResponseErrors(body)
 		if err != nil {
 			return nil, err
 		}
 
-		respError := fmt.Sprintf("Unexpected status code on Venafi Cloud zone read. Status: %s\n", httpStatus)
+		respError := fmt.Sprintf("Unexpected status code on Venafi Cloud policy read. Status: %s\n", httpStatus)
 		for _, e := range respErrors {
 			respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
 		}
-		return nil, fmt.Errorf("%w: %v", verror.ServerError, respError)
+		return nil, fmt.Errorf(respError)
+	default:
+		if body != nil {
+			respErrors, err := parseResponseErrors(body)
+			if err == nil {
+				respError := fmt.Sprintf("Unexpected status code on Venafi Cloud policy read. Status: %s\n", httpStatus)
+				for _, e := range respErrors {
+					respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
+				}
+				return nil, fmt.Errorf(respError)
+			}
+		}
+		return nil, fmt.Errorf("Unexpected status code on Venafi Cloud policy read. Status: %s", httpStatus)
+	}
+}
+
+func parseCertificatePolicyData(b []byte) (*certificatePolicy, error) {
+	var data certificatePolicy
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
+}
+
+func parseCertificateRequestResult(httpStatusCode int, httpStatus string, body []byte) (*certificateRequestResponse, error) {
+	switch httpStatusCode {
+	case http.StatusCreated:
+		z, err := parseCertificateRequestData(body)
+		if err != nil {
+			return nil, err
+		}
+		return z, nil
+	case http.StatusBadRequest, http.StatusPreconditionFailed:
+		respErrors, err := parseResponseErrors(body)
+		if err != nil {
+			return nil, err
+		}
+
+		respError := fmt.Sprintf("Certificate request failed with server error. Status: %s\n", httpStatus)
+		for _, e := range respErrors {
+			respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
+		}
+		return nil, fmt.Errorf(respError)
+	default:
+		if body != nil {
+			respErrors, err := parseResponseErrors(body)
+			if err == nil {
+				respError := fmt.Sprintf("Unexpected status code on Venafi Cloud certificate request. Status: %s\n", httpStatus)
+				for _, e := range respErrors {
+					respError += fmt.Sprintf("Error Code: %d Error: %s\n", e.Code, e.Message)
+				}
+				return nil, fmt.Errorf(respError)
+			}
+		}
+		return nil, fmt.Errorf("Unexpected status code on Venafi Cloud certificate request. Status: %s", httpStatus)
 	}
 }
 
@@ -372,7 +425,7 @@ func parseCertificateRequestData(b []byte) (*certificateRequestResponse, error) 
 	var data certificateRequestResponse
 	err := json.Unmarshal(b, &data)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", verror.ServerError, err)
+		return nil, err
 	}
 
 	return &data, nil
@@ -383,6 +436,8 @@ func newPEMCollectionFromResponse(data []byte, chainOrder certificate.ChainOptio
 }
 
 func certThumprint(asn1 []byte) string {
-	h := sha1.Sum(asn1)
-	return strings.ToUpper(fmt.Sprintf("%x", h))
+	h := sha1.New()
+	h.Write(asn1)
+	s := h.Sum(nil)
+	return strings.ToUpper(fmt.Sprintf("%x", s))
 }

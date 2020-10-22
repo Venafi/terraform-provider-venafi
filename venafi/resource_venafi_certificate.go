@@ -5,15 +5,15 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/endpoint"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"net"
 	"software.sslmate.com/src/go-pkcs12"
 	"time"
 
 	"crypto/x509"
 	"encoding/pem"
-	"github.com/Venafi/vcert"
-	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/certificate"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"log"
 	"strings"
@@ -128,6 +128,18 @@ func resourceVenafiCertificate() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"valid_days": &schema.Schema{
+				Type:        schema.TypeInt,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The desired certificate validity",
+			},
+			"issuer_hint": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Indicate the target issuer to enable valid days with Venafi Platform; DigiCert, Entrust, and Microsoft are supported values.",
 			},
 		},
 	}
@@ -339,6 +351,22 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 				req.CustomFields = append(req.CustomFields, certificate.CustomField{Name: key, Value: value})
 			}
 		}
+	}
+
+	if ttl, ok := d.GetOk("valid_days"); ok {
+
+		validity := ttl.(int)
+		validity = validity * 24
+		expiration_window := d.Get("expiration_window").(int)
+
+		if validity < expiration_window {
+			validity = expiration_window
+		}
+
+		req.ValidityHours = validity
+		issuer_hint := d.Get("issuer_hint").(string)
+		req.IssuerHint = getIssuerHint(issuer_hint)
+
 	}
 
 	log.Println("Making certificate request")

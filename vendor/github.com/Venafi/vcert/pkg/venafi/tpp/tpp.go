@@ -23,44 +23,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
-
-	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
 )
 
 const defaultKeySize = 2048
 const defaultSignatureAlgorithm = x509.SHA256WithRSA
-const defaultClientID = "vcert-sdk"
-const defaultScope = "certificate:manage,revoke"
-const defaultWorkloadName = "Default"
-
-type customField struct {
-	Name   string
-	Values []string
-}
-
-type application struct {
-	ObjectName     string
-	Class          string
-	DriverName     string
-	ValidationHost string `json:",omitempty"`
-	ValidationPort string `json:",omitempty"`
-}
-
-type device struct {
-	PolicyDN     string
-	ObjectName   string
-	Host         string
-	Applications []application
-}
 
 type certificateRequest struct {
 	PolicyDN                string          `json:",omitempty"`
@@ -75,14 +49,11 @@ type certificateRequest struct {
 	SubjectAltNames         []sanItem       `json:",omitempty"`
 	Contact                 string          `json:",omitempty"`
 	CASpecificAttributes    []nameValuePair `json:",omitempty"`
-	Origin                  string          `json:",omitempty"`
 	PKCS10                  string          `json:",omitempty"`
 	KeyAlgorithm            string          `json:",omitempty"`
 	KeyBitSize              int             `json:",omitempty"`
 	EllipticCurve           string          `json:",omitempty"`
 	DisableAutomaticRenewal bool            `json:",omitempty"`
-	CustomFields            []customField   `json:",omitempty"`
-	Devices                 []device        `json:",omitempty"`
 }
 
 type certificateRetrieveRequest struct {
@@ -105,7 +76,7 @@ type certificateRetrieveResponse struct {
 
 type RevocationReason int
 
-// RevocationReasonsMap maps *certificate.RevocationRequest.Reason to TPP-specific webSDK codes
+// this maps *certificate.RevocationRequest.Reason to TPP-specific webSDK codes
 var RevocationReasonsMap = map[string]RevocationReason{
 	"":                       0, // NoReason
 	"none":                   0, //
@@ -152,28 +123,14 @@ type nameValuePair struct {
 	Value string `json:",omitempty"`
 }
 
-type nameSliceValuePair struct {
-	Name  string
-	Value []string
-}
-
 type certificateRequestResponse struct {
 	CertificateDN string `json:",omitempty"`
 	Error         string `json:",omitempty"`
 }
 
-type importRequest struct {
-	PolicyDN        string `json:",omitempty"`
-	ObjectName      string `json:",omitempty"`
-	CertificateData string `json:",omitempty"`
-	PrivateKeyData  string `json:",omitempty"`
-	Password        string `json:",omitempty"`
-	Reconcile       bool   `json:",omitempty"`
-}
-
 type authorizeResponse struct {
 	APIKey     string `json:",omitempty"`
-	ValidUntil string `json:",omitempty"` //todo: add usage
+	ValidUntil string `json:",omitempty"`
 }
 
 type authorizeResquest struct {
@@ -181,121 +138,24 @@ type authorizeResquest struct {
 	Password string `json:",omitempty"`
 }
 
-type refreshAccessTokenResquest struct {
-	Client_id     string `json:"client_id"`
-	Refresh_token string `json:"refresh_token"`
-}
-
-type oauthGetRefreshTokenRequest struct {
-	Client_id string `json:"client_id"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	Scope     string `json:"scope"`
-}
-type OauthGetRefreshTokenResponse struct {
-	Access_token  string `json:"access_token,omitempty"`
-	Expires       int    `json:"expires,omitempty"`
-	Identity      string `json:"identity,omitempty"`
-	Refresh_token string `json:"refresh_token,omitempty"`
-	Scope         string `json:"scope,omitempty"`
-	Token_type    string `json:"token_type,omitempty"`
-}
-
-type oauthRefreshAccessTokenRequest struct {
-	Refresh_token string `json:"refresh_token,omitempty"`
-	Client_id     string `json:"client_id"`
-}
-
-type oauthCertificateTokenRequest struct {
-	Client_id string `json:"client_id"`
-	Scope     string `json:"scope,omitempty"`
-}
-
-type OauthRefreshAccessTokenResponse struct {
-	Access_token  string `json:"access_token,omitempty"`
-	Expires       int    `json:"expires,omitempty"`
-	Identity      string `json:"identity,omitempty"`
-	Refresh_token string `json:"refresh_token,omitempty"`
-	Token_type    string `json:"token_type,omitempty"`
-}
 type policyRequest struct {
 	ObjectDN      string `json:",omitempty"`
 	Class         string `json:",omitempty"`
 	AttributeName string `json:",omitempty"`
 }
-type metadataItem struct {
-	AllowedValues     []string `json:",omitempty"`
-	Classes           []string `json:",omitempty"`
-	ConfigAttribute   string   `json:",omitempty"`
-	DefaultValues     []string `json:",omitempty"`
-	DN                string   `json:",omitempty"`
-	ErrorMessage      string   `json:",omitempty"`
-	Guid              string   `json:",omitempty"`
-	Help              string   `json:",omitempty"`
-	Label             string   `json:",omitempty"`
-	Name              string   `json:",omitempty"`
-	Policyable        bool     `json:",omitempty"`
-	RegularExpression string   `json:",omitempty"`
-	RenderHidden      bool     `json:",omitempty"`
-	RenderReadOnly    bool     `json:",omitempty"`
-	Type              int      `json:",omitempty"`
-}
-type metadataKeyValueSet struct {
-	Key   metadataItem `json:",omitempty"`
-	Value []string     `json:",omitempty"`
-}
-
-type metadataGetItemsRequest struct {
-	ObjectDN string `json:"DN"`
-}
-type metadataGetItemsResponse struct {
-	Items  []metadataItem `json:",omitempty"`
-	Locked bool           `json:",omitempty"`
-}
-type metadataGetResponse struct {
-	Data   []metadataKeyValueSet
-	Locked bool `json:",omitempty"`
-}
-type guidData struct {
-	ItemGuid string   `json:",omitempty"`
-	List     []string `json:",omitempty"`
-}
-type metadataSetRequest struct {
-	DN           string     `json:"DN"`
-	GuidData     []guidData `json:"GuidData"`
-	KeepExisting bool       `json:"KeepExisting"`
-}
-type metadataSetResponse struct {
-	Locked bool `json:",omitempty"`
-	Result int  `json:",omitempty"`
-}
-type systemStatusVersionResponse string
 
 type urlResource string
 
 const (
-	urlResourceAuthorize              urlResource = "vedsdk/authorize/"
-	urlResourceAuthorizeCertificate   urlResource = "vedauth/Authorize/Certificate"
-	urlResourceAuthorizeOAuth         urlResource = "vedauth/authorize/oauth"
-	urlResourceCertificateImport      urlResource = "vedsdk/certificates/import"
-	urlResourceCertificatePolicy      urlResource = "vedsdk/certificates/checkpolicy"
-	urlResourceCertificateRenew       urlResource = "vedsdk/certificates/renew"
-	urlResourceCertificateRequest     urlResource = "vedsdk/certificates/request"
-	urlResourceCertificateRetrieve    urlResource = "vedsdk/certificates/retrieve"
-	urlResourceCertificateRevoke      urlResource = "vedsdk/certificates/revoke"
-	urlResourceCertificatesAssociate  urlResource = "vedsdk/Certificates/Associate"
-	urlResourceCertificatesDissociate urlResource = "vedsdk/Certificates/Dissociate"
-	urlResourceCertificate            urlResource = "vedsdk/certificates/"
-	urlResourceCertificateSearch                  = urlResourceCertificate
-	urlResourceCertificatesList                   = urlResourceCertificate
-	urlResourceConfigDnToGuid         urlResource = "vedsdk/Config/DnToGuid"
-	urlResourceConfigReadDn           urlResource = "vedsdk/Config/ReadDn"
-	urlResourceFindPolicy             urlResource = "vedsdk/config/findpolicy"
-	urlResourceRefreshAccessToken     urlResource = "vedauth/authorize/token" // #nosec
-	urlResourceMetadataSet            urlResource = "vedsdk/metadata/set"
-	urlResourceAllMetadataGet         urlResource = "vedsdk/metadata/getitems"
-	urlResourceMetadataGet            urlResource = "vedsdk/metadata/get"
-	urlResourceSystemStatusVersion    urlResource = "vedsdk/SystemStatus/Version"
+	urlResourceAuthorize           urlResource = "authorize/"
+	urlResourceCertificateRequest              = "certificates/request"
+	urlResourceCertificateRetrieve             = "certificates/retrieve"
+	urlResourceFindPolicy                      = "config/findpolicy"
+	urlResourceCertificateRevoke               = "certificates/revoke"
+	urlResourceCertificateRenew                = "certificates/renew"
+	urlResourceCertificateSearch               = "certificates/"
+	urlResourceCertificateImport               = "certificates/import"
+	urlResourceCertificatePolicy               = "certificates/checkpolicy"
 )
 
 const (
@@ -345,20 +205,52 @@ func retrieveChainOptionFromString(order string) retrieveChainOption {
 	}
 }
 
+var baseUrlRegex = regexp.MustCompile("^https://[a-z\\d]+[-a-z\\d.]+[a-z\\d][:\\d]*/vedsdk/$")
+
+// SetBaseURL sets the base URL used to communicate with TPP
+func (c *Connector) SetBaseURL(url string) error {
+	modified := strings.ToLower(url)
+	if strings.HasPrefix(modified, "http://") {
+		modified = "https://" + modified[7:]
+	} else if !strings.HasPrefix(modified, "https://") {
+		modified = "https://" + modified
+	}
+	if !strings.HasSuffix(modified, "/") {
+		modified = modified + "/"
+	}
+
+	if !strings.HasSuffix(modified, "vedsdk/") {
+		modified += "vedsdk/"
+	}
+	if loc := baseUrlRegex.FindStringIndex(modified); loc == nil {
+		return fmt.Errorf("The specified TPP URL is invalid. %s\nExpected TPP URL format 'https://tpp.company.com/vedsdk/'", url)
+	}
+
+	c.baseURL = modified
+	return nil
+}
+
+func (c *Connector) getURL(resource urlResource) (string, error) {
+	if c.baseURL == "" {
+		return "", fmt.Errorf("The Host URL has not been set")
+	}
+	return fmt.Sprintf("%s%s", c.baseURL, resource), nil
+}
+
 func (c *Connector) request(method string, resource urlResource, data interface{}) (statusCode int, statusText string, body []byte, err error) {
-	url := c.baseURL + string(resource)
+	url, err := c.getURL(resource)
+	if err != nil {
+		return
+	}
 	var payload io.Reader
 	var b []byte
-	if method == "POST" || method == "PUT" {
+	if method == "POST" {
 		b, _ = json.Marshal(data)
 		payload = bytes.NewReader(b)
 	}
 
 	r, _ := http.NewRequest(method, url, payload)
-	r.Close = true
-	if c.accessToken != "" {
-		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
-	} else if c.apiKey != "" {
+	if c.apiKey != "" {
 		r.Header.Add("x-venafi-api-key", c.apiKey)
 	}
 	r.Header.Add("content-type", "application/json")
@@ -380,8 +272,7 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 	// I hope you know what are you doing
 	if trace {
 		log.Println("#################")
-		log.Printf("Headers are:\n%s", r.Header)
-		if method == "POST" || method == "PUT" {
+		if method == "POST" {
 			log.Printf("JSON sent for %s\n%s\n", url, string(b))
 		} else {
 			log.Printf("%s request sent to %s\n", method, url)
@@ -394,42 +285,18 @@ func (c *Connector) request(method string, resource urlResource, data interface{
 }
 
 func (c *Connector) getHTTPClient() *http.Client {
-	if c.client != nil {
-		return c.client
-	}
-	var netTransport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).DialContext,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-	tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
 	if c.trust != nil {
-		if tlsConfig == nil {
-			tlsConfig = &tls.Config{}
-		} else {
-			tlsConfig = tlsConfig.Clone()
-		}
-		tlsConfig.RootCAs = c.trust
+		tr := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: c.trust}}
+		return &http.Client{Transport: tr}
 	}
-	netTransport.TLSClientConfig = tlsConfig
-	c.client = &http.Client{
-		Timeout:   time.Second * 30,
-		Transport: netTransport,
-	}
-	return c.client
+
+	return http.DefaultClient
 }
 
-// GenerateRequest creates a new certificate request, based on the zone/policy configuration and the user data
+//GenerateRequest creates a new certificate request, based on the zone/policy configuration and the user data
 func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *certificate.Request) (err error) {
 	if config == nil {
-		config, err = c.ReadZoneConfiguration()
+		config, err = c.ReadZoneConfiguration(c.zone)
 		if err != nil {
 			return fmt.Errorf("could not read zone configuration: %s", err)
 		}
@@ -459,20 +326,21 @@ func (c *Connector) GenerateRequest(config *endpoint.ZoneConfiguration, req *cer
 		if config.CustomAttributeValues[tppAttributeManualCSR] == "0" {
 			return fmt.Errorf("Unable to request certificate with user provided CSR when zone configuration is 'Manual Csr' = 0")
 		}
-		if len(req.GetCSR()) == 0 {
+		if len(req.CSR) == 0 {
 			return fmt.Errorf("CSR was supposed to be provided by user, but it's empty")
 		}
 
 	case certificate.ServiceGeneratedCSR:
+		req.CSR = nil
 	}
 	return nil
 }
 
 func getPolicyDN(zone string) string {
 	modified := zone
-	reg := regexp.MustCompile(`^\\VED\\Policy`)
+	reg := regexp.MustCompile("^\\\\VED\\\\Policy")
 	if reg.FindStringIndex(modified) == nil {
-		reg = regexp.MustCompile(`^\\`)
+		reg = regexp.MustCompile("^\\\\")
 		if reg.FindStringIndex(modified) == nil {
 			modified = "\\" + modified
 		}
@@ -481,24 +349,22 @@ func getPolicyDN(zone string) string {
 	return modified
 }
 
-func getDeviceDN(zone string, location certificate.Location) string {
-	workload := location.Workload
-	if workload == "" {
-		workload = "Default"
+func parseAuthorizeResult(httpStatusCode int, httpStatus string, body []byte) (string, error) {
+	switch httpStatusCode {
+	case http.StatusOK:
+		auth, err := parseAuthorizeData(body)
+		if err != nil {
+			return "", err
+		}
+		return auth.APIKey, nil
+	default:
+		return "", fmt.Errorf("Unexpected status code on TPP Authorize. Status: %s", httpStatus)
 	}
-	return getPolicyDN(zone + "\\" + location.Instance + "\\" + workload)
 }
 
-func getCertificateDN(zone, cn string) string {
-	return getPolicyDN(zone + "\\" + cn)
-}
-
-func stripBackSlashes(s string) string {
-
-	var r = regexp.MustCompile(`\\+`)
-
-	result := r.ReplaceAll([]byte(s), []byte("\\"))
-	return string(result)
+func parseAuthorizeData(b []byte) (data authorizeResponse, err error) {
+	err = json.Unmarshal(b, &data)
+	return
 }
 
 func parseConfigResult(httpStatusCode int, httpStatus string, body []byte) (tppData tppPolicyData, err error) {
@@ -529,7 +395,7 @@ func parseRequestResult(httpStatusCode int, httpStatus string, body []byte) (str
 		}
 		return reqData.CertificateDN, nil
 	default:
-		return "", fmt.Errorf("Unexpected status code on TPP Certificate Request.\n Status:\n %s. \n Body:\n %s\n", httpStatus, body)
+		return "", fmt.Errorf("Unexpected status code on TPP Certificate Request. Status: %s. Body: %s", httpStatus, body)
 	}
 }
 
@@ -651,22 +517,6 @@ func (sp serverPolicy) toZoneConfig(zc *endpoint.ZoneConfiguration) {
 	zc.OrganizationalUnit = sp.Subject.OrganizationalUnit.Values
 	zc.Province = sp.Subject.State.Value
 	zc.Locality = sp.Subject.City.Value
-	key := endpoint.AllowedKeyConfiguration{}
-	err := key.KeyType.Set(sp.KeyPair.KeyAlgorithm.Value)
-	if err != nil {
-		return
-	}
-	if sp.KeyPair.KeySize.Value != 0 {
-		key.KeySizes = []int{sp.KeyPair.KeySize.Value}
-	}
-	if sp.KeyPair.EllipticCurve.Value != "" {
-		curve := certificate.EllipticCurveNotSet
-		err = curve.Set(sp.KeyPair.EllipticCurve.Value)
-		if err == nil {
-			key.KeyCurves = append(key.KeyCurves, curve)
-		}
-	}
-	zc.KeyConfiguration = &key
 }
 
 func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
@@ -696,9 +546,9 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		p.SubjectCNRegexes = make([]string, len(sp.WhitelistedDomains))
 		for i, d := range sp.WhitelistedDomains {
 			if sp.WildcardsAllowed {
-				p.SubjectCNRegexes[i] = addStartEnd(`([\p{L}\p{N}-*]+\.)*` + regexp.QuoteMeta(d))
+				p.SubjectCNRegexes[i] = addStartEnd(".*" + regexp.QuoteMeta("."+d))
 			} else {
-				p.SubjectCNRegexes[i] = addStartEnd(`([\p{L}\p{N}-]+\.)*` + regexp.QuoteMeta(d))
+				p.SubjectCNRegexes[i] = escapeOne(d)
 			}
 		}
 	}
@@ -734,9 +584,9 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 			p.DnsSanRegExs = make([]string, len(sp.WhitelistedDomains))
 			for i, d := range sp.WhitelistedDomains {
 				if sp.WildcardsAllowed {
-					p.DnsSanRegExs[i] = addStartEnd(`([\p{L}\p{N}-*]+\.)*` + regexp.QuoteMeta(d))
+					p.DnsSanRegExs[i] = addStartEnd(".*" + regexp.QuoteMeta("."+d))
 				} else {
-					p.DnsSanRegExs[i] = addStartEnd(`([\p{L}\p{N}-]+\.)*` + regexp.QuoteMeta(d))
+					p.DnsSanRegExs[i] = escapeOne(d)
 				}
 			}
 		}
@@ -793,28 +643,12 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 		}
 		p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, key)
 	} else {
-		var ks []int
-		for _, s := range certificate.AllSupportedKeySizes() {
-			if !sp.KeyPair.KeySize.Locked || s >= sp.KeyPair.KeySize.Value {
-				ks = append(ks, s)
-			}
-		}
 		p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
-			KeyType: certificate.KeyTypeRSA, KeySizes: ks,
+			KeyType: certificate.KeyTypeRSA, KeySizes: certificate.AllSupportedKeySizes(),
 		})
-		if sp.KeyPair.EllipticCurve.Locked {
-			var curve certificate.EllipticCurve
-			if err := curve.Set(sp.KeyPair.EllipticCurve.Value); err != nil {
-				panic(err)
-			}
-			p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
-				KeyType: certificate.KeyTypeECDSA, KeyCurves: []certificate.EllipticCurve{curve},
-			})
-		} else {
-			p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
-				KeyType: certificate.KeyTypeECDSA, KeyCurves: certificate.AllSupportedCurves(),
-			})
-		}
+		p.AllowedKeyConfigurations = append(p.AllowedKeyConfigurations, endpoint.AllowedKeyConfiguration{
+			KeyType: certificate.KeyTypeECDSA, KeyCurves: certificate.AllSupportedCurves(),
+		})
 	}
 	p.AllowWildcards = sp.WildcardsAllowed
 	p.AllowKeyReuse = sp.PrivateKeyReuseAllowed
