@@ -187,6 +187,8 @@ using the
    | `ecdsa_curve`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ECDSA curve to use when generating a key pair (i.e. P256, P384, P521). Applies when `algorithm`=ECDSA | P521   |
    | `key_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Private key password                                                              | `none` |
    | `custom_fields`     | [Map](https://www.terraform.io/docs/extend/schemas/schema-types.html#typemap) | Collection of key-value pairs where the key is the name of the Custom Field in Trust Protection Platform.  For list type Custom Fields, use the \| character to delimit mulitple values.<br/>Example: `custom_fields = { "Number List" = "2\|4\|6" }` | `none` |
+   | `valid_days` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Desired number of days for which the new certificate will be valid | `none` |
+   | `issuer_hint` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Used with `valid_days` to indicate the target issuer when using Trust Protection Platform and the CA is DigiCert, Entrust, or Microsoft.<br/>Example: `issuer_hint = "Microsoft"` | `none` |
    | `expiration_window` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of hours before certificate expiry to request a new certificate            | 168    |
 
    >:pushpin: **NOTE**: The `venafi_certificate` resource handles certificate
