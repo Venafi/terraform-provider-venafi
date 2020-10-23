@@ -56,7 +56,15 @@ The following arguments are supported:
 
 * `key_password` - (Optional, string) The password used to encrypt the private key.
 
-* `custom_fields` - (Optional, map) Collection of Custom Field name-value pairs to assign to the certificate.
+* `custom_fields` - (Optional, map) Collection of Custom Field name-value pairs to
+  assign to the certificate.
+
+* `valid_days` - (Optional, integer) Desired number of days for which the new
+  certificate will be valid.
+
+* `issuer_hint` - (Optional, string) Used with valid_days to indicate the target
+  issuer when using Trust Protection Platform.  Relevant values are: "DigiCert",
+  "Entrust", and "Microsoft".
 
 * `expiration_window` - (Optional, integer) Number of hours before certificate expiry
   to request a new certificate.
