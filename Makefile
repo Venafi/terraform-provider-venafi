@@ -46,9 +46,12 @@ else
 		UNAME_P := $(shell uname -p)
 		ifeq ($(UNAME_P),x86_64)
 			CPU_STR := amd64
-		endif
-		ifneq ($(filter %86,$(UNAME_P)),)
-			CPU_STR := 386
+		else
+			ifneq ($(filter %86,$(UNAME_P)),)
+				CPU_STR := 386
+			else
+				CPU_STR := amd64
+			endif
 		endif
 	endif
 	ifeq ($(UNAME_S),Darwin)
@@ -141,8 +144,6 @@ test_e2e_jenkins: e2e_init_jenkins test_e2e_dev test_e2e_tpp test_e2e_cloud test
 
 # This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
 e2e_init: build_dev_dynamic
-	echo $(shell uname -s)
-	echo $(shell uname -p)
 	mkdir -p $(TERRAFORM_TEST_DIR)
 	mv $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
 	chmod 755 $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
