@@ -59,6 +59,7 @@ endif
 
 TERRAFORM_TEST_VERSION := 99.9.9
 TERRAFORM_TEST_DIR := terraform.d/plugins/registry.terraform.io/terraform-providers/venafi/$(TERRAFORM_TEST_VERSION)/$(OS_STR)_$(CPU_STR)
+TERRAFORM_TEST_DIR_JENKINS := terraform.d/plugins/registry.terraform.io/terraform-providers/venafi/$(TERRAFORM_TEST_VERSION)/linux_amd64
 
 os:
 	@echo $(OS_STRING)
@@ -133,15 +134,24 @@ fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 # Integration tests using real terraform binary
-# Right now only works in linux platform
 test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_cloud test_e2e_tpp_token
+
+# Integration tests using jenkins
+test_e2e_jenkins: e2e_init_jenkins test_e2e_dev test_e2e_tpp test_e2e_cloud test_e2e_tpp_token
 
 # This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
 e2e_init: build_dev_dynamic
-	echo uname -s
-	echo uname -p
+	echo $(shell uname -s)
+	echo $(shell uname -p)
 	mkdir -p $(TERRAFORM_TEST_DIR)
 	mv $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
+	chmod 755 $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
+	terraform init
+
+# This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
+e2e_init_jenkins: build_dev
+	mkdir -p $(TERRAFORM_TEST_DIR)
+	mv $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
 	chmod 755 $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
 	terraform init
 
