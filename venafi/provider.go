@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"log"
+	"strings"
 )
 
 const (
@@ -104,6 +105,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	var cfg vcert.Config
 
+	zone = normalizeZone(zone)
+
 	if devMode {
 		log.Print(messageUseDevMode)
 		cfg = vcert.Config{
@@ -175,4 +178,14 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func normalizeZone(zone string) string {
+	if zone == "" {
+		return zone
+	}
+
+	newZone := strings.Replace(zone, "\\", "", 1)
+	log.Printf("Normalized zone : %s", newZone)
+	return newZone
 }
