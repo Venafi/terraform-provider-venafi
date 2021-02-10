@@ -98,6 +98,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	tppPassword := d.Get("tpp_password").(string)
 	accessToken := d.Get("access_token").(string)
 	zone := d.Get("zone").(string)
+	log.Printf("===ZONE==== : %s", zone)
 	devMode := d.Get("dev_mode").(bool)
 	trustBundle := d.Get("trust_bundle").(string)
 
