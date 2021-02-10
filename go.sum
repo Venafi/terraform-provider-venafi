@@ -27,6 +27,8 @@ github.com/Venafi/vcert v3.18.4+incompatible h1:mDXSjd+EpXa8YEkEo9Oad19E270aiPJJ
 github.com/Venafi/vcert v3.18.4+incompatible/go.mod h1:3dpfrCI+31cDZosD+1UX8GFziVFORaegByXtzT1dwNo=
 github.com/Venafi/vcert/v4 v4.11.1 h1:BmV17mEbNIxIrJZhKO47AIHQTHDIZBOntgwqkrRySPU=
 github.com/Venafi/vcert/v4 v4.11.1/go.mod h1:OE+UZ0cj8qqVUuk0u7R4GIk4ZB6JMSf/WySqnBPNwws=
+github.com/Venafi/vcert/v4 v4.13.0 h1:A6kiHCw+i1Fs6J7lWcTw5mBFUk/Nh8xTIwgCfdDbNH0=
+github.com/Venafi/vcert/v4 v4.13.0/go.mod h1:Z3sJFoAurFNXPpoSUSHq46aIeHLiGQEMDhprfxlpofQ=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=
 github.com/agext/levenshtein v1.2.1/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/agext/levenshtein v1.2.2 h1:0S/Yg6LYmFJ5stwQeRp6EeOcCbj7xiqQSdNelsXvaqE=
@@ -347,6 +349,7 @@ github.com/onsi/ginkgo v1.10.1/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
+github.com/pavel-v-chernykh/keystore-go/v4 v4.1.0/go.mod h1:2ejgys4qY+iNVW1IittZhyRYA6MNv8TgM6VHqojbB9g=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=

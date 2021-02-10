@@ -6,7 +6,6 @@ CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
 #Plugin information
 PLUGIN_NAME := terraform-provider-venafi
 PLUGIN_DIR := pkg/bin
-PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
 
 ifdef BUILD_NUMBER
@@ -27,10 +26,53 @@ ZIP_VERSION := $(shell echo ${VERSION} | cut -c 2-)
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
+# Get the OS dinamically.
+# credits to https://gist.github.com/sighingnow/deee806603ec9274fd47
+OS_STR :=
+CPU_STR :=
+ifeq ($(OS),Windows_NT)
+	OS_STR := windows
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+		CPU_STR := amd64
+	endif
+	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+		CPU_STR := 386
+	endif
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OS_STR := linux
+
+		UNAME_P := $(shell uname -p)
+		ifeq ($(UNAME_P),x86_64)
+			CPU_STR := amd64
+		else
+			ifneq ($(filter %86,$(UNAME_P)),)
+				CPU_STR := 386
+			else
+				CPU_STR := amd64
+			endif
+		endif
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		OS_STR := darwin
+		CPU_STR := amd64
+	endif
+endif
+
+TERRAFORM_TEST_VERSION := 99.9.9
+TERRAFORM_TEST_DIR := terraform.d/plugins/registry.terraform.io/terraform-providers/venafi/$(TERRAFORM_TEST_VERSION)/$(OS_STR)_$(CPU_STR)
+TERRAFORM_TEST_DIR_JENKINS := terraform.d/plugins/registry.terraform.io/terraform-providers/venafi/$(TERRAFORM_TEST_VERSION)/linux_amd64
+
+os:
+	@echo $(OS_STRING)
+
 all: build test testacc
 
-
 #Build
+build_dev_dynamic:
+	env CGO_ENABLED=0 GOOS=$(OS_STR)   GOARCH=$(CPU_STR) go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) || exit 1
+
 build_dev:
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
 
@@ -84,6 +126,7 @@ test_go:
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+
 testacc:
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
@@ -93,10 +136,14 @@ fmt:
 fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
-#Integration tests using real terrafomr binary
+# Integration tests using real terraform binary
 test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_cloud test_e2e_tpp_token
 
-e2e_init:
+# This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
+e2e_init: build_dev_dynamic
+	mkdir -p $(TERRAFORM_TEST_DIR)
+	mv $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
+	chmod 755 $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
 	terraform init
 
 test_e2e_tpp:
