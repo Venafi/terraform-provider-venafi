@@ -185,7 +185,14 @@ func normalizeZone(zone string) string {
 		return zone
 	}
 
-	newZone := strings.Replace(zone, "\\", "", 1)
-	log.Printf("Normalized zone : %s", newZone)
-	return newZone
+	values := strings.Split(zone, "\\")
+	// string is already normalized, nothing to do here
+	if len(values) <= 2 {
+		log.Printf("Normalized zone : %s", zone)
+		return zone
+	} else {
+		newZone := strings.Replace(zone, "\\", "", 1)
+		log.Printf("Normalized zone : %s", newZone)
+		return newZone
+	}
 }
