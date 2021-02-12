@@ -70,8 +70,10 @@ and any other dependencies that appear in the Venafi Cloud documentation.
 - Set up an issuing template to link Venafi Cloud to your CA. To learn more,
   search for "Issuing Templates" in the
   [Venafi Cloud Help system](https://docs.venafi.cloud/help/Default.htm).
-- Create a project and zone that identifies the template and other information.
-  To learn more, search for "Projects" in the
+- Create an Application and Issuing Template API Alias because these values 
+  will be used later as value for the zone parameter in the way of 
+  "Application_Name\Issuing_Template_API_Alias" (e.g. "Business App\Enterprise CIT").
+  To learn more, search for "Applications" in the
   [Venafi Cloud Help system](https://docs.venafi.cloud/help/Default.htm).
 
 ## Setup
@@ -135,7 +137,7 @@ using the
    ```text
    provider "venafi" {
      api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-     zone    = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+     zone    = "Business App\\Enterprise CIT"
    }
    ```
 
@@ -149,7 +151,7 @@ using the
    | `tpp_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
    | `trust_bundle` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform | |
    | `url`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to Trust Protection Platform | VENAFI_URL |
-   | `zone`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) | VENAFI_ZONE |
+   | `zone`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") | VENAFI_ZONE |
    | `dev_mode`     | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)   | When "true", the provider operates without connecting to Trust Protection Platform or Venafi Cloud | VENAFI_DEVMODE |
 
    >:pushpin: **NOTE**: The indicated environment variables can be used to specify
