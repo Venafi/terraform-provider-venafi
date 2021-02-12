@@ -1,3 +1,7 @@
+## 0.11.0 (February 12, 2021)
+
+Updated Venafi Cloud integration to use OutagePREDICT instead of DevOpsACCELERATE.
+
 ## 0.10.2 (October 22, 2020)
 
 Added support for requesting certificates with specific validity periods.
