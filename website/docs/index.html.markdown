@@ -19,16 +19,17 @@ Use the navigation to the left to read about the available resources.
 ## Example Usage for Venafi Cloud
 
 You can sign up for a Venafi Cloud account by visiting https://www.venafi.com/platform/cloud/devops.
-Once registered, find your API key by clicking your name in the top right of the web interface.  You
-will also need to specify the ID of a `zone` to use when requesting certificates.  Zones are the part 
-of a Venafi Cloud project that define the machine identity policy applied to certificate requests and
-the certificate authority that will issue certificates.
+Once registered, find your API key by clicking your name in the top right of the web interface.  You 
+will also need to specify the `zone` to use when requesting certificates. Zones define the machine 
+identity policy that will be applied to certificate requests and the certificate authority that will 
+issue certificates. The zone is formed by combining the Application Name and Issuing Template API Alias 
+(e.g. "Business App\Enterprise CIT").
 
 ```hcl
 # Configure the Venafi provider
 provider "venafi" {
     api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    zone    = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+    zone    = "Business App\\Enterprise CIT"
 }
 
 # Generate a key pair and request a certificate
@@ -70,7 +71,8 @@ resource "venafi_certificate" "webserver" {
 
 The following arguments are supported:
 
-* `zone` - (Required, string) Zone ID for Venafi Cloud or policy folder for Venafi Platform.
+* `zone` - (Required, string) Application Name and Issuing 
+Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi Cloud or policy folder for Venafi Platform.
 
 * `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example").
 
