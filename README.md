@@ -98,7 +98,7 @@ block of the configuration file.
 
 A Terraform module is a container for multiple resources that are used together
 and the steps that follow illustrate the resources required to enroll certificates
-using the Venafi Provider with HashiCorp Terraform 0.13.  
+using the Venafi Provider with HashiCorp Terraform 0.13 or higher.  
 
 >:pushpin: **NOTE**: For Terraform 0.12, omit the `required_providers` block and
 specify any desired version constraints for the provider in the `provider` block
@@ -112,7 +112,7 @@ using the
      required_providers {
        venafi = {
          source = "venafi/venafi"
-         version = "~> 0.10.0"
+         version = "~> 0.11.0"
        }
      }
      required_version = ">= 0.13"
