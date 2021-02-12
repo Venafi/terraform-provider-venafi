@@ -61,8 +61,7 @@ else
 endif
 
 TERRAFORM_TEST_VERSION := 99.9.9
-TERRAFORM_TEST_DIR := terraform.d/plugins/registry.terraform.io/terraform-providers/venafi/$(TERRAFORM_TEST_VERSION)/$(OS_STR)_$(CPU_STR)
-TERRAFORM_TEST_DIR_JENKINS := terraform.d/plugins/registry.terraform.io/terraform-providers/venafi/$(TERRAFORM_TEST_VERSION)/linux_amd64
+TERRAFORM_TEST_DIR := terraform.d/plugins/registry.terraform.io/venafi/venafi/$(TERRAFORM_TEST_VERSION)/$(OS_STR)_$(CPU_STR)
 
 os:
 	@echo $(OS_STRING)

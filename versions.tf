@@ -4,7 +4,7 @@ terraform {
       source = "hashicorp/random"
     }
     venafi = {
-      source = "terraform-providers/venafi"
+      source = "Venafi/venafi"
     }
   }
   required_version = ">= 0.13"
