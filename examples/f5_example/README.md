@@ -85,69 +85,69 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 ## Step 2: Set you main terraform config file
 
 1. Declare that the Venafi and BIGIP providers are required:
-    ```JSON
+    ```
     terraform {
-    required_providers {
-        venafi = {
-        source = "venafi/venafi"
-        version = "~> 0.10.0"
+        required_providers {
+            venafi = {
+            source = "venafi/venafi"
+            version = "~> 0.10.0"
+            }
+            bigip = {
+            source = "f5networks/bigip"
+            version = "~> 1.5.0"
+            }
         }
-        bigip = {
-        source = "f5networks/bigip"
-        version = "~> 1.5.0"
-        }
-    }
-    required_version = ">= 0.13"
+        required_version = ">= 0.13"
     }
     ```
 
 2. Define you variables from **terraforms.vars**
 
-    ```JSON
+    ```
     variable "venafi_api_key" {
-    type = string
-    sensitive = true
+        type = string
+        sensitive = true
     }
 
     variable "venafi_zone" {
-    type = string
+        type = string
     }
 
     variable "test_site_name" {
-    type = string
+        type = string
     }
 
     variable "test_site_domain" {
-    type = string
+        type = string
     }
 
     variable "f5_address" {
-    type = string
+        type = string
     }
 
     variable "f5_username" {
-    type = string
+        type = string
     }
 
     variable "f5_password" {
-    type = string
-    sensitive = true
+        type = string
+        sensitive = true
     }
 
     variable "f5_partition" {
-    type = string
+        type = string
     }
 
     variable "f5_virtual_ip" {
-    type = string
+        type = string
     }
 
     variable "f5_virtual_port" {
-    type = string
+        type = string
     }
 
     variable "f5_pool_members" {
-    type = list(string)
+        type = list(string)
     }
     ```
 ## Step 3: Set your venafi terraform config file
@@ -155,21 +155,21 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 1. Specify the connection and authentication settings for the venafi provider (Venafi Cloud - DevOps Accelerate for this example):
     ```
     provider "venafi" {
-    api_key = var.venafi_api_key
-    zone = var.venafi_zone
+        api_key = var.venafi_api_key
+        zone = var.venafi_zone
     }
     ```
 
 2. Create a `venafi_certificate` **resource** that will generate a new key pair and enroll the certificate needed by a _"tls_server"_ application:
     ```
     resource "venafi_certificate" "tls_server" {
-    common_name = "${var.test_site_name}-${formatdate("YYYYMMDD-hhmmss", timestamp())}.${var.test_site_domain}"
-    san_dns = [
-        "${var.test_site_name}.${var.test_site_domain}"
-    ]
-    algorithm = "RSA"
-    rsa_bits = 2048
-    expiration_window = 720
+        common_name = "${var.test_site_name}-${formatdate("YYYYMMDD-hhmmss", timestamp())}.${var.test_site_domain}"
+        san_dns = [
+            "${var.test_site_name}.${var.test_site_domain}"
+        ]
+        algorithm = "RSA"
+        rsa_bits = 2048
+        expiration_window = 720
     }
     ```
 
@@ -177,86 +177,86 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 1. Set your BIG-IP provider config:
 
-    ```JSON
+    ```
     provider "bigip" {
-    address  = var.f5_address
-    username = var.f5_username
-    password = var.f5_password
+        address  = var.f5_address
+        username = var.f5_username
+        password = var.f5_password
     }
     ```
 
 2. Set your asset_name for your vars in `locals`, remeber that locals<sup>[1](https://www.terraform.io/docs/language/values/locals.html)</sup> are values that multiple times within a module without repeating it:
 
-    ```JSON
+    ```
     locals {
-    asset_name = "${var.test_site_name}.${var.test_site_domain}"
+        asset_name = "${var.test_site_name}.${var.test_site_domain}"
     }
     ```
 
 3. Set your F5 BIG_IP resources as it gets the content from the venafi_certificate resource:
-    ```JSON
+    ```
     resource "bigip_ssl_key" "my_key" {
-    name      = "${local.asset_name}.key"
-    content   = venafi_certificate.tls_server.private_key_pem
-    partition = var.f5_partition
+        name      = "${local.asset_name}.key"
+        content   = venafi_certificate.tls_server.private_key_pem
+        partition = var.f5_partition
     }
 
     resource "bigip_ssl_certificate" "my_cert" {
-    name      = "${local.asset_name}.crt"
-    content   = venafi_certificate.tls_server.certificate
-    partition = var.f5_partition
+        name      = "${local.asset_name}.crt"
+        content   = venafi_certificate.tls_server.certificate
+        partition = var.f5_partition
     }
 
     resource "bigip_ssl_certificate" "my_chain" {
-    name      = "${local.asset_name}-ca-bundle.crt"
-    content   = venafi_certificate.tls_server.chain
-    partition = var.f5_partition
+        name      = "${local.asset_name}-ca-bundle.crt"
+        content   = venafi_certificate.tls_server.chain
+        partition = var.f5_partition
     }
     ```
 
 4. Create a resource to manages client SSL profiles on a BIG-IP from the F5 partion<sup>[2](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)</sup>:
 
-    ```JSON
+    ```
     resource "bigip_ltm_profile_client_ssl" "my_profile" {
-    name           = "/${var.f5_partition}/clientssl_${var.test_site_name}"
-    defaults_from  = "/Common/clientssl"
-    cert_key_chain {
-        name  = bigip_ssl_certificate.my_cert.name
-        cert  = "/${var.f5_partition}/${bigip_ssl_certificate.my_cert.name}"
-        key   = "/${var.f5_partition}/${bigip_ssl_key.my_key.name}"
-        chain = "/${var.f5_partition}/${bigip_ssl_certificate.my_chain.name}"
-    }
+        name           = "/${var.f5_partition}/clientssl_${var.test_site_name}"
+        defaults_from  = "/Common/clientssl"
+        cert_key_chain {
+            name  = bigip_ssl_certificate.my_cert.name
+            cert  = "/${var.f5_partition}/${bigip_ssl_certificate.my_cert.name}"
+            key   = "/${var.f5_partition}/${bigip_ssl_key.my_key.name}"
+            chain = "/${var.f5_partition}/${bigip_ssl_certificate.my_chain.name}"
+        }
     }
     ```
 
 5. Create your pool members resources to manage memebership in pools<sup>[3](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_pool_attachment)</sup>:
 
-    ```JSON
+    ```
     resource "bigip_ltm_pool" "my_pool" {
-    name                   = "/${var.f5_partition}/pool_${var.test_site_name}"
-    load_balancing_mode    = "round-robin"
-    minimum_active_members = 1
-    monitors               = ["/Common/http"]
+        name                   = "/${var.f5_partition}/pool_${var.test_site_name}"
+        load_balancing_mode    = "round-robin"
+        minimum_active_members = 1
+        monitors               = ["/Common/http"]
     }
 
     resource "bigip_ltm_pool_attachment" "my_pool_node" {
-    pool     = bigip_ltm_pool.my_pool.name
-    for_each = toset(var.f5_pool_members)
-    node     = each.key
+        pool     = bigip_ltm_pool.my_pool.name
+        for_each = toset(var.f5_pool_members)
+        node     = each.key
     }
     ```
 
 6. Create you resource in order to create your virtual server to manage your F5 partion<sup>[4](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)</sup>:
 
-    ```JSON
+    ```
     resource "bigip_ltm_virtual_server" "my_virtual_server" {
-    name                       = "/${var.f5_partition}/vs_${var.test_site_name}"
-    description                = "Provisioned by Terraform"
-    destination                = var.f5_virtual_ip
-    port                       = var.f5_virtual_port
-    client_profiles            = [bigip_ltm_profile_client_ssl.my_profile.name]
-    source_address_translation = "automap"
-    pool                       = bigip_ltm_pool.my_pool.name
+        name                       = "/${var.f5_partition}/vs_${var.test_site_name}"
+        description                = "Provisioned by Terraform"
+        destination                = var.f5_virtual_ip
+        port                       = var.f5_virtual_port
+        client_profiles            = [bigip_ltm_profile_client_ssl.my_profile.name]
+        source_address_translation = "automap"
+        pool                       = bigip_ltm_pool.my_pool.name
     }
     ```
 
