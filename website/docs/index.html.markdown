@@ -20,7 +20,7 @@ Use the navigation to the left to read about the available resources.
 
 You can sign up for a Venafi Cloud account by visiting https://www.venafi.com/platform/cloud/devops.
 Once registered, find your API key by clicking your name in the top right of the web interface.  You 
-will also need to specify the zone to use when requesting certificates. Zones define the machine 
+will also need to specify the `zone` to use when requesting certificates. Zones define the machine 
 identity policy that will be applied to certificate requests and the certificate authority that will 
 issue certificates. The zone is formed by combining the Application Name and Issuing Template API Alias 
 (e.g. "Business App\Enterprise CIT").
