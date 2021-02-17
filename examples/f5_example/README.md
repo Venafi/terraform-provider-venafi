@@ -31,7 +31,7 @@ We will divide the process in the following steps:
 To perform the tasks described in this example, you'll need:
 
 - Have [terraform properly installed](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you need to generate an access token from the [Vcert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
+- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
 - Administration access to the F5 BIG-IP instance.
 - A set of 3 NGINX servers running your application.
 
@@ -74,17 +74,19 @@ First we have to set the following variables depending on your platform that you
 
 > **_Note:_** You can check how to set these variables in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
 
-**Venafi Cloud**:
-```JSON
-venafi_api_key = "<venafi_api_key>"
-venafi_zone = "<venafi_zone>"
-```
 **TPP**:
 ```JSON
 bundle_path = "<bundle_path>"
 access_token = "<access_token>"
 venafi_zone = "<venafi_zone>"
 ```
+
+**Venafi Cloud**:
+```JSON
+venafi_api_key = "<venafi_api_key>"
+venafi_zone = "<venafi_zone>"
+```
+
 
 And finally configure your F5 infrastructure (these values are illustrative, you should change them accordingly to your own configutation):
 
@@ -125,14 +127,6 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 2. Define you variables from **terraforms.vars**:
 
-    **Venafi Cloud**:
-    ```
-    variable "venafi_api_key" {
-        type = string
-        sensitive = true
-    }    
-    ```
-
     **TPP**:
     ```
     variable "tpp_url" {
@@ -145,6 +139,14 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
     variable "access_token" {
         type = string
+    }
+    ```
+
+    **Venafi Cloud**:
+    ```
+    variable "venafi_api_key" {
+        type = string
+        sensitive = true
     }
     ```
 
@@ -195,13 +197,6 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 1. Specify the connection and authentication settings for your Venafi provider this example:
 
-    **Venafi Cloud**:
-    ```
-    provider "venafi" {
-        api_key = var.venafi_api_key
-        zone = var.venafi_zone
-    }
-    ```
     **TPP**:
     ```
     provider "venafi" {
@@ -212,6 +207,13 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
+    **Venafi Cloud**:
+    ```
+    provider "venafi" {
+        api_key = var.venafi_api_key
+        zone = var.venafi_zone
+    }
+    ```
 
 2. Create a `venafi_certificate` **resource** that will generate a new key pair and enroll the certificate needed by a _"tls_server"_ application:
     ```
