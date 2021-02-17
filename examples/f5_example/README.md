@@ -18,7 +18,7 @@ Using terraform "infrastructure as code" automation process for generating and i
 
 We will divide the process in the following steps:
 
-> **_Note:_**  This steps are providing a suggested terraform file structure for this example only but you could still use the same configuration of your preference.
+> **_Note:_**  These steps are providing a suggested terraform file structure for this example only but you could still use the same configuration of your preference.
 
 1. Create your Terraform variables file
 2. Set you main Terraform config file
