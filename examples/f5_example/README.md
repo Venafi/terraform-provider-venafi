@@ -70,7 +70,10 @@ The **terraform.tfvars** configuration for F5 is divided by:
 - The Virtual IP and Port which is the entry point for your traffic-management object of your virtual server.
 - The pool members are physical nodes on the network (NGINX servers for this example).
 
-First we have to set the following variables depending on your platform that you are working on. You can check how to set these variables in [here](https://github.com/Venafi/terraform-provider-venafi#usage):
+First we have to set the following variables depending on your platform that you are working on:
+
+> **_Note:_** You can check how to set these variables in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
+
 **Venafi Cloud**:
 ```JSON
 venafi_api_key = "<venafi_api_key>"
@@ -83,7 +86,7 @@ access_token = "<access_token>"
 venafi_zone = "<venafi_zone>"
 ```
 
-And finally configure your F5 infrastructure (these values are illustrative, you should change them accordinly to your own configutation):
+And finally configure your F5 infrastructure (these values are illustrative, you should change them accordingly to your own configutation):
 
 ```JSON
 url = "https://tpp.example"
@@ -103,7 +106,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 ### Step 2: Set you main Terraform config file
 
-1. Declare that the Venafi and BIG-IP providers are required:
+1. Declare that the Venafi and F5 BIG-IP providers are required:
     ```
     terraform {
         required_providers {
@@ -190,7 +193,8 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     ```
 ### Step 3: Set your Venafi Terraform config file
 
-1. Specify the connection and authentication settings for your venafi provider this example):
+1. Specify the connection and authentication settings for your Venafi provider this example:
+
     **Venafi Cloud**:
     ```
     provider "venafi" {
@@ -234,7 +238,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-2. Set your asset_name for your vars in `locals` (remember that locals<sup>[1](https://www.terraform.io/docs/language/values/locals.html)</sup> are values that can be used multiple times within a module without repeating it):
+2. Set your *asset_name* for your vars in `locals` (remember that locals<sup>[1](https://www.terraform.io/docs/language/values/locals.html)</sup> are values that can be used multiple times within a module without repeating it):
 
     ```
     locals {
@@ -242,7 +246,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-3. Set your F5 BIG_IP resources as it gets the content from the _venafi_certificate_ resource:
+3. Set your F5 BIG-IP resources as it gets the content from the _venafi_certificate_ resource:
     ```
     resource "bigip_ssl_key" "my_key" {
         name      = "${local.asset_name}.key"
