@@ -72,26 +72,24 @@ The **terraform.tfvars** configuration for F5 is divided by:
 
 First we have to set the following variables depending on your platform that you are working on:
 
-> **_Note:_** You can check how to set these variables in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
+> **_Note:_** You can check how to set these variables and the `venafi_zone` in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
 
 **TPP**:
 ```JSON
+tpp_url = "https://tpp.example"
 bundle_path = "<bundle_path>"
 access_token = "<access_token>"
-venafi_zone = "<venafi_zone>"
 ```
 
 **Venafi Cloud**:
 ```JSON
 venafi_api_key = "<venafi_api_key>"
-venafi_zone = "<venafi_zone>"
 ```
-
 
 And finally configure your F5 infrastructure (these values are illustrative, you should change them accordingly to your own configutation):
 
 ```JSON
-url = "https://tpp.example"
+venafi_zone = "<venafi_zone>"
 
 f5_address = "192.168.x.x"
 f5_username = "your_f5_user"

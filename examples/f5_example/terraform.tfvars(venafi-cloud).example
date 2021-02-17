@@ -1,7 +1,6 @@
 venafi_api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-venafi_zone = "DevOps\\Terraform"
 
-tpp_url = "https://tpp.venafi.example"
+venafi_zone = "DevOps\\Terraform"
 
 f5_address = "192.168.x.x"
 f5_username = "your_f5_user"

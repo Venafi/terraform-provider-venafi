@@ -1,7 +1,8 @@
-venafi_api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-bundle_path = "/path/to/bundle.pem"
-
 tpp_url = "https://tpp.venafi.example"
+bundle_path = "/path/to/bundle.pem"
+access_token = "p0WTt3sDPbzm2BDIkoJROQ=="
+
+venafi_zone = "DevOps\\Terraform"
 
 f5_address = "192.168.x.x"
 f5_username = "your_f5_user"
