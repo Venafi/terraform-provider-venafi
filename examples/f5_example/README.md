@@ -267,7 +267,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-4. Create a resource to manages client SSL profiles on a BIG-IP from the F5 partion<sup>[2](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)</sup>:
+4. Create a resource to manages client SSL profiles on a BIG-IP from the F5 partition<sup>[2](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)</sup>:
 
     ```
     resource "bigip_ltm_profile_client_ssl" "my_profile" {
@@ -299,7 +299,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-6. Create you resource in order to create your virtual server to manage your F5 partion<sup>[4](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)</sup>:
+6. Create you resource in order to create your virtual server to manage your F5 partition<sup>[4](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)</sup>:
 
     ```
     resource "bigip_ltm_virtual_server" "my_virtual_server" {
@@ -315,9 +315,9 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 ### Step 5: Apply your setup
 
-Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your F5 partion in `192.168.x.x` using ``<your_f5_user>:<your_password>``.
+Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your F5 partition in `192.168.x.x` using ``<your_f5_user>:<your_password>``.
 
-To tear down your F5 partion execute `terraform destroy`.
+To tear down your F5 partition execute `terraform destroy`.
 
 ## References
 
