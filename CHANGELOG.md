@@ -1,3 +1,7 @@
+## 0.11.1 (February 18, 2021)
+
+Fixing a bug that broke TPP integrations when the customer's zone is more than 2 levels.
+
 ## 0.11.0 (February 12, 2021)
 
 Updated Venafi Cloud integration to use OutagePREDICT instead of DevOpsACCELERATE.
