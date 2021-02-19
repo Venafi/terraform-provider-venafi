@@ -1,6 +1,6 @@
 # Venafi Provider Examples
 
-In this section you'll find examples to make your implementation of your Venafi Provider for Terraform in for automating your process of SSL integration in your infrastructure.
+In this section you'll find examples to make your implementation of your Venafi Provider for [HashiCorp Terraform](https://terraform.io/) in for automating your process of SSL integration in your infrastructure.
 
 **Examples:**
 
