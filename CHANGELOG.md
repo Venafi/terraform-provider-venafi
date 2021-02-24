@@ -1,3 +1,7 @@
+## 0.11.2 (February 24, 2021)
+
+Fixing a bug that broke TPP integrations when the customer's zone is in the "long form" way, that is using the "VED" prefix.
+
 ## 0.11.1 (February 18, 2021)
 
 Fixing a bug that broke TPP integrations when the customer's zone is more than 2 levels.
