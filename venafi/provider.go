@@ -196,6 +196,11 @@ func normalizeZone(zone string) string {
 			}
 		}
 	}
+	//Add leading forward slash when the zone includes the VED\Policy prefix
+	if strings.HasPrefix(newZone, "VED") {
+		newZone = "\\" + newZone
+	}
+
 	log.Printf("Normalized zone : %s", newZone)
 	return newZone
 }
