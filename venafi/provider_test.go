@@ -41,7 +41,7 @@ func TestNormalizedZones(t *testing.T) {
 		"\\VED\\Policy\\One\\Two\\Three",
 		"\\\\VED\\\\Policy\\\\One\\\\Two\\\\Three",
 	}
-	var re, _ = regexp.Compile("^(\\\\VED | [\\w\\-]+) (\\s?[\\w\\-]+)* (\\\\[\\w\\-]+(\\s?[\\w\\-]+)*)*$")
+	var re, _ = regexp.Compile("^(\\\\VED|[\\w\\-]+)(\\s?[\\w\\-]+)*(\\\\[\\w\\-]+(\\s?[\\w\\-]+)*)*$")
 
 	for _, zone := range zones {
 		newZone := normalizeZone(zone)
