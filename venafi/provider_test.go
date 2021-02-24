@@ -38,8 +38,10 @@ func TestNormalizedZones(t *testing.T) {
 		"Open Source Integrations\\Unrestricted",
 		"Certificates\\Automation\\Terraform",
 		"Certificates\\\\Automation\\\\Terraform",
+		"\\VED\\Policy\\One\\Two\\Three",
+		"\\\\VED\\\\Policy\\\\One\\\\Two\\\\Three",
 	}
-	var re, _ = regexp.Compile("^[\\w\\-]+(\\s?[\\w\\-]+)*(\\\\[\\w\\-]+(\\s?[\\w\\-]+)*)*$")
+	var re, _ = regexp.Compile("^(\\\\VED | [\\w\\-]+) (\\s?[\\w\\-]+)* (\\\\[\\w\\-]+(\\s?[\\w\\-]+)*)*$")
 
 	for _, zone := range zones {
 		newZone := normalizeZone(zone)
