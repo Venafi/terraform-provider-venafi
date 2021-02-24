@@ -196,7 +196,7 @@ func normalizeZone(zone string) string {
 			}
 		}
 	}
-	//Add leading forward slash when the zone includes the VED\Policy prefix
+	//Add leading forward slash when the zone includes the "VED" prefix
 	if strings.HasPrefix(newZone, "VED") {
 		newZone = "\\" + newZone
 	}
