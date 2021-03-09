@@ -5,3 +5,5 @@ In this section you'll find examples to make your implementation of your Venafi 
 **Examples:**
 
 - [SSL Termination with F5 BIG-IP](./f5_bigip/README.md)
+
+- [SSL Termination with Citrix ADC](./citrix_adc/README.md)

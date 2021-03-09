@@ -37,7 +37,7 @@ To perform the tasks described in this example, you'll need:
 
 ## Scenario Introduction
 
-As for this example scenario, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using this Venafi Provider for Hashicorp Terraform using either using **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud**. Thus adding them to your F5 BIG-IP resources, then use them in the ADC node, and, finally, you'll configure the "pool" for your ADC nodes.
+As for this example scenario, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using this Venafi Provider for Hashicorp Terraform and also using either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud**. Thus adding them to your F5 BIG-IP resources, then use them in the ADC node, and, finally, you'll configure the "pool" for your ADC nodes.
 
 > **_Note:_** As for ADC config, we will be using ``Round robin`` balancing method but keep in mind there are other methods that may be more suitable for your use case scenario (https://www.f5.com/services/resources/glossary/load-balancer)
 
@@ -50,14 +50,14 @@ As for this example scenario, you'll generate a certificate for ``demo-f5-bigip.
 We'll be managing the following file structure:
 
 ```
-./<your_workspace>f5_example/
+./<your_workspace>/f5_example/
 ├── f5bigip.tf
 ├── main.tf
 ├── venafi.tf
 └── terraform.tfvars
 ```
 
-We provided the need files in this folder except for **terraform.tfvars**. The configuration of the file is custom by each user, hence we provided **terraform.tfvars.example** for each Venafi platform that you could use to set your own configuration.
+We provided the needed files in this folder except for **terraform.tfvars**. The configuration of the file is custom by each user, hence we provided **terraform.tfvars.example** for each Venafi platform that you could use to set your own configuration.
 
 ### Step 1: Create your Terraform variables file
 
