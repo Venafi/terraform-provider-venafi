@@ -34,7 +34,7 @@ To perform the tasks described in this example, you'll need:
 - Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
 - Administration access to the Citrix ADC instance.
 - A set of 3 NGINX servers running your application.
-- Citrix Terraform prerequisites installed locally following instructions provided [here](./base/README.md)
+- Citrix Terraform prerequisites installed locally following instructions provided [here](./../base/README.md)
 
 ## Scenario Introduction
 
@@ -118,7 +118,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
                 version = "~> 0.11.2"
             }
             citrixadc = {
-                source = "localhost/citrix/citrixadc"
+                source = "path/to/citrix/citrixadc"
                 version = "~> 0.12.0"
             }
         }
@@ -319,10 +319,10 @@ Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to 
 
 If done correctly, you should see an output like below.
 
-<pending>
+\<pending\>
 
 To tear down your infrastructure execute `terraform destroy`, then you should see an output like this:
 
-<pending>
+\<pending\>
 
 

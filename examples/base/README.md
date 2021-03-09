@@ -1,11 +1,20 @@
-# Citrix
+# Building your unregistered provider
 
-## Building your unregistered provider:
 
-How the url is built:
+First we have to take the current project url from github
+and tear it down as follows:
+
 ```
-https://github.com/owner/name/releases/download/v{{version}}/asset-name
+https://github.com/owner/project_name/releases/download/v{{version}}/asset-name
 ```
+
+Taking [citrix terraform module](https://github.com/citrix/terraform-provider-citrixadc) for example:
+
+```LOG
+https://github.com/citrix/terraform-provider-citrixadc/releases/download/v0.12.36/terraform-provider-citrixadc_0.12.36_linux_amd64.tar.gz
+```
+
+Build our .env file:
 
 **.env**
 ```
@@ -14,6 +23,8 @@ OWNER=citrix
 PROJECT_NAME=terraform-provider-citrixadc
 ASSET_NAME=terraform-provider-citrixadc_0.12.36_linux_amd64.tar.gz
 ```
+
+Add this script:
 
 **citrixadc-prereq.sh**
 ```BASH
@@ -50,7 +61,7 @@ EOF
 echo export TF_CLI_CONFIG_FILE=${PWD}/.terraformrc
 ```
 
-Then execute
+Then execute:
 
 ```BASH
 $ ./citrixadc-prereq.sh
