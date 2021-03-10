@@ -1,4 +1,4 @@
-# Configuring SSL termination with  on a set of HTTP servers that are load balanced by Citrix ADC
+# Configuring SSL termination with on a set of HTTP servers that are load balanced by Citrix ADC
 
 This example will guide you in mounting an [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implentation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
@@ -20,11 +20,11 @@ We will divide the process in the following steps:
 
 > **_Note:_**  These steps are providing a suggested Terraform file structure for this example only but you could still use the same configuration of your preference.
 
-1. Create your Terraform variables file
-2. Set you main Terraform config file
-3. Set your Venafi Terraform config file
-4. Set your Citrix Terraform config file
-5. Apply your setup
+1. Create your Terraform variables file.
+2. Set you main Terraform config file.
+3. Set your Venafi Terraform config file.
+4. Set your Citrix Terraform config file.
+5. Apply your setup.
 
 ## Prerequisites
 
@@ -34,13 +34,13 @@ To perform the tasks described in this example, you'll need:
 - Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
 - Administration access to the Citrix ADC instance.
 - A set of 3 NGINX servers running your application.
-- Citrix Terraform prerequisites installed locally following instructions provided [here](./../base/README.md)
+- Citrix Terraform prerequisites installed locally following instructions provided [here](./../base/README.md).
 
 ## Scenario Introduction
 
 As for this example scenario, you'll generate a certificate for ``demo-citrix.venafi.example`` using this Venafi Provider for Hashicorp Terraform and also using either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud**. Thus adding them to your Citrix ADC resources, then use them in the ADC node, and, finally, you'll configure the service group members and [bind them](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-manage-large-scale-deployment/configure-service-groups.html#bind-a-service-group-to-a-virtual-server) to your ADC node.
 
-> **_Note:_** As for ADC config, we will be using ``Round robin`` balancing method but keep in mind there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that may be more suitable for your use case scenario
+> **_Note:_** As for ADC config, we will be using ``Round robin`` balancing method but keep in mind there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that may be more suitable for your use case scenario.
 
 ![scenario](scenario.png "Scenario")
 
@@ -105,9 +105,9 @@ citrix_virtual_port = "44371"
 citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8003" ]
 ```
 
-### Step 2: Set you main Terraform config file
+### Step 2: Set your main Terraform config file
 
-> **_Important:_** Make sure your local provider is [installed properly](./base/README.md)
+> **_Important:_** Make sure your local provider is [installed properly](./base/README.md).
 
 1. Declare that the Venafi and Citrix ADC providers are required:
     ```
@@ -313,16 +313,34 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
+7. For verification purposes, output the certificate, private key, and chain in PEM format and as a PKCS#12 keystore (base64-encoded):
+    ```
+    output "my_private_key" {
+        value = venafi_certificate.tls_server.private_key_pem
+        sensitive = true
+    }
+
+    output "my_certificate" {
+        value = venafi_certificate.tls_server.certificate
+    }
+
+    output "my_trust_chain" {
+        value = venafi_certificate.tls_server.chain
+    }
+
+    output "my_p12_keystore" {
+        value = venafi_certificate.tls_server.pkcs12
+    }
+    ```
+
 ### Step 5: Apply your setup
 
 Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your Citrix ADC appliance in `192.168.x.x` using ``<your_citrix_user>:<your_password>``.
 
-If done correctly, you should see an output like below.
+If done correctly, you should see an output like below:
 
-\<pending\>
+[![asciicast](https://asciinema.org/a/xe0UUgiLKsaOhOXRqLu2bku9c.svg)](https://asciinema.org/a/xe0UUgiLKsaOhOXRqLu2bku9c)
 
 To tear down your infrastructure execute `terraform destroy`, then you should see an output like this:
 
-\<pending\>
-
-
+[![asciicast](https://asciinema.org/a/PrCtLI7cwkZC6RUriqpwuiQVU.svg)](https://asciinema.org/a/PrCtLI7cwkZC6RUriqpwuiQVU)

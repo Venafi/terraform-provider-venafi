@@ -1,7 +1,7 @@
 # -- Venafi Cloud ---
 # Uncomment for Venafi Cloud
 
-# venafi_api_key = "d2751f4e-ddde-4f4f-9baf-0a4ec13824c3"
+# venafi_api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 # venafi_zone = "DevOps\\Terraform"
 
 # ------ TPP -------

@@ -1,12 +1,13 @@
+# --- Venafi Cloud ---
+# Uncomment for Venafi Cloud
 
-# Venafi Cloud
+# provider "venafi" {
+#   api_key = var.venafi_api_key
+#   zone    = var.venafi_zone
+# }
 
-provider "venafi" {
-  api_key = var.venafi_api_key
-  zone    = var.venafi_zone
-}
-
-# TPP
+#  --- TPP ---
+# Uncomment for Venafi Trust Protection Platform
 
 # provider "venafi" {
 #   url          = var.tpp_url
@@ -15,9 +16,10 @@ provider "venafi" {
 #   zone         = var.venafi_zone
 # }
 
+# ----
+
 resource "venafi_certificate" "tls_server" {
   common_name = "${var.test_site_name}.${var.test_site_domain}"
-  # common_name = "${var.test_site_name}.${var.test_site_domain}"
   san_dns = [
     "${var.test_site_name}.${var.test_site_domain}"
   ]

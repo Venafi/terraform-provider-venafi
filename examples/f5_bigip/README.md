@@ -104,7 +104,7 @@ f5_virtual_port = "443"
 f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8003" ]
 ```
 
-### Step 2: Set you main Terraform config file
+### Step 2: Set your main Terraform config file
 
 1. Declare that the Venafi and F5 BIG-IP providers are required:
     ```

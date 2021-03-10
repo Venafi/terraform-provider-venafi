@@ -12,28 +12,30 @@ terraform {
   required_version = ">= 0.13"
 }
 
-# TPP
+#  --- TPP ---
+# Uncomment for Veni Protection Platform
 
 # variable "tpp_url" {
-#     type = string
+#   type = string
 # }
 
 # variable "bundle_path" {
-#     type = string
+#   type = string
 # }
 
 # variable "access_token" {
-#     type = string
+#   type = string
 # }
 
-# Venafi Cloud
+# --- Venafi Cloud ---
+# Uncomment for Venafi Cloud
 
+# variable "venafi_api_key" {
+#   type = string
+#   sensitive = true
+# }
 
-variable "venafi_api_key" {
-  type = string
-  sensitive = true
-}
-
+# ---------
 
 variable "venafi_zone" {
   type = string

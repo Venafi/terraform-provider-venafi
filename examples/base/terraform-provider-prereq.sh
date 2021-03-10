@@ -28,6 +28,5 @@ provider_installation {
 }
 EOF
 
-echo export TF_CLI_CONFIG_FILE=${PWD}/.terraformrc
 export TF_CLI_CONFIG_FILE=${PWD}/.terraformrc
-terraform init
+echo "export TF_CLI_CONFIG_FILE="$TF_CLI_CONFIG_FILE
