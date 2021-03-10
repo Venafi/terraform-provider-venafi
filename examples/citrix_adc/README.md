@@ -1,4 +1,4 @@
-# Configuring SSL termination with on a set of HTTP servers that are load balanced by Citrix ADC
+# Configuring SSL termination on a set of HTTP servers that are load balanced by Citrix ADC
 
 This example will guide you in mounting an [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implentation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
