@@ -23,5 +23,5 @@ test_site_name = "demo-citrix"
 test_site_domain = "venafi.example"
 
 citrix_virtual_ip = "192.168.7.68"
-citrix_virtual_port = "44371"
+citrix_virtual_port = "443"
 citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8003" ]

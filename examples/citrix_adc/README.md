@@ -1,6 +1,6 @@
-# Configuring SSL termination on a set of HTTP servers that are load balanced by Citrix ADC
+# Configuring SSL termination with _Venafi Provider for HashiCorp Terraform_ on a set of HTTP servers that are load balanced by Citrix ADC.
 
-This example will guide you in mounting an [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implentation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
+This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
 ## Personas
 
@@ -31,10 +31,10 @@ We will divide the process in the following steps:
 To perform the tasks described in this example, you'll need:
 
 - Have [Terraform properly installed](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
+- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
 - Administration access to the Citrix ADC instance.
 - A set of 3 NGINX servers running your application.
-- Citrix Terraform prerequisites installed locally following instructions provided [here](./../base/README.md).
+- Citrix Terraform SDK installed locally following instructions provided [here](./../base/README.md).
 
 ## Scenario Introduction
 
@@ -101,7 +101,7 @@ test_site_name = "demo-citrix"
 test_site_domain = "venafi.example"
 
 citrix_virtual_ip = "192.168.7.68"
-citrix_virtual_port = "44371"
+citrix_virtual_port = "443"
 citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8003" ]
 ```
 

@@ -1,6 +1,6 @@
-# Build a set of servers with a balancer using F5
+# Configuring SSL termination with _Venafi Provider for HashiCorp Terraform_ on a set of HTTP servers that are load balanced by F5 BIG-IP
 
-This example will guide you in mounting an [F5 BIG-IP](https://www.f5.com/products/big-ip-services) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implentation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
+This example will guide you in mounting a [F5 BIG-IP](https://www.f5.com/products/big-ip-services) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
 ## Personas
 
@@ -31,7 +31,7 @@ We will divide the process in the following steps:
 To perform the tasks described in this example, you'll need:
 
 - Have [Terraform properly installed](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
+- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
 - Administration access to the F5 BIG-IP instance.
 - A set of 3 NGINX servers running your application.
 
@@ -50,7 +50,7 @@ As for this example scenario, you'll generate a certificate for ``demo-f5-bigip.
 We'll be managing the following file structure:
 
 ```
-./<your_workspace>/f5_example/
+./<your_workspace>/f5_bigip/
 ├── f5bigip.tf
 ├── main.tf
 ├── venafi.tf
@@ -111,12 +111,12 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     terraform {
         required_providers {
             venafi = {
-            source = "venafi/venafi"
-            version = "~> 0.11.0"
+                source = "venafi/venafi"
+                version = "~> 0.11.0"
             }
             bigip = {
-            source = "f5networks/bigip"
-            version = "~> 1.5.0"
+                source = "f5networks/bigip"
+                version = "~> 1.5.0"
             }
         }
         required_version = ">= 0.13"
