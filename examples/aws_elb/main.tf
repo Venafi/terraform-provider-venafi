@@ -45,4 +45,3 @@ variable "test_site_name" {
 variable "test_site_domain" {
   type = string
 }
-
