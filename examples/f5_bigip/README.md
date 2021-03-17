@@ -319,11 +319,10 @@ Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to 
 
 If done correctly, you should see an output like below.
 
-[![asciicast](https://asciinema.org/a/yNAr29K5AOUTkfkkKLebkl2ri.svg)](https://asciinema.org/a/yNAr29K5AOUTkfkkKLebkl2ri)
-
+[![asciicast](https://asciinema.org/a/fKmvGRMCGxSaLN6EodmedsRpg.svg)](https://asciinema.org/a/fKmvGRMCGxSaLN6EodmedsRpg)
 To tear down your F5 partition execute `terraform destroy`, then you should see an output like this:
 
-[![asciicast](https://asciinema.org/a/kRRTLFMurJ0IDmK8DKgyaGwoT.svg)](https://asciinema.org/a/kRRTLFMurJ0IDmK8DKgyaGwoT)
+[![asciicast](https://asciinema.org/a/V7TthUjHaejww5miuUbAnmyQS.svg)](https://asciinema.org/a/V7TthUjHaejww5miuUbAnmyQS)
 
 ## References
 
