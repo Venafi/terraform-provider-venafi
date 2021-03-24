@@ -1,7 +1,5 @@
 # Configuring secure application delivery using Citrix ADC and the _Venafi Provider for HashiCorp Terraform_
 
-**DW:** Luis, great job on working through this example. I want to provide some general feedback from a technical writer/User Assistance viewpoint in hopes of suggesting ways you can clarify concepts that help users move quickly to the desired outcome. I'll use my initials whereever I make general comments. I'll create a branch for the remainder of my comments so that I can freely change content in addition to adding my comments. Please let me know if you have questions. 
-
 This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
 ## Personas
