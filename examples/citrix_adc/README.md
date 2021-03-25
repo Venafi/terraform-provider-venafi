@@ -2,13 +2,13 @@
 
 This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
-**DW:** I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
+>**DW:** I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
 
-So perhaps something like: 
+>So perhaps something like: 
 
-In this example, we'll show you how to secure application delivery using Citrix ADC and the _Venafi Provider for HashiCorp Terraform_ for securely managing certificates as part of the TLS termination process on your load balancer. 
+>_In this example, we'll show you how to secure application delivery using Citrix ADC and the **Venafi Provider for HashiCorp Terraform** for securely managing certificates as part of the TLS termination process on your load balancer._ 
 
-I'm not the technical guru here, obviously; but hopefully what I'm conveying makes sense? 
+>I'm not the technical guru here, obviously; but hopefully what I'm conveying makes sense? 
 
 ## Who should use this example?
 
