@@ -2,29 +2,37 @@
 
 This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
-## Personas
+**DW:** I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
 
-The steps described in this example are typically performed by a **DevOps engineer** or **Systems Administrator**.
+So perhaps something like: 
 
-## Scenario
+In this example, we'll show you how to secure application delivery using Citrix ADC and the _Venafi Provider for HashiCorp Terraform_ for securely managing certificates as part of the TLS termination process on your load balancer. 
 
-In order to increase reliability and capacity of applications, an Application Delivery Controller(ADC) manages web traffic of your server application into nodes in order to reduce the "weight load" of those applications.
+I'm not the technical guru here, obviously; but hopefully what I'm conveying makes sense? 
 
-For this example's scenario, we will be using Citrix ADC for managing 3 HTTP servers as nodes where the web traffic will be distributed.
+## Who should use this example?
 
-## Solution
+The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example. 
 
-Using Terraform "infrastructure as code" automation process for generating and installing a certificate and adding the corresponding configuration to achieve a SSL termination for handling a load balancing of a cluster of 3 HTTP servers.
+**DW:** I suggest adding, as I tried to do in that second sentence, the basic knowledge required and permissions and access to systems in order to successfully complete your example. 
 
-We will divide the process in the following steps:
+## About this example
 
-> **_Note:_**  These steps are providing a suggested Terraform file structure for this example only but you could still use the same configuration of your preference.
+Using Terraform's _infrastructure as code_ automation process for generating and installing a certificate and adding the required configuration for SSL termination on a load balancer (Citrix ADC) that is balancing the load of three HTTP servers contained in cluster.
+
+**DW:** It's not clear to me in the above sentence which parts are Terraform's and which parts are Venafi...because the first half of the sentence makes it sound like Terraform has an automated process already for generating and installing certs. Is this saying that the Venafi Provider (for HC Terraform), as a service component of Terraform is creating/installing the certs? I'm just not clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example.
+
+## Getting started
+
+To implement this solution, we'll complete the following steps:
 
 1. Create your Terraform variables file.
 2. Set you main Terraform config file.
 3. Set your Venafi Terraform config file.
 4. Set your Citrix Terraform config file.
 5. Apply your setup.
+
+**NOTE** These steps reflect a suggested Terraform file structure and apply only to this solutfor this example only but you could still use the same configuration of your preference.
 
 ## Prerequisites
 
