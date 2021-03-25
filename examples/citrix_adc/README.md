@@ -2,7 +2,7 @@
 
 This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
->**DW:** I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
+>**DW:** Hi Luis, I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
 
 >So perhaps something like: 
 
