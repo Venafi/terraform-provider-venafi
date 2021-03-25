@@ -2,25 +2,31 @@
 
 This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
 
->**DW:** Hi Luis, I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
+<!--
+DW: Hi Luis, I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
 
->So perhaps something like: 
+So perhaps something like: 
 
->_In this example, we'll show you how to secure application delivery using Citrix ADC and the **Venafi Provider for HashiCorp Terraform** for securely managing certificates as part of the TLS termination process on your load balancer._ 
+_In this example, we'll show you how to secure application delivery using Citrix ADC and the **Venafi Provider for HashiCorp Terraform** for securely managing certificates as part of the TLS termination process on your load balancer._ 
 
->I'm not the technical guru here, obviously; but hopefully what I'm conveying makes sense? 
+I'm not the technical guru here, obviously; but hopefully what I'm conveying makes sense? 
+-->
 
 ## Who should use this example?
 
 The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example. 
 
->**DW:** Luis, I suggest adding, as I tried to do in that second sentence, the basic knowledge (as well as the permissions and access to the various systems) that is required in order to successfully complete your example. 
+<!--
+DW: So I suggest adding--as I tried to do in that second sentence--the basic knowledge (as well as the permissions and access to the various systems) that is required in order to successfully complete your example. 
+-->
 
 ## About this example
 
 Using Terraform's _infrastructure as code_ automation process for generating and installing a certificate and adding the required configuration for SSL termination on a load balancer (Citrix ADC) that is balancing the load of three HTTP servers contained in cluster.
 
->**DW:** It's not clear to me in the above sentence which parts are Terraform's and which parts are Venafi...because the first half of the sentence makes it sound like Terraform has an automated process already for generating and installing certs. Is this saying that the Venafi Provider (for HC Terraform), as a service component of Terraform is creating/installing the certs? I'm just not clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example.
+<!--
+**DW:** It's not clear to me in the above sentence which parts are Terraform's and which parts are Venafi...because the first half of the sentence makes it sound like Terraform has an automated process already for generating and installing certs. Is this saying that the Venafi Provider (for HC Terraform), as a service component of Terraform is creating/installing the certs? I'm just not clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example.
+-->
 
 ## Getting started
 
