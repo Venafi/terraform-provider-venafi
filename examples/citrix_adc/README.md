@@ -14,13 +14,13 @@ This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/pr
 
 The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example. 
 
-**DW:** I suggest adding, as I tried to do in that second sentence, the basic knowledge required and permissions and access to systems in order to successfully complete your example. 
+>**DW:** Luis, I suggest adding, as I tried to do in that second sentence, the basic knowledge (as well as the permissions and access to the various systems) that is required in order to successfully complete your example. 
 
 ## About this example
 
 Using Terraform's _infrastructure as code_ automation process for generating and installing a certificate and adding the required configuration for SSL termination on a load balancer (Citrix ADC) that is balancing the load of three HTTP servers contained in cluster.
 
-**DW:** It's not clear to me in the above sentence which parts are Terraform's and which parts are Venafi...because the first half of the sentence makes it sound like Terraform has an automated process already for generating and installing certs. Is this saying that the Venafi Provider (for HC Terraform), as a service component of Terraform is creating/installing the certs? I'm just not clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example.
+>**DW:** It's not clear to me in the above sentence which parts are Terraform's and which parts are Venafi...because the first half of the sentence makes it sound like Terraform has an automated process already for generating and installing certs. Is this saying that the Venafi Provider (for HC Terraform), as a service component of Terraform is creating/installing the certs? I'm just not clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example.
 
 ## Getting started
 
@@ -32,11 +32,11 @@ To implement this solution, we'll complete the following steps:
 4. Set your Citrix Terraform config file.
 5. Apply your setup.
 
-**NOTE** These steps reflect a suggested Terraform file structure and apply only to this solutfor this example only but you could still use the same configuration of your preference.
+>**NOTE** These steps reflect a suggested Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, if you prefer.
 
 ## Prerequisites
 
-To perform the tasks described in this example, you'll need:
+Before you get started, review these prerequisites first:
 
 - Have [Terraform properly installed](https://learn.hashicorp.com/tutorials/terraform/install-cli).
 - Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
