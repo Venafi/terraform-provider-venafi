@@ -33,12 +33,12 @@ Using Terraform's _infrastructure as code_ automation process for generating and
 To implement this solution, we'll complete the following steps:
 
 1. Create your Terraform variables file.
-2. Set you main Terraform config file.
-3. Set your Venafi Terraform config file.
-4. Set your Citrix Terraform config file.
+2. Set up your main Terraform config file.
+3. Set up your Venafi Terraform config file.
+4. Set up your Citrix Terraform config file.
 5. Apply your setup.
 
->**NOTE** These steps reflect a suggested Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, if you prefer.
+>**NOTE** These steps reflect a suggested Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, depending on your environment and your personal preferences.
 
 ## Prerequisites
 
