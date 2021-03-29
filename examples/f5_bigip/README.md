@@ -1,30 +1,41 @@
-# Configuring SSL termination with _Venafi Provider for HashiCorp Terraform_ on a set of HTTP servers that are load balanced by F5 BIG-IP
+# Configuring secure application delivery using F5 BIG-IP and the _Venafi Provider for HashiCorp Terraform_
 
-This example will guide you in mounting a [F5 BIG-IP](https://www.f5.com/products/big-ip-services) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
+In this example, we'll show you how to better secure application delivery using _Venafi Provider for HashiCorp Terraform_ with your F5 BIG-IP instance. Adding Venafi enables you to manage certificates more securely as part of the TLS termination process on your load balancer.
+<!-- 
+ORIGINAL TEXT: This example will guide you in mounting a [F5 BIG-IP](https://www.f5.com/products/big-ip-services) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination). 
+-->
+<!--
+DW: Hi Ricardo, I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is (as I understand it): securing application delivery using Venafi Provider for HashiCorp Terraform with my F5 BIG-IP instance. My thinking is that while mounting an F5 BIG-IP instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using F5 and Venafi, but not the desired end goal. Does that make sense? 
+-->
+## Who should use this example?<!-- Suggest not using "Persona" as this is an UX term used more internally in software dev than a term that users would typically understand; while more techy people will use your example and might understand UX notion of personas, they are in this context a user. -->
 
-## Personas
+The steps described in this example are typically performed by a **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of F5 BIG-IP, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
+<!--
+DW: So I suggest adding--as I tried to do in that second sentence--the basic knowledge (as well as the permissions and access to the various systems) that is required in order to successfully complete your example. 
+-->
+## About this example <!--To make this more conversational and friendly, I've changed the title from "Scenario" to this one. -->
 
-The steps described in this example are typically performed by a **DevOps engineer** or **Systems Administrator**.
+<!-- ORIGINAL TEXT: 
+In order to increase reliability and capacity of applications, an application delivery controller(ADC) manages web traffic of your server application into nodes in order to reduce the "weight load" of those applications.
+-->
+<!--
+For this example's scenario, the ADC that will be used is BIG-IP from F5 for managing 3 HTTP servers as nodes where the web traffic will be distributed. 
+-->
+In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates as part of SSL termination on a load balancer (F5 BIG-IP). We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic that's being managed by F5 BIG-IP.
+<!-- 
+**DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. 
+-->
 
-## Scenario
-
-In order to increase reliability and capacity of applications, an Application Delivery Controller(ADC) manages web traffic of your server application into nodes in order to reduce the "weight load" of those applications.
-
-For this example's scenario, the ADC that will be used is BIG-IP from F5 for managing 3 HTTP servers as nodes where the web traffic will be distributed.
-
-## Solution
-
-Using Terraform "infrastructure as code" automation process for generating and installing a certificate and adding the corresponding configuration to achieve a SSL termination for handling a load balancing of a cluster of 3 HTTP servers.
-
-We will divide the process in the following steps:
-
-> **_Note:_**  These steps are providing a suggested Terraform file structure for this example only but you could still use the same configuration of your preference.
+## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to brass tax. -->
+Here are the steps we'll take as we go through the example:
 
 1. Create your Terraform variables file
 2. Set you main Terraform config file
 3. Set your Venafi Terraform config file
 4. Set your F5 BIG IP Terraform config file
 5. Apply your setup
+
+>**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, depending on your preferences.
 
 ## Prerequisites
 
