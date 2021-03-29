@@ -1,36 +1,32 @@
 # Configuring secure application delivery using Citrix ADC and the _Venafi Provider for HashiCorp Terraform_
 
-This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination).
-
+In this example, we'll show you how to better secure application delivery using _Venafi Provider for HashiCorp Terraform_ with your Citrix ADC instance. Adding Venafi enables you to manage certificates more securely as part of the TLS termination process on your load balancer.
+<!-- 
+ORIGINAL TEXT: This example will guide you in mounting a [CITRIX-ADC](https://www.citrix.com/products/citrix-adc/) instance and make certificates for those sites using Venafi's product [HashiCorp Terraform](https://terraform.io/) implementation in order to provide [SSL termination](https://www.techwalla.com/articles/what-is-ssl-termination). -->
 <!--
-DW: Hi Luis, I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is: _securing application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform_. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not desired end goal. Does that make sense? 
-
-So perhaps something like: 
-
-_In this example, we'll show you how to secure application delivery using Citrix ADC and the **Venafi Provider for HashiCorp Terraform** for securely managing certificates as part of the TLS termination process on your load balancer._ 
-
-I'm not the technical guru here, obviously; but hopefully what I'm conveying makes sense? 
+DW: Hi Luis, I think this first para should describe the desired outcome: state in simple terms what the user can expect when they implement your example. In fact, I re-wrote your title to state more directly what the desired outcome actually is (as I understand it): securing application delivery using Venafi Provider for HashiCorp Terraform with my Citrix ADC instance. So for example, while mounting a Citrix ADC instance is something the user will do to get to the outcome, it's not the end goal. And similarly, TLS termination is part of the process of securing app delivery using Citrix and Venafi, but not the desired end goal. Does that make sense? 
 -->
 
-## Who should use this example?
+## Who should use this example? <!-- Suggest not using "Persona" as this is an UX term used more internally in software dev than a term that users would typically understand; while more techy people will use your example and might understand UX notion of personas, they are in this context a user. -->
 
-The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example. 
+The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
 
 <!--
 DW: So I suggest adding--as I tried to do in that second sentence--the basic knowledge (as well as the permissions and access to the various systems) that is required in order to successfully complete your example. 
 -->
+## About this example <!--To make this more conversational and friendly, I've changed the title from "Solution" to this one. -->
 
-## About this example
-
-Using Terraform's _infrastructure as code_ automation process for generating and installing a certificate and adding the required configuration for SSL termination on a load balancer (Citrix ADC) that is balancing the load of three HTTP servers contained in cluster.
-
-<!--
-**DW:** It's not clear to me in the above sentence which parts are Terraform's and which parts are Venafi...because the first half of the sentence makes it sound like Terraform has an automated process already for generating and installing certs. Is this saying that the Venafi Provider (for HC Terraform), as a service component of Terraform is creating/installing the certs? I'm just not clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example.
+<!-- ORIGINAL TEXT: In order to increase reliability and capacity of applications, an application delivery controller(ADC) manages web traffic of your server application into nodes in order to reduce the "weight load" of those applications.
 -->
+<!-- DW: I took this first para out because I don't think we need to describe in this section what ADCs are and what they do. -->
 
-## Getting started
+In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates as part of SSL termination on a load balancer (Citrix ADC). We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic and being managed by Citrix ADC.
 
-To implement this solution, we'll complete the following steps:
+<!-- **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. -->
+
+## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to brass tax. -->
+
+Here are the steps we'll complete as we go through the example: 
 
 1. Create your Terraform variables file.
 2. Set up your main Terraform config file.
@@ -38,7 +34,7 @@ To implement this solution, we'll complete the following steps:
 4. Set up your Citrix Terraform config file.
 5. Apply your setup.
 
->**NOTE** These steps reflect a suggested Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, depending on your environment and your personal preferences.
+>**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, depending on your preferences.
 
 ## Prerequisites
 
