@@ -40,8 +40,8 @@ Here are the steps we'll complete as we go through the example:
 
 Before you get started, review these prerequisites first:
 
-- Have [Terraform properly installed](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
+- Make sure that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
+- Make sure that you have administrative access to either Venafi Trust Protection Platform or Venafi Cloud Services     - If you're using Trust Protection Platform and you do NOT have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md); that process is described in the Terr   This is described  as mentioned in [Venafi Provider for HashiCorp Terraform Readme](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
 - Administration access to the Citrix ADC instance.
 - A set of 3 NGINX servers running your application.
 - Citrix Terraform SDK installed locally following instructions provided [here](./../base/README.md).
