@@ -24,33 +24,34 @@ In this example, we use Terraform's _infrastructure as code_ automation process 
 
 <!-- **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. -->
 
-## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to brass tax. -->
+## Prerequisites
 
-Here are the steps we'll complete as we go through the example: 
+Before you continue, carefully review these prerequisites first:
+
+- Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
+- Verify that you have administrator access to your Citrix ADC instance.
+- Install Citrix Terraform SDK locally; for instructions, [look here](./../base/README.md).
+- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services.       - If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
+- Verify that you have three (3) NGINX servers that are running your application
+
+## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to business! -->
+
+Here are the steps we'll complete as we go through this example: 
 
 1. Create your Terraform variables file.
 2. Set up your main Terraform config file.
 3. Set up your Venafi Terraform config file.
 4. Set up your Citrix Terraform config file.
 5. Apply your setup.
+6. Test your implementation
 
->**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, depending on your preferences.
+>**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use a similar configuration, depending on your needs and preferences.
 
-## Prerequisites
-
-Before you get started, review these prerequisites first:
-
-- Make sure that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Make sure that you have administrative access to either Venafi Trust Protection Platform or Venafi Cloud Services     - If you're using Trust Protection Platform and you do NOT have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md); that process is described in the Terr   This is described  as mentioned in [Venafi Provider for HashiCorp Terraform Readme](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
-- Administration access to the Citrix ADC instance.
-- A set of 3 NGINX servers running your application.
-- Citrix Terraform SDK installed locally following instructions provided [here](./../base/README.md).
-
-## Scenario Introduction
+## Scenario introduction <!-- This reads like prerequisite stuff; is this something I do before I start on Step 1? Also, it's not clear in the instructions if you're telling me to do this stuff right now, or if it's something you'll have me do later in the Steps. -->
 
 As for this example scenario, you'll generate a certificate for ``demo-citrix.venafi.example`` using this Venafi Provider for Hashicorp Terraform and also using either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud**. Thus adding them to your Citrix ADC resources, then use them in the ADC node, and, finally, you'll configure the service group members and [bind them](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-manage-large-scale-deployment/configure-service-groups.html#bind-a-service-group-to-a-virtual-server) to your ADC node.
 
-> **_Note:_** As for ADC config, we will be using ``Round robin`` balancing method but keep in mind there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that may be more suitable for your use case scenario.
+> **NOTE** As for ADC config, we will be using ``Round robin`` balancing method but keep in mind there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that may be more suitable for your use case scenario.
 
 ![scenario](scenario.png "Scenario")
 
@@ -115,7 +116,7 @@ citrix_virtual_port = "443"
 citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8003" ]
 ```
 
-### Step 2: Set your main Terraform config file
+### Step 2: Set up your main Terraform config file
 
 > **_Important:_** Make sure your local provider is [installed properly](./base/README.md).
 
@@ -200,7 +201,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
         type = list(string)
     }
     ```
-### Step 3: Set your Venafi Terraform config file
+### Step 3: Set up your Venafi Terraform config file
 
 1. Specify the connection and authentication settings for your Venafi provider this example:
 
@@ -237,7 +238,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-### Step 4: Set your Citrix ADC Terraform config file
+### Step 4: Set up your Citrix ADC Terraform config file
 
 1. Set your Citrix ADC provider config:
 
@@ -346,6 +347,8 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 ### Step 5: Apply your setup
 
 Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your Citrix ADC appliance in `192.168.x.x` using ``<your_citrix_user>:<your_password>``.
+
+### Step 6: Test your implementation
 
 If done correctly, you should see an output like below:
 
