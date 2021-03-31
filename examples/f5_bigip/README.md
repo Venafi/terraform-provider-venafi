@@ -22,7 +22,7 @@ In this example, we use Terraform's _infrastructure as code_ automation process 
 **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. 
 -->
 
-<!-- NOTE: I (Derek) moved the content below from what was called the Scenario Introduction section, which was below the Getting Started section, per our discussion on 31 March; we'd agreed that it makes more sense here and that it interupted the flow of the document in it's old location. -->
+<!-- I moved the following paragraphs below from what was called the Scenario Introduction section, which was below the Getting Started section, per our discussion on 31 March; we'd agreed that it makes more sense here and that it interupted the flow of the document in it's old location. -->
 Later in this example, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using the _Venafi Provider for Hashicorp Terraform_ with either Venafi Trust Protection Platform (TPP) or Venafi Cloud. Then after adding them to your F5 BIG-IP resources, you'll use them in the ADC node. And finally, you'll configure the "pool" for your ADC nodes.
 
 > **NOTE** While we'll be using a ``Round robin`` balancing method in our ADC configuration, keep in mind that there are [other methods](https://www.f5.com/services/resources/glossary/load-balancer) that might be more suitable for your specific use case.
@@ -64,22 +64,22 @@ Here are the steps we'll take as we go through this example:
 4. Set your F5 BIG IP Terraform config file
 5. Apply your setup
 
->**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use a similar configuration, depending on your needs and preferences.
+>**NOTE** These steps reflect an example Terraform file structure and apply to this example only. Of course, you might be able to use a similar configuration, depending on your needs and preferences.
 
 ### Step 1: Create your Terraform variables file
 
-The **terraform.tfvars** configuration for F5 is divided by:
+The **terraform.tfvars** configuration for F5 is divided by the following:
 
-- Platform configuration (Venafi Cloud or TPP).
-- Your F5 floating managment access.
-- The configuration for your site.
-- The F5 partition where your data is stored.
-- The Virtual IP and Port which is the entry point for your traffic-management object of your virtual server.
-- The pool members are physical nodes on the network (NGINX servers for this example).
+- Platform configuration (Venafi Cloud or TPP)
+- Your F5 floating managment access
+- The configuration for your site
+- The F5 partition where your data is stored
+- The Virtual IP and Port, which is the entry point for your traffic-management object of your virtual server
+- The pool members are physical nodes on the network (NGINX servers, in this example)
 
-First we have to set the following variables depending on your platform that you are working on:
+First, we have to set the following variables depending on your platform that you are working on:
 
-> **_Note:_** You can check how to set these variables and the `venafi_zone` in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
+> **NOTE** [Learn how to set these variables and the `venafi_zone`](https://github.com/Venafi/terraform-provider-venafi#usage).
 
 **TPP**:
 ```JSON
@@ -93,7 +93,9 @@ access_token = "<access_token>"
 venafi_api_key = "<venafi_api_key>"
 ```
 
-And finally configure your F5 infrastructure (these values are illustrative, you should change them accordingly to your own configutation):
+And finally, configure your F5 infrastructure: 
+
+>**NOTE** The values we use here are for illustration only; you should change them according to your own configutation.
 
 ```JSON
 venafi_zone = "<venafi_zone>"
@@ -111,7 +113,7 @@ f5_virtual_port = "443"
 f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8003" ]
 ```
 
-### Step 2: Set your main Terraform config file
+### Step 2: Set up your main Terraform config file
 
 1. Declare that the Venafi and F5 BIG-IP providers are required:
     ```
@@ -130,7 +132,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-2. Define you variables from **terraforms.vars**:
+2. Define your variables from **terraforms.vars**:
 
     **TPP**:
     ```
@@ -198,9 +200,9 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
         type = list(string)
     }
     ```
-### Step 3: Set your Venafi Terraform config file
+### Step 3: Set up your Venafi Terraform config file
 
-1. Specify the connection and authentication settings for your Venafi provider this example:
+1. Specify the connection and authentication settings for your Venafi provider:
 
     **TPP**:
     ```
@@ -233,7 +235,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-### Step 4: Set your F5 BIG IP Terraform config file
+### Step 4: Set up your F5 BIG IP Terraform config file
 
 1. Set your F5 BIG-IP provider config:
 
@@ -322,16 +324,28 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 ### Step 5: Apply your setup
 
-Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your F5 partition in `192.168.x.x` using ``<your_f5_user>:<your_password>``.
+Finally, execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log into your F5 partition in `192.168.x.x` using ``<your_f5_user>:<your_password>``.
 
-If done correctly, you should see an output like below.
+If done correctly, you should see an output similar to the following:
 
 [![asciicast](https://asciinema.org/a/fKmvGRMCGxSaLN6EodmedsRpg.svg)](https://asciinema.org/a/fKmvGRMCGxSaLN6EodmedsRpg)
 To tear down your F5 partition execute `terraform destroy`, then you should see an output like this:
 
 [![asciicast](https://asciinema.org/a/V7TthUjHaejww5miuUbAnmyQS.svg)](https://asciinema.org/a/V7TthUjHaejww5miuUbAnmyQS)
 
-## References
+## What's next
+<!-- should keep this section brief; if the answer is more than a small paragraph, I suggest that you link to another article/topic/website somewhere -->
+
+After you've successfully implemented this example, consider the following tips:
+
+- **What happens when certificates expire? How do they get renewed?** (BriefAnswerHere)
+
+- **How do certificates get validated?** (BriefAnswerHere)
+
+<!-- Depending on your MD language, you could format these as expandable text so users can click the bullet item to reveal your answers. -->
+
+## Helpful references 
+<!-- I think if you use this idea of providing links to third-party resources, that we should make it part of our template; otherwise, I would move these links one at a time up into your content where it makes the most sense and is in context -->
 
 1. https://www.terraform.io/docs/language/values/locals.html
 2. https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl
