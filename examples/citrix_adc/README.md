@@ -24,15 +24,41 @@ In this example, we use Terraform's _infrastructure as code_ automation process 
 
 <!-- **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. -->
 
+<!-- NOTE: DW moved the content below from what was called the Scenario Introduction section, which was below the Getting Started section, per our discussion on 31 March; we'd agreed that it makes more sense here and that it interupted the flow of the document in it's old location. --> 
+
+Later in this example, you'll generate a certificate for ``demo-citrix.venafi.example`` using the _Venafi Provider for Hashicorp Terraform_ with either Venafi Trust Protection Platform (TPP) or Venafi Cloud. Then after adding them to your Citrix ADC resources, you'll use them in the ADC node. And finally, you'll configure the service group members and [bind them](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-manage-large-scale-deployment/configure-service-groups.html#bind-a-service-group-to-a-virtual-server) to your ADC node.
+
+> **NOTE** While we'll be using a ``Round robin`` balancing method in our ADC configuration, keep in mind that there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that might be more suitable for your specific use case.
+
+![scenario](scenario.png "Scenario")
+
+### About retrieving a certificate using the _Venafi Provider for Terraform_
+
+> **NOTE** The only purpose of the credentials used in this example is illustrative, in a real life scenario they must be considered as **weak** and **insecure**.
+<!-- This seems like a strange place for this note; is this about the generic creds used in the steps below? And is the intent to tell users that they shouldn't use simple passwords (e.g. "password") in production environments? Once I understand the purpose, I can suggest some changes... -->
+
+We'll be managing the following file structure:
+
+```
+./<your_workspace>/citrix_adc/
+├── citrixadc-prereq.sh
+├── citrix.tf
+├── main.tf
+├── venafi.tf
+└── terraform.tfvars
+```
+
+We provided the needed files in this folder except for **terraform.tfvars**. The configuration of the file is customized by each user, which is why we provided **terraform.tfvars.example** for each Venafi platform that you could use for your own configuration.
+
 ## Prerequisites
 
-Before you continue, carefully review these prerequisites first:
+Before you continue, carefully review these prerequisites:
 
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
 - Verify that you have administrator access to your Citrix ADC instance.
 - Install Citrix Terraform SDK locally; for instructions, [look here](./../base/README.md).
 - Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services.       - If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
-- Verify that you have three (3) NGINX servers that are running your application
+- Verify that you have three (3) web servers that are running your application; for this example, we'll use NGINX servers.
 
 ## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to business! -->
 
@@ -46,31 +72,6 @@ Here are the steps we'll complete as we go through this example:
 6. Test your implementation
 
 >**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use a similar configuration, depending on your needs and preferences.
-
-## Scenario introduction <!-- This reads like prerequisite stuff; is this something I do before I start on Step 1? Also, it's not clear in the instructions if you're telling me to do this stuff right now, or if it's something you'll have me do later in the Steps. -->
-
-As for this example scenario, you'll generate a certificate for ``demo-citrix.venafi.example`` using this Venafi Provider for Hashicorp Terraform and also using either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud**. Thus adding them to your Citrix ADC resources, then use them in the ADC node, and, finally, you'll configure the service group members and [bind them](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-manage-large-scale-deployment/configure-service-groups.html#bind-a-service-group-to-a-virtual-server) to your ADC node.
-
-> **NOTE** As for ADC config, we will be using ``Round robin`` balancing method but keep in mind there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that may be more suitable for your use case scenario.
-
-![scenario](scenario.png "Scenario")
-
-## Retrieving certificate using Venafi Provider for Terraform
-
-> **_Note:_** The sole purpose of the credentials used in this example is illustrative, in a real life scenario they must be considered as **weak** and **insecure**.
-
-We'll be managing the following file structure:
-
-```
-./<your_workspace>/citrix_adc/
-├── citrixadc-prereq.sh
-├── citrix.tf
-├── main.tf
-├── venafi.tf
-└── terraform.tfvars
-```
-
-We provided the needed files in this folder except for **terraform.tfvars**. The configuration of the file is custom by each user, hence we provided **terraform.tfvars.example** for each Venafi platform that you could use to set your own configuration.
 
 ### Step 1: Create your Terraform variables file
 
@@ -348,12 +349,21 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 
 Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your Citrix ADC appliance in `192.168.x.x` using ``<your_citrix_user>:<your_password>``.
 
-### Step 6: Test your implementation
-
-If done correctly, you should see an output like below:
+If done correctly, you should see an output similar to the following:
 
 [![asciicast](https://asciinema.org/a/xe0UUgiLKsaOhOXRqLu2bku9c.svg)](https://asciinema.org/a/xe0UUgiLKsaOhOXRqLu2bku9c)
 
-To tear down your infrastructure execute `terraform destroy`, then you should see an output like this:
+To tear down your infrastructure, execute `terraform destroy`, and then you should see an output similar to this:
 
 [![asciicast](https://asciinema.org/a/PrCtLI7cwkZC6RUriqpwuiQVU.svg)](https://asciinema.org/a/PrCtLI7cwkZC6RUriqpwuiQVU)
+
+## What's next
+<!-- should keep this section brief; if the answer is more than a small paragraph, I suggest that you link to another article/topic/website somewhere -->
+
+After you've successfully implemented this example, consider the following tips:
+
+- **What happens when certificates expire? How do they get renewed?** (BriefAnswerHere)
+
+- **How do certificates get validated?** (BriefAnswerHere)
+
+<!-- Depending on your MD language, you could format these as expandable text so users can click the bullet item to reveal your answers. -->
