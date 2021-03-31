@@ -26,8 +26,8 @@ In this example, we use Terraform's _infrastructure as code_ automation process 
 **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. 
 -->
 
-## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to brass tax. -->
-Here are the steps we'll take as we go through the example:
+## Getting started <!-- To give your document more of a flow forward, I changed the title from "Solution" to this one. Users love this title because it's like a sign-post letting them know that now we're getting down to business! -->
+Here are the steps we'll take as we go through this example:
 
 1. Create your Terraform variables file
 2. Set you main Terraform config file
@@ -35,18 +35,18 @@ Here are the steps we'll take as we go through the example:
 4. Set your F5 BIG IP Terraform config file
 5. Apply your setup
 
->**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use the same configuration, depending on your preferences.
+>**NOTE** These steps reflect an example Terraform file structure and apply only to this example. Of course, you might be able to use a similar configuration, depending on your needs and preferences.
 
 ## Prerequisites
 
-To perform the tasks described in this example, you'll need:
+Before you continue, carefully review these prerequisites first:
 
-- Have [Terraform properly installed](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Access to either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud services** (In TPP use case, unless you have administrative access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md) as mentioned in [here](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)).
-- Administration access to the F5 BIG-IP instance.
-- A set of 3 NGINX servers running your application.
+- Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
+- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services        - If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
+- Verify that you have administrator access to your F5 BIG-IP instance
+- Verify that you have three (3) NGINX servers that are running your application
 
-## Scenario Introduction
+## Scenario Introduction <!-- This reads like prerequisite stuff; is this something I do before I start on Step 1? Also, it's not clear in the instructions if you're telling me to do this stuff right now, or if it's something you'll have me do later in the Steps. -->
 
 As for this example scenario, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using this Venafi Provider for Hashicorp Terraform and also using either **Venafi Trust Protection Platform (TPP)** or **Venafi Cloud**. Thus adding them to your F5 BIG-IP resources, then use them in the ADC node, and, finally, you'll configure the "pool" for your ADC nodes.
 
