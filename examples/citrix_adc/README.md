@@ -11,6 +11,8 @@ DW: Hi Luis, I think this first para should describe the desired outcome: state 
 
 The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
 
+> **TIP** Having at least some basic knowledge of the Bash command language is helpful, such as when you need to set your provider locally.
+
 <!--
 DW: So I suggest adding--as I tried to do in that second sentence--the basic knowledge (as well as the permissions and access to the various systems) that is required in order to successfully complete your example. 
 -->
@@ -20,7 +22,7 @@ DW: So I suggest adding--as I tried to do in that second sentence--the basic kno
 -->
 <!-- DW: I took this first para out because I don't think we need to describe in this section what ADCs are and what they do. -->
 
-In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates as part of SSL termination on a load balancer (Citrix ADC). We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic and being managed by Citrix ADC.
+In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_  to generate and install certificates as part of SSL termination on an ADC (specifically, Citrix ADC) for load balancing web traffic. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic and being managed by Citrix ADC.
 
 <!-- **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. -->
 
@@ -34,7 +36,7 @@ Later in this example, you'll generate a certificate for ``demo-citrix.venafi.ex
 
 ### About retrieving a certificate using the _Venafi Provider for Terraform_
 
-> **NOTE** The only purpose of the credentials used in this example is illustrative, in a real life scenario they must be considered as **weak** and **insecure**.
+> **Best Practice:** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.
 <!-- This seems like a strange place for this note; is this about the generic creds used in the steps below? And is the intent to tell users that they shouldn't use simple passwords (e.g. "password") in production environments? Once I understand the purpose, I can suggest some changes... -->
 
 We'll be managing the following file structure:
@@ -252,15 +254,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-2. Set your *asset_name* for your vars in `locals` (remember that locals are values that can be used multiple times within a module without repeating it):
-
-    ```
-    locals {
-        asset_name = "${var.test_site_name}.${var.test_site_domain}"
-    }
-    ```
-
-3. Set your Citrix ADC resources as it gets the content from the _venafi_certificate_ resource:
+2. Set your Citrix ADC resources as it gets the content from the _venafi_certificate_ resource:
     ```
     resource "citrixadc_systemfile" "my_certfile" {
         filename = "${venafi_certificate.tls_server.common_name}.cert"
@@ -288,7 +282,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-4. Create a resource to manages client SSL profiles on a Citrix to the ADC:
+3. Create a resource to manages client SSL profiles on a Citrix to the ADC:
 
     ```
     resource "citrixadc_sslcertkey" "my_certkey" {
@@ -300,7 +294,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-5. Create your service group members resources to manage membership in pools:
+4. Create your service group members resources to manage membership in pools:
 
     ```
     resource "citrixadc_servicegroup" "my_pool" {
@@ -311,7 +305,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-6. Create you resource in order to create your virtual server to manage your Citrix ADC:
+5. Create you resource in order to create your virtual server to manage your Citrix ADC:
 
     ```
     resource "citrixadc_lbvserver" "my_virtual_server" {
@@ -325,7 +319,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-7. For verification purposes, output the certificate, private key, and chain in PEM format and as a PKCS#12 keystore (base64-encoded):
+6. For verification purposes, output the certificate, private key, and chain in PEM format and as a PKCS#12 keystore (base64-encoded):
     ```
     output "my_private_key" {
         value = venafi_certificate.tls_server.private_key_pem
@@ -362,8 +356,21 @@ To tear down your infrastructure, execute `terraform destroy`, and then you shou
 
 After you've successfully implemented this example, consider the following tips:
 
-- **What happens when certificates expire? How do they get renewed?** (BriefAnswerHere)
+<details>
+    <summary><b>
+        What happens when certificates expire? How do they get renewed? (click here to expand):
+    </b></summary>
 
-- **How do certificates get validated?** (BriefAnswerHere)
+- _Whenever your certificate gets expired there are high chances you'll get an outage of users for using you application. Web browsers are programmed to rise a danger warning when this happens. Also there's a chance, depending of your ADC provider, it will turn off the appliances when one of certificates of the appliances it points to expires ([an example of an provider for previous mentioned sceneario](https://www.ibm.com/support/pages/one-expired-certificate-brings-down-all-certificates-datapower-validation-credential))._
+- In order to renew a certificate you'll need to generate new [CSR](https://www.globalsign.com/en/blog/what-is-a-certificate-signing-request-csr). Once the certificate is ready, the CA will deliver it to you in order to install it to your appliance.
+</details>
+
+<details>
+    <summary><b>
+        How do certificates get validated? (click here to expand)
+    </b></summary>
+    
+_The web server of you application send a copy of the SSL certificate to browser, which then makes a validation among the list of certificate authorities that are publicy trusted. Then the browser answers back a message whenever if the certificate was indeed signed by a trusted CA. Finally the web server start a SSL encrypted session with the web browser. You can check more about this [here](https://www.ssl.com/article/browsers-and-certificate-validation/)._
+</details>
 
 <!-- Depending on your MD language, you could format these as expandable text so users can click the bullet item to reveal your answers. -->

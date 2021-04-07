@@ -17,7 +17,9 @@ DW: So I suggest adding--as I tried to do in that second sentence--the basic kno
 
 <!-- ORIGINAL TEXT: In order to increase reliability and capacity of applications, an application delivery controller(ADC) manages web traffic of your server application into nodes in order to reduce the "weight load" of those applications. --> <!-- DW: I took this first para out because I don't think we need to describe in this section what ADCs are and what they do. Remember, just my suggestion; if you think it's important, leave it here. -->
 
-In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates as part of SSL termination on a load balancer (F5 BIG-IP). We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic that's being managed by F5 BIG-IP.
+In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates as part of SSL termination on a Application Delevery Controller for F5 BIG-IP. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic that's being managed by F5 BIG-IP.
+
+> **TIP** Having at least some basic knowledge of the Bash command language is helpful, such as when you need to set your provider locally.
 <!-- 
 **DW:** The original paragraph above wasn't clear to me; in my attempt to undersand it, I've written a new para. If I've lost the technical meaning, it's because I couldn't follow the original logic. Some of the questions I had from the original were these: Which parts of the explanation are Terraform's and which parts are Venafi...because the first half of the original sentence made it sound like Terraform has an automated process already for generating and installing certs, and so why woud you need Venafi? But I knew that's not true. So I wondered if it was saying that the Venafi Provider, as a service component of Terraform, is creating/installing the certs? In short, I wasn't clear which parts are us and which parts are Terraform, etc. And understanding that will I think help users stay oriented to "who's doing what" as they prepare to test drive your example. 
 -->
@@ -31,7 +33,7 @@ Later in this example, you'll generate a certificate for ``demo-f5-bigip.venafi.
 
 ## About retrieving a certificate using the _Venafi Provider for Terraform_
 
-> **NOTE** The only purpose of the credentials used in this example is illustrative, in a real life scenario they must be considered as **weak** and **insecure**. <!-- This seems like a strange place for this note; is this about the generic creds used in the steps below? And is the intent to tell users that they shouldn't use simple passwords (e.g. "password") in production environments? Once I understand the purpose, I can suggest some changes... -->
+> **Best Practice:** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.<!-- This seems like a strange place for this note; is this about the generic creds used in the steps below? And is the intent to tell users that they shouldn't use simple passwords (e.g. "password") in production environments? Once I understand the purpose, I can suggest some changes... -->
 
 We'll be managing the following file structure:
 
@@ -247,7 +249,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-2. Set your *asset_name* for your vars in `locals` (remember that locals<sup>[1](https://www.terraform.io/docs/language/values/locals.html)</sup> are values that can be used multiple times within a module without repeating it):
+2. Set your *asset_name* for your vars in `locals` ([check more about locals here](https://www.terraform.io/docs/language/values/locals.html)):
 
     ```
     locals {
@@ -276,7 +278,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-4. Create a resource to manages client SSL profiles on a BIG-IP from the F5 partition<sup>[2](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)</sup>:
+4. Create a resource to manages client SSL profiles on a BIG-IP from the F5 partition ([check more aboout this configuration in here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)):
 
     ```
     resource "bigip_ltm_profile_client_ssl" "my_profile" {
@@ -291,7 +293,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-5. Create your pool members resources to manage membership in pools<sup>[3](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_pool_attachment)</sup>:
+5. Create your pool members resources to manage membership in pools ([check more aboout this configuration in here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_pool_attachment)):
 
     ```
     resource "bigip_ltm_pool" "my_pool" {
@@ -308,7 +310,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-6. Create you resource in order to create your virtual server to manage your F5 partition<sup>[4](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)</sup>:
+6. Create you resource in order to create your virtual server to manage your F5 partition ([check more aboout this configuration in here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)):
 
     ```
     resource "bigip_ltm_virtual_server" "my_virtual_server" {
@@ -337,17 +339,21 @@ To tear down your F5 partition execute `terraform destroy`, then you should see 
 <!-- should keep this section brief; if the answer is more than a small paragraph, I suggest that you link to another article/topic/website somewhere -->
 
 After you've successfully implemented this example, consider the following tips:
+<details>
+    <summary><b>
+        What happens when certificates expire? How do they get renewed? (click here to expand):
+    </b></summary>
 
-- **What happens when certificates expire? How do they get renewed?** (BriefAnswerHere)
+- _Whenever your certificate gets expired there are high chances you'll get an outage of users for using you application. Web browsers are programmed to rise a danger warning when this happens. Also there's a chance, depending of your ADC provider, it will turn off the appliances when one of certificates of the appliances it points to expires ([an example of an provider for previous mentioned sceneario](https://www.ibm.com/support/pages/one-expired-certificate-brings-down-all-certificates-datapower-validation-credential))._
+- In order to renew a certificate you'll need to generate new [CSR](https://www.globalsign.com/en/blog/what-is-a-certificate-signing-request-csr). Once the certificate is ready, the CA will deliver it to you in order to install it to your appliance.
+</details>
 
-- **How do certificates get validated?** (BriefAnswerHere)
+<details>
+    <summary><b>
+        How do certificates get validated? (click here to expand)
+    </b></summary>
+    
+_The web server of you application send a copy of the SSL certificate to browser, which then makes a validation among the list of certificate authorities that are publicy trusted. Then the browser answers back a message whenever if the certificate was indeed signed by a trusted CA. Finally the web server start a SSL encrypted session with the web browser. You can check more about this [here](https://www.ssl.com/article/browsers-and-certificate-validation/)._
+</details>
 
 <!-- Depending on your MD language, you could format these as expandable text so users can click the bullet item to reveal your answers. -->
-
-## Helpful references 
-<!-- I think if you use this idea of providing links to third-party resources, that we should make it part of our template; otherwise, I would move these links one at a time up into your content where it makes the most sense and is in context -->
-
-1. https://www.terraform.io/docs/language/values/locals.html
-2. https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl
-3. https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_pool_attachment
-4. https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server
