@@ -4,7 +4,7 @@ In this example, we'll show you how to better secure application delivery using 
 
 ## Who should use this example? 
 
-The steps described in this example are typically performed by **DevOps engineers** or **system administrators**. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
+The steps described in this example are typically performed by _DevOps engineers_ or _system administrators_. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
 
 > **TIP** Having at least some basic knowledge of the Bash command language is helpful, such as when you need to set your provider locally.
 
@@ -20,7 +20,7 @@ Later in this example, you'll generate a certificate for ``demo-citrix.venafi.ex
 
 ### About retrieving a certificate using the _Venafi Provider for Terraform_
 
-> **Best Practice:** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.
+> **BEST PRACTICES** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.
 
 We'll be managing the following file structure:
 
@@ -33,7 +33,7 @@ We'll be managing the following file structure:
 └── terraform.tfvars
 ```
 
-We provided the needed files in this folder except for **terraform.tfvars**. The configuration of the file is customized by each user, which is why we provided **terraform.tfvars.example** for each Venafi platform that you could use for your own configuration.
+We provided the needed files in this folder except for _terraform.tfvars_. The configuration of the file is customized by each user, which is why we provided _terraform.tfvars.example_ for each Venafi platform that you could use for your own configuration.
 
 ## Prerequisites
 
@@ -42,7 +42,8 @@ Before you continue, carefully review these prerequisites:
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
 - Verify that you have administrator access to your Citrix ADC instance.
 - Install Citrix Terraform SDK locally; for instructions, [look here](./../base/README.md).
-- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services.       - If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
+- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services.      
+- If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
 - Verify that you have three (3) web servers that are running your application; for this example, we'll use NGINX servers.
 
 ## Getting started 
@@ -60,18 +61,18 @@ Here are the steps we'll complete as we go through this example:
 
 ### Step 1: Create your Terraform variables file
 
-The **terraform.tfvars** configuration for Citrix is divided by:
+The _terraform.tfvars_ configuration for Citrix is divided into the following sections:
 
-- Platform configuration (Venafi Cloud or TPP).
-- Your Citrix management access.
-- The configuration for your site.
-- The Citrix Appliance where your data is stored.
-- The Virtual IP and Port which is the entry point for your traffic-management object of your virtual server.
-- The service group members are physical nodes on the network (NGINX servers for this example).
+- Platform configuration (Venafi Cloud or TPP)
+- Your Citrix management access
+- The configuration for your site
+- The Citrix Appliance where your data is stored
+- The Virtual IP and Port, which is the entry point for your traffic-management object of your virtual server
+- The service group members are physical nodes on the network (NGINX servers for this example)
 
 First we have to set the following variables depending on your platform that you are working on:
 
-> **_Note:_** You can check how to set these variables and the `venafi_zone` in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
+> **NOTE** You can check how to set these variables and the `venafi_zone` in [here](https://github.com/Venafi/terraform-provider-venafi#usage).
 
 **TPP**:
 ```JSON
@@ -85,7 +86,9 @@ access_token = "<access_token>"
 venafi_api_key = "<venafi_api_key>"
 ```
 
-And finally configure your Citrix infrastructure (these values are illustrative, you should change them accordingly to your own configutation):
+And finally configure your Citrix infrastructure: 
+
+> **NOTE** The values we use here are for illustration only; you should change them according to your own configuration.
 
 ```JSON
 venafi_zone = "<venafi_zone>"
@@ -104,7 +107,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 
 ### Step 2: Set up your main Terraform config file
 
-> **_Important:_** Make sure your local provider is [installed properly](./base/README.md).
+> **IMPORTANT!** If not already done, make sure your local provider is [installed properly](./base/README.md).
 
 1. Declare that the Venafi and Citrix ADC providers are required:
     ```
@@ -123,7 +126,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-2. Define you variables from **terraforms.vars**:
+2. Define you variables from _terraforms.vars_:
 
     **TPP**:
     ```
@@ -189,7 +192,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     ```
 ### Step 3: Set up your Venafi Terraform config file
 
-1. Specify the connection and authentication settings for your Venafi provider this example:
+1. Specify the connection and authentication settings for your Venafi provider:
 
     **TPP**:
     ```
@@ -209,7 +212,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-2. Create a `venafi_certificate` **resource** that will generate a new key pair and enroll the certificate needed by a _"tls_server"_ application:
+2. Create a `venafi_certificate` _resource_ that will generate a new key pair and enroll the certificate needed by a _"tls_server"_ application:
 
 
     ```
@@ -226,7 +229,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 
 ### Step 4: Set up your Citrix ADC Terraform config file
 
-1. Set your Citrix ADC provider config:
+1. Specify your Citrix ADC provider configuration:
 
     ```
     provider "citrixadc" {
@@ -265,7 +268,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-3. Create a resource to manages client SSL profiles on a Citrix to the ADC:
+3. Create a resource to manage client SSL profiles on a Citrix to the ADC:
 
     ```
     resource "citrixadc_sslcertkey" "my_certkey" {
@@ -288,7 +291,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     }
     ```
 
-5. Create you resource in order to create your virtual server to manage your Citrix ADC:
+5. Create your resource in order to create your virtual server for managing your Citrix ADC:
 
     ```
     resource "citrixadc_lbvserver" "my_virtual_server" {
@@ -324,7 +327,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 
 ### Step 5: Apply your setup
 
-Finally execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log in your Citrix ADC appliance in `192.168.x.x` using ``<your_citrix_user>:<your_password>``.
+Finally, run `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log into your Citrix ADC appliance in `192.168.x.x` using ``<your_citrix_user>:<your_password>``.
 
 If done correctly, you should see an output similar to the following:
 
@@ -343,14 +346,15 @@ After you've successfully implemented this example, consider the following tips:
         What happens when certificates expire? How do they get renewed? (click here to expand):
     </b></summary>
 
-- _Whenever your certificate gets expired there are high chances you'll get an outage of users for using you application. Web browsers are programmed to rise a danger warning when this happens. Also there's a chance, depending of your ADC provider, it will turn off the appliances when one of certificates of the appliances it points to expires ([an example of an provider for previous mentioned sceneario](https://www.ibm.com/support/pages/one-expired-certificate-brings-down-all-certificates-datapower-validation-credential))._
-- In order to renew a certificate you'll need to generate new [CSR](https://www.globalsign.com/en/blog/what-is-a-certificate-signing-request-csr). Once the certificate is ready, the CA will deliver it to you in order to install it to your appliance.
+**IMPORTANT!** When your certificate expires, the chances that users of your application will experience an outage increases significantly. When an outage occures, most web browsers automatically warn users. Also, your ADC provider might turn off the appliances when any of the certificates of the appliances it points to expire ([here's an example](https://www.ibm.com/support/pages/one-expired-certificate-brings-down-all-certificates-datapower-validation-credential)).
+
+To renew a certificate, you'll need to generate a new [CSR](https://www.globalsign.com/en/blog/what-is-a-certificate-signing-request-csr). Once the certificate is ready, the CA will deliver it to you. Then you can install it on your appliance.
 </details>
 
 <details>
     <summary><b>
-        How do certificates get validated? (click here to expand)
+        How do certificates get validated? (click to expand)
     </b></summary>
     
-_The web server of you application send a copy of the SSL certificate to browser, which then makes a validation among the list of certificate authorities that are publicy trusted. Then the browser answers back a message whenever if the certificate was indeed signed by a trusted CA. Finally the web server start a SSL encrypted session with the web browser. You can check more about this [here](https://www.ssl.com/article/browsers-and-certificate-validation/)._
+Your application's web server sends a copy of the SSL certificate to the browser. The browser validates the certificate against a list of certificate authorities that are publicy trusted. The browser then returns a message indicating whether the certificate was signed by a trusted CA. Finally, the web server starts an SSL-encrypted session with the web browser. You can [learn more about this here](https://www.ssl.com/article/browsers-and-certificate-validation/).
 </details>
