@@ -335,7 +335,6 @@ To tear down your infrastructure, execute `terraform destroy`, and then you shou
 [![asciicast](https://asciinema.org/a/PrCtLI7cwkZC6RUriqpwuiQVU.svg)](https://asciinema.org/a/PrCtLI7cwkZC6RUriqpwuiQVU)
 
 ## What's next
-<!-- should keep this section brief; if the answer is more than a small paragraph, I suggest that you link to another article/topic/website somewhere -->
 
 After you've successfully implemented this example, consider the following tips:
 
@@ -355,5 +354,3 @@ After you've successfully implemented this example, consider the following tips:
     
 _The web server of you application send a copy of the SSL certificate to browser, which then makes a validation among the list of certificate authorities that are publicy trusted. Then the browser answers back a message whenever if the certificate was indeed signed by a trusted CA. Finally the web server start a SSL encrypted session with the web browser. You can check more about this [here](https://www.ssl.com/article/browsers-and-certificate-validation/)._
 </details>
-
-<!-- Depending on your MD language, you could format these as expandable text so users can click the bullet item to reveal your answers. -->
