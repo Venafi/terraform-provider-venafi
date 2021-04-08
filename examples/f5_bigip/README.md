@@ -122,7 +122,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-2. Define your variables from **terraforms.vars**:
+2. Define your variables from _terraforms.vars_:
 
     **TPP**:
     ```
@@ -212,7 +212,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-2. Create a `venafi_certificate` **resource** that will generate a new key pair and enroll the certificate needed by a _"tls_server"_ application:
+2. Create a `venafi_certificate` _resource_ that will generate a new key pair and enroll the certificate needed by a _"tls_server"_ application:
     ```
     resource "venafi_certificate" "tls_server" {
         common_name = "${var.test_site_name}-${formatdate("YYYYMMDD-hhmmss", timestamp())}.${var.test_site_domain}"
@@ -227,7 +227,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 ### Step 4: Set up your F5 BIG IP Terraform config file
 
-1. Set your F5 BIG-IP provider configuration:
+1. Specify your F5 BIG-IP provider configuration:
 
     ```
     provider "bigip" {
@@ -266,7 +266,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-4. Create a resource to manages client SSL profiles on a BIG-IP from the F5 partition ([learn more aboout this configuration here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)):
+4. Create a resource to manage client SSL profiles on a BIG-IP from the F5 partition ([learn more aboout this configuration here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)):
 
     ```
     resource "bigip_ltm_profile_client_ssl" "my_profile" {
@@ -314,7 +314,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 ### Step 5: Apply your setup
 
-Finally, execute `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log into your F5 partition in `192.168.x.x` using ``<your_f5_user>:<your_password>``.
+Finally, run `terraform init`, ``terraform plan`` and ``terraform apply`` to apply your configuration changes. Then you should be able to log into your F5 partition in `192.168.x.x` using ``<your_f5_user>:<your_password>``.
 
 If done correctly, you should see an output similar to the following:
 
