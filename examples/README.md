@@ -1,6 +1,8 @@
 # Venafi Provider Examples
 
-In this section you'll find examples to make your implementation of your Venafi Provider for [HashiCorp Terraform](https://terraform.io/) in for automating your process of SSL integration in your infrastructure.
+In this section you'll find functional examples you can use to better secure application delivery using _Venafi Provider for [HashiCorp Terraform](https://terraform.io/)_ with F5 BIG-IP or Citrix ADC. 
+
+Adding Venafi enables you to manage certificates more securely as part of the TLS termination process on your application delivery controller (ADC).
 
 **Examples:**
 
@@ -8,6 +10,6 @@ In this section you'll find examples to make your implementation of your Venafi 
 
 - [SSL Termination with Citrix ADC](./citrix_adc/README.md).
 
-# Adding your Terraform Provider Locally
+# Adding your Terraform Provider locally
 
-Follow instructions from [here](./base/README.md).
+Follow [these instructions](./base/README.md).
