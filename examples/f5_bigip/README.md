@@ -266,7 +266,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-4. Create a resource to manage client SSL profiles on a BIG-IP from the F5 partition ([learn more aboout this configuration here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)):
+4. Create a resource to manage client SSL profiles on a BIG-IP from the F5 partition ([learn more about this configuration here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_profile_client_ssl)):
 
     ```
     resource "bigip_ltm_profile_client_ssl" "my_profile" {
@@ -281,7 +281,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-5. Create your pool members' resources to manage membership in pools ([learn more aboout this configuration here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_pool_attachment)):
+5. Create your pool members' resources to manage membership in pools ([learn more about this configuration here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_pool_attachment)):
 
     ```
     resource "bigip_ltm_pool" "my_pool" {
@@ -298,7 +298,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-6. Create your resource in order to create your virtual server for managing your F5 partition ([check more aboout this configuration in here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)):
+6. Create your resource in order to create your virtual server for managing your F5 partition ([check more about this configuration in here](https://registry.terraform.io/providers/F5Networks/bigip/latest/docs/resources/bigip_ltm_virtual_server)):
 
     ```
     resource "bigip_ltm_virtual_server" "my_virtual_server" {
