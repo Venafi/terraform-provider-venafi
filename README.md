@@ -18,8 +18,10 @@ This solution adds certificate enrollment capabilities to [HashiCorp Terraform](
 >
 >Click one to get started:
 >
->------------ | -------------
->[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="80" height="80" />](examples/f5_bigip/README.md)|[<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="80" height="80" />](examples/citrix_adc/README.md)
+>
+>[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="30" height="30" />](examples/f5_bigip/README.md) [Configuring secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)
+>
+>[<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="30" height="30" />](examples/citrix_adc/README.md) [Configuring secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/citrix_adc/README.md)
 
 ## Requirements
 
