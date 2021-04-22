@@ -14,13 +14,13 @@ This solution adds certificate enrollment capabilities to [HashiCorp Terraform](
 
 >:red_car: **Test drive our integration examples today**
 >
->Do you use any of the following products? Let us guide you through adding certificates to your _Infrastucture as Code_ automation with Terraform.  
+>Let us show you _step-by-step_ how to add certificates to your _Infrastucture as Code_ automation using Terraform and your chosen application delivery controller (ADC).
+> 
+>>**NOTE** If you don't see an example for an ADC product you use, check back later. We're working hard to add more integration examples.
 >
 >[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="20" height="20" />](examples/f5_bigip/README.md) [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)
 >
 >[<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="20" height="20" />](examples/citrix_adc/README.md) [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/citrix_adc/README.md)
->s
->>**NOTE** If you don't see an example for a product you use, check back later. We're working hard to add more integration examples.
 
 ## Requirements
 
