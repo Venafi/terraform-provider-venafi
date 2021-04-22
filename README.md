@@ -19,7 +19,7 @@ This solution adds certificate enrollment capabilities to [HashiCorp Terraform](
 >
 > Products | Available integration examples...
 >------------ | -------------
->[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" align="center" width="40" height="40" />](examples/f5_bigip/README.md) | [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)
+>[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="40" height="40" />](examples/f5_bigip/README.md) | [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)
 >[<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="40" height="40" />](examples/citrix_adc/README.md) | [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/citrix_adc/README.md)
 >
 >>**NOTE** If you don't see an example for a product you use, check back later. We're working hard to add more integration examples.
