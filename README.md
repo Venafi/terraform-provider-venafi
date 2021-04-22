@@ -12,7 +12,21 @@ We welcome and appreciate all contributions. Got questions or want to discuss so
 
 This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://terraform.io/) by seamlessly integrating with the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi Cloud](https://www.venafi.com/platform/cloud/devops) in a manner that ensures compliance with corporate security policy and provides visibility into certificate issuance enterprise wide.
 
-### Venafi Trust Protection Platform Requirements
+>:red_car: **Test drive our integration examples today**
+>
+>Let us show you _step-by-step_ how to add certificates to your _Infrastucture as Code_ automation using Terraform.
+> 
+>
+>Products | Available integration examples...
+>:------: | --------
+>[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="40" height="40" />](examples/f5_bigip/README.md) | [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)
+>[<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="40" height="40" />](examples/citrix_adc/README.md) | [How to configure secure application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform](examples/citrix_adc/README.md)
+>
+>**NOTE** If you don't see an example for a product you use, check back later. We're working hard to add more integration examples.
+
+## Requirements
+
+### Venafi Trust Protection Platform
 
 Your certificate authority (CA) must be able to issue a certificate in
 under one minute. Microsoft Active Directory Certificate Services (ADCS) is a
@@ -62,7 +76,7 @@ make changes to your system configuration, save the root certificate to a file
 in PEM format (e.g. /opt/venafi/bundle.pem) and include it using the
 `trust_bundle` parameter of your Venafi provider.
 
-### Venafi Cloud Requirements
+### Venafi Cloud
 
 If you are using Venafi Cloud, be sure to set up an issuing template, project,
 and any other dependencies that appear in the Venafi Cloud documentation.
