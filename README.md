@@ -12,13 +12,15 @@ We welcome and appreciate all contributions. Got questions or want to discuss so
 
 This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://terraform.io/) by seamlessly integrating with the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi Cloud](https://www.venafi.com/platform/cloud/devops) in a manner that ensures compliance with corporate security policy and provides visibility into certificate issuance enterprise wide.
 
->:red_car: **Want to test drive one of our integration examples?**
+>:red_car: **Test drive our integration examples today**
 >
->Do you use any of the following products? Let us guide you through adding certificates to your _Infrastucture as Code_ automation with Terraform. 
+>Do you use any of the following products? Let us guide you through adding certificates to your _Infrastucture as Code_ automation with Terraform.  
 >
 >[<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="20" height="20" />](examples/f5_bigip/README.md) [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)
 >
 >[<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="20" height="20" />](examples/citrix_adc/README.md) [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/citrix_adc/README.md)
+>s
+>>**NOTE** If you don't see an example for a product you use, check back later. We're working hard to add more integration examples.
 
 ## Requirements
 
