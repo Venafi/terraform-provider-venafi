@@ -107,7 +107,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 
 ### Step 2: Set up your main Terraform config file
 
-> **IMPORTANT!** If not already done, make sure your local provider is [installed properly](./base/README.md).
+> **IMPORTANT!** If not already done, make sure your local provider is [installed properly](./../base/README.md).
 
 1. Declare that the Venafi and Citrix ADC providers are required:
     ```
