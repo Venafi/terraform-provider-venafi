@@ -1,7 +1,7 @@
 ![Venafi](Venafi_logo.png)
 [![MPL 2.0 License](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
 ![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
-![Compatible with TPP 17.3+ & Cloud](https://img.shields.io/badge/Compatibility-TPP%2017.3+%20%26%20Cloud-f9a90c)  
+![Compatible with TPP 17.3+ & VaaS](https://img.shields.io/badge/Compatibility-TPP%2017.3+%20%26%20VaaS-f9a90c)  
 _**This open source project is community-supported.** To report a problem or share an idea, use
 **[Issues](../../issues)**; and if you have a suggestion for fixing the issue, please include those details, too.
 In addition, use **[Pull Requests](../../pulls)** to contribute actual bug fixes or proposed enhancements.
@@ -10,7 +10,7 @@ We welcome and appreciate all contributions. Got questions or want to discuss so
 
 # Venafi Provider for HashiCorp Terraform
 
-This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://terraform.io/) by seamlessly integrating with the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi Cloud](https://www.venafi.com/platform/cloud/devops) in a manner that ensures compliance with corporate security policy and provides visibility into certificate issuance enterprise wide.
+This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://terraform.io/) by seamlessly integrating with the [Venafi Trust Protection Platform](https://www.venafi.com/platform/trust-protection-platform) or [Venafi as a Service](https://www.venafi.com/venaficloud) in a manner that ensures compliance with corporate security policy and provides visibility into certificate issuance enterprise wide.
 
 >:red_car: **Test drive our integration examples today**
 >
@@ -76,19 +76,27 @@ make changes to your system configuration, save the root certificate to a file
 in PEM format (e.g. /opt/venafi/bundle.pem) and include it using the
 `trust_bundle` parameter of your Venafi provider.
 
-### Venafi Cloud
+### Venafi as a Service
 
-If you are using Venafi Cloud, be sure to set up an issuing template, project,
-and any other dependencies that appear in the Venafi Cloud documentation.
+If you are using Venafi as a Service, verify the following:
 
-- Set up an issuing template to link Venafi Cloud to your CA. To learn more,
-  search for "Issuing Templates" in the
-  [Venafi Cloud Help system](https://docs.venafi.cloud/help/Default.htm).
-- Create an Application and Issuing Template API Alias because these values 
-  will be used later as value for the zone parameter in the way of 
-  "Application_Name\Issuing_Template_API_Alias" (e.g. "Business App\Enterprise CIT").
-  To learn more, search for "Applications" in the
-  [Venafi Cloud Help system](https://docs.venafi.cloud/help/Default.htm).
+- The Venafi as a Service REST API at [https://api.venafi.cloud](https://api.venafi.cloud/swagger-ui.html)
+is accessible from the system where Terraform will run.
+- You have successfully registered for a Venafi as a Service account, have been granted at least the
+"Resource Owner" role, and know your API key.
+- A CA Account and Issuing Template exist and have been configured with:
+    - Recommended Settings values for:
+        - Organizational Unit (OU)
+        - Organization (O)
+        - City/Locality (L)
+        - State/Province (ST)
+        - Country (C)
+    - Issuing Rules that:
+        - (Recommended) Limits Common Name and Subject Alternative Name to domains that are allowed by your organization
+        - (Recommended) Restricts the Key Length to 2048 or higher
+        - (Recommended) Does not allow Private Key Reuse
+- An Application exists where you are among the owners, and you know the Application name.
+- An Issuing Template is assigned to the Application, and you know its API Alias.
 
 ## Setup
 
@@ -146,7 +154,7 @@ using the
    }
    ```
 
-   **Venafi Cloud**:
+   **Venafi as a Service**:
 
    ```text
    provider "venafi" {
@@ -159,19 +167,20 @@ using the
 
    | Property       | Type   | Description                                                  | Env. Variable |
    | -------------- | ------ | ------------------------------------------------------------ | ------------ |
-   | `api_key`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi Cloud API key                                         | VENAFI_API |
+   | `api_key`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi as a Service API key                                         | VENAFI_API |
    | `access_token` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application | VENAFI_TOKEN |
    | `tpp_username` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
    | `tpp_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
    | `trust_bundle` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform | |
    | `url`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to Trust Protection Platform | VENAFI_URL |
-   | `zone`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") | VENAFI_ZONE |
-   | `dev_mode`     | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)   | When "true", the provider operates without connecting to Trust Protection Platform or Venafi Cloud | VENAFI_DEVMODE |
+   | `zone`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT") | VENAFI_ZONE |
+   | `dev_mode`     | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)   | When "true", the provider operates without connecting to TPP or VaaS | VENAFI_DEVMODE |
 
    >:pushpin: **NOTE**: The indicated environment variables can be used to specify
    values for provider settings rather than including them in a configuration 
-   file. Avoid specifying a value for `api_key` unless you are using Venafi Cloud as
-   that variable is used by the provider to decide which Venafi service to use.
+   file. Avoid specifying a value for `api_key` unless you are using Venafi as a 
+   Service since that variable is used by the provider to decide which Venafi product
+   to use.
 
 1. Create a `venafi_certificate` resource that will generate a new key pair and
    enroll the certificate needed by a "tls_server" application:
