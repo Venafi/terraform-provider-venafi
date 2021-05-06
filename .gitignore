@@ -8,3 +8,4 @@ terraform-provider-venafi
 credentials
 chain.pem
 !*/**
+terraform.d

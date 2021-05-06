@@ -4,8 +4,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/Venafi/vcert/v4/pkg/util"
 	"github.com/pkg/errors"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -74,6 +77,8 @@ type testData struct {
 	custom_fields        string
 	issuer_hint          string
 	valid_days           int
+	zone                 string
+	file_path            string
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
@@ -118,4 +123,21 @@ func getIssuerHint(is string) string {
 
 	return issuerHint
 
+}
+
+func getConnection(meta interface{}) (endpoint.Connector, error) {
+	cfg := meta.(*vcert.Config)
+	cl, err := vcert.NewClient(cfg)
+	if err != nil {
+		log.Printf(messageVenafiClientInitFailed + err.Error())
+		return nil, err
+	}
+	err = cl.Ping()
+	if err != nil {
+		log.Printf(messageVenafiPingFailed + err.Error())
+		return nil, err
+	}
+	log.Println(messageVenafiPingSucessfull)
+
+	return cl, nil
 }

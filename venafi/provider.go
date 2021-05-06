@@ -84,6 +84,7 @@ Example:
 
 		ResourcesMap: map[string]*schema.Resource{
 			"venafi_certificate": resourceVenafiCertificate(),
+			"venafi_policy":      resourceVenafiPolicy(),
 		},
 
 		ConfigureFunc: providerConfigure,

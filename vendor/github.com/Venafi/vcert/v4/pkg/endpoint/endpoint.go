@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4/pkg/policy"
 	"log"
 	"net"
 	"net/http"
@@ -94,6 +95,8 @@ type Connector interface {
 	SetHTTPClient(client *http.Client)
 	// ListCertificates
 	ListCertificates(filter Filter) ([]certificate.CertificateInfo, error)
+	SetPolicy(name string, ps *policy.PolicySpecification) (string, error)
+	GetPolicy(name string) (*policy.PolicySpecification, error)
 }
 
 type Filter struct {
@@ -437,7 +440,7 @@ func (z *ZoneConfiguration) UpdateCertificateRequest(request *certificate.Reques
 }
 
 func getPrimaryNetAddr() string {
-	conn, err := net.Dial("udp", "venafi.com:1")
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "0.0.0.0"
 	}
