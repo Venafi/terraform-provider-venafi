@@ -78,7 +78,7 @@ type testData struct {
 	issuer_hint          string
 	valid_days           int
 	zone                 string
-	file_path            string
+	filePath             string
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {

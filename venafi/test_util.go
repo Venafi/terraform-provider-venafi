@@ -10,7 +10,9 @@ import (
 )
 
 const (
-	empty_policy = "/test_files/empty_policy.json"
+	emptyPolicy     = "/test_files/empty_policy.json"
+	policySpecCloud = "/test_files/policy_specification_cloud.json"
+	policySpecTpp   = "/test_files/policy_specification_tpp.json"
 )
 
 func RandAppName() string {
@@ -39,4 +41,29 @@ func GetRootDir() string {
 	_, b, _, _ := runtime.Caller(0)
 	d := path.Join(path.Dir(b))
 	return filepath.Dir(d)
+}
+
+func IsArrayStringEqual(expectedValues, values []string) bool {
+
+	if len(expectedValues) != len(values) {
+		return false
+	}
+
+	for i, currentValue := range expectedValues {
+
+		if currentValue != values[i] {
+
+			return false
+
+		}
+
+	}
+
+	return true
+}
+
+func GetAbsoluteFIlePath(filePath string) string {
+	rootDir := GetRootDir()
+	absolutePath := rootDir + filePath
+	return absolutePath
 }

@@ -6,7 +6,9 @@ import (
 	"github.com/Venafi/vcert/v4/pkg/policy"
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -52,15 +54,26 @@ provider "venafi" {
 }
 `
 
-	emptyPolicyTest = `
+	cloudPolicyResourceTest = `
 %s
-resource "venafi_policy" "empty_policy" {
+resource "venafi_policy" "cloud_policy" {
 	provider = "venafi.cloud"
 	zone="%s"
 	policy_specification_path = "%s"
 }
 output "policy_specification" {
-	value = "${venafi_policy.empty_policy.policy_specification}"
+	value = "${venafi_policy.cloud_policy.policy_specification}"
+}`
+
+	tppPolicyResourceTest = `
+%s
+resource "venafi_policy" "tpp_policy" {
+	provider = "venafi.token_tpp"
+	zone="%s"
+	policy_specification_path = "%s"
+}
+output "policy_specification" {
+	value = "${venafi_policy.tpp_policy.policy_specification}"
 }`
 
 	readPolicy = `
@@ -72,12 +85,15 @@ resource "venafi_policy" "read_policy" {
 }`
 )
 
-func TestCreateEmptyPolicy(t *testing.T) {
+//-----------------------------------------------cloud test cases begins----------------------------------------------//
+
+func TestCreateCloudEmptyPolicy(t *testing.T) {
 	data := testData{}
 	data.zone = RandAppName() + "\\\\" + RandCitName()
-	root_dir := GetRootDir()
-	data.file_path = root_dir + empty_policy
-	config := fmt.Sprintf(emptyPolicyTest, cloudProv, data.zone, data.file_path)
+
+	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
+
+	config := fmt.Sprintf(cloudPolicyResourceTest, cloudProv, data.zone, data.filePath)
 	t.Logf("Testing Creating empty Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -85,16 +101,38 @@ func TestCreateEmptyPolicy(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Creating empty zone: ", data.zone)
-					return checkCreateEmptyPolicy(t, &data, s)
+					t.Log("Creating VaaS empty zone: ", data.zone)
+					return checkCreateCloudPolicy(t, &data, s, false)
 				},
 			},
 		},
 	})
 }
 
-func checkCreateEmptyPolicy(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Validate Creating empty policy", data.zone)
+func TestCreateCloudPolicy(t *testing.T) {
+	data := testData{}
+	data.zone = RandAppName() + "\\\\" + RandCitName()
+
+	data.filePath = GetAbsoluteFIlePath(policySpecCloud)
+
+	config := fmt.Sprintf(cloudPolicyResourceTest, cloudProv, data.zone, data.filePath)
+	t.Logf("Testing creating VaaS Zone:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Creating VaaS zone: ", data.zone)
+					return checkCreateCloudPolicy(t, &data, s, false)
+				},
+			},
+		},
+	})
+}
+
+func checkCreateCloudPolicy(t *testing.T, data *testData, s *terraform.State, validateAttr bool) error {
+	t.Log("Validate Creating VaaS empty policy", data.zone)
 
 	pstUntyped := s.RootModule().Outputs["policy_specification"].Value
 
@@ -111,14 +149,189 @@ func checkCreateEmptyPolicy(t *testing.T, data *testData, s *terraform.State) er
 		return fmt.Errorf("policy specification is nil")
 	}
 
+	if !validateAttr {
+		return nil
+	}
+
+	//get policy on directory.
+	file, err := os.Open(data.filePath)
+	if err != nil {
+		return err
+	}
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	var filePolicySpecification policy.PolicySpecification
+	err = json.Unmarshal(fileBytes, &filePolicySpecification)
+	if err != nil {
+		return err
+	}
+
+	equal := IsArrayStringEqual(filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	if !equal {
+		return fmt.Errorf("domains are different, expected %+q but get %+q", filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	}
+
+	//compare some attributes.
+
+	if *(filePolicySpecification.Policy.MaxValidDays) != *(policySpecification.Policy.MaxValidDays) {
+		return fmt.Errorf("max valid period is different, expected %s but get %s", strconv.Itoa(*(filePolicySpecification.Policy.MaxValidDays)), strconv.Itoa(*(policySpecification.Policy.MaxValidDays)))
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+
+	if !equal {
+		return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+
+	if !equal {
+		return fmt.Errorf("countries are different, expected %+q but get %+q", filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
 	return nil
 }
+
+//------------------------------------------------cloud test cases ends-----------------------------------------------//
+
+//------------------------------------------------TPP test cases begins-----------------------------------------------//
+
+func TestCreateTppEmptyPolicy(t *testing.T) {
+	data := testData{}
+	data.zone = os.Getenv("TPP_POLICY_MANAGEMENT_ROOT") + "\\\\" + RandTppPolicyName()
+
+	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
+
+	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
+	t.Logf("Testing creating TPP empty Zone:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Creating empty zone: ", data.zone)
+					return checkCreateTppPolicy(t, &data, s, false)
+				},
+			},
+		},
+	})
+}
+
+func TestCreateTppPolicy(t *testing.T) {
+	data := testData{}
+	data.zone = os.Getenv("TPP_POLICY_MANAGEMENT_ROOT") + "\\\\" + RandTppPolicyName()
+
+	data.filePath = GetAbsoluteFIlePath(policySpecTpp)
+
+	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
+	t.Logf("Testing creating TPP Zone:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Creating TPP zone: ", data.zone)
+					return checkCreateCloudPolicy(t, &data, s, false)
+				},
+			},
+		},
+	})
+}
+
+func checkCreateTppPolicy(t *testing.T, data *testData, s *terraform.State, validateAttr bool) error {
+	t.Log("Validate Creating TPP empty policy", data.zone)
+
+	pstUntyped := s.RootModule().Outputs["policy_specification"].Value
+
+	ps, ok := pstUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"policy_specification\" is not a string")
+	}
+
+	bytes := []byte(ps)
+
+	var policySpecification policy.PolicySpecification
+	err := json.Unmarshal(bytes, &policySpecification)
+	if err != nil {
+		return fmt.Errorf("policy specification is nil")
+	}
+
+	if !validateAttr {
+		return nil
+	}
+
+	//get policy on directory.
+	file, err := os.Open(data.filePath)
+	if err != nil {
+		return err
+	}
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	var filePolicySpecification policy.PolicySpecification
+	err = json.Unmarshal(fileBytes, &filePolicySpecification)
+	if err != nil {
+		return err
+	}
+
+	equal := IsArrayStringEqual(filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	if !equal {
+		return fmt.Errorf("domains are different, expected %+q but get %+q", filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	}
+
+	//compare some attributes.
+
+	if *(filePolicySpecification.Policy.MaxValidDays) != *(policySpecification.Policy.MaxValidDays) {
+		return fmt.Errorf("max valid period is different, expected %s but get %s", strconv.Itoa(*(filePolicySpecification.Policy.MaxValidDays)), strconv.Itoa(*(policySpecification.Policy.MaxValidDays)))
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+
+	if !equal {
+		return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+
+	if !equal {
+		return fmt.Errorf("countries are different, expected %+q but get %+q", filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
+	return nil
+}
+
+//-------------------------------------------------TPP test cases ends------------------------------------------------//
 
 /*
 func TestRadPolicy(t *testing.T) {
 	root_dir := GetRootDir()
-	file_path := root_dir + "/test_files/empty_policy.json"
-	config := fmt.Sprintf(readPolicy, cloudProvider, "vcert_cloud\\\\terraform-test", file_path)
+	filePath := root_dir + "/test_files/emptyPolicy.json"
+	config := fmt.Sprintf(readPolicy, cloudProvider, "vcert_cloud\\\\terraform-test", filePath)
 	t.Logf("Testing Creating empty Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -146,8 +359,8 @@ func checkReadEmptyPolicy(t *testing.T, s *terraform.State) error {
 
 func getConfig() string {
 	root_dir := GetRootDir()
-	file_path := root_dir + "/test_files/empty_policy.json"
-	config := fmt.Sprintf(readPolicy, cloudProvider, "vcert_cloud\\\\terraform-test", file_path)
+	filePath := root_dir + "/test_files/emptyPolicy.json"
+	config := fmt.Sprintf(readPolicy, cloudProvider, "vcert_cloud\\\\terraform-test", filePath)
 	return config
 }
 */
