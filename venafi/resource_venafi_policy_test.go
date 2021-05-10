@@ -210,7 +210,7 @@ func checkCreateCloudPolicy(t *testing.T, data *testData, s *terraform.State, va
 
 func TestCreateTppEmptyPolicy(t *testing.T) {
 	data := testData{}
-	data.zone = os.Getenv("TPP_POLICY_MANAGEMENT_ROOT") + "\\\\" + RandTppPolicyName()
+	data.zone = os.Getenv("TPP_PM_ROOT") + "\\\\" + RandTppPolicyName()
 
 	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
 
@@ -232,7 +232,7 @@ func TestCreateTppEmptyPolicy(t *testing.T) {
 
 func TestCreateTppPolicy(t *testing.T) {
 	data := testData{}
-	data.zone = os.Getenv("TPP_POLICY_MANAGEMENT_ROOT") + "\\\\" + RandTppPolicyName()
+	data.zone = os.Getenv("TPP_PM_ROOT") + "\\\\" + RandTppPolicyName()
 
 	data.filePath = GetAbsoluteFIlePath(policySpecTpp)
 
