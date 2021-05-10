@@ -212,7 +212,7 @@ func TestCreateTppEmptyPolicy(t *testing.T) {
 	data := testData{}
 	data.zone = os.Getenv("TPP_PM_ROOT") + "\\\\" + RandTppPolicyName()
 
-	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
+	data.filePath = GetAbsoluteFIlePath(emptyTppPolicy)
 
 	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
 	t.Logf("Testing creating TPP empty Zone:\n %s", config)

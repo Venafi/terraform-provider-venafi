@@ -1,0 +1,5 @@
+{
+  "policy": {
+    "certificateAuthority": "\\VED\\Policy\\Open Source\\msca_template_ecdsa"
+  }
+}

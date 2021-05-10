@@ -13,6 +13,7 @@ const (
 	emptyPolicy     = "/test_files/empty_policy.json"
 	policySpecCloud = "/test_files/policy_specification_cloud.json"
 	policySpecTpp   = "/test_files/policy_specification_tpp.json"
+	emptyTppPolicy  = "/test_files/empty_tpp_policy.json"
 )
 
 func RandAppName() string {

@@ -5,7 +5,7 @@
     "domains": [
       "venafi.com"
     ],
-    "certificateAuthority": "\\VED\\Policy\\Certificate Authorities\\Microsoft CA\\QA Venafi CA - Server 90 Days",
+    "certificateAuthority": "\\VED\\Policy\\Open Source\\msca_template_ecdsa",
     "subject": {
       "orgs": [
         "venafi.com"
