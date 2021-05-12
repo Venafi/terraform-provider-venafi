@@ -6,8 +6,6 @@ In this example, we'll show you how to better secure application delivery using 
 
 The steps described in this example are typically performed by _DevOps engineers_ or _system administrators_. Generally, you'll need a basic understanding of Citrix ADC, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
 
-> **TIP** Having at least some basic knowledge of the Bash command language is helpful, such as when you need to set your provider locally.
-
 ## About this example 
 
 In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_  to generate and install certificates as part of SSL termination on an ADC (specifically, Citrix ADC) for load balancing web traffic. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic and being managed by Citrix ADC.
@@ -41,7 +39,6 @@ Before you continue, carefully review these prerequisites:
 
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
 - Verify that you have administrator access to your Citrix ADC instance.
-- Install Citrix Terraform SDK locally; for instructions, [look here](./../base/README.md).
 - Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services.      
 - If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
 - Verify that you have three (3) web servers that are running your application; for this example, we'll use NGINX servers.
@@ -107,8 +104,6 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
 
 ### Step 2: Set up your main Terraform config file
 
-> **IMPORTANT!** If not already done, make sure your local provider is [installed properly](./../base/README.md).
-
 1. Declare that the Venafi and Citrix ADC providers are required:
     ```
     terraform {
@@ -118,8 +113,8 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
                 version = "~> 0.11.2"
             }
             citrixadc = {
-                source = "path/to/citrix/citrixadc"
-                version = "~> 0.12.0"
+                source = "citrix/citrixadc"
+                version = "~> 1.0.0"
             }
         }
         required_version = ">= 0.13"
@@ -331,7 +326,7 @@ Finally, run `terraform init`, ``terraform plan`` and ``terraform apply`` to app
 
 If done correctly, you should see an output similar to the following:
 
-[![asciicast](https://asciinema.org/a/xe0UUgiLKsaOhOXRqLu2bku9c.svg)](https://asciinema.org/a/xe0UUgiLKsaOhOXRqLu2bku9c)
+[![asciicast](https://asciinema.org/a/Q64rupCfgX8MJFFQeMVfPzaAb.svg)](https://asciinema.org/a/Q64rupCfgX8MJFFQeMVfPzaAb)
 
 To tear down your infrastructure, execute `terraform destroy`, and then you should see an output similar to this:
 
