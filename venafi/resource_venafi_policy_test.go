@@ -47,17 +47,15 @@ provider "venafi" {
 
 	cloudProv = environmentVariables + `
 provider "venafi" {
-	alias = "cloud"
 	url = "${var.CLOUD_URL}"
 	api_key = "${var.CLOUD_APIKEY}"
-	zone = "${var.CLOUD_ZONE}"
 }
 `
 
 	cloudPolicyResourceTest = `
 %s
 resource "venafi_policy" "cloud_policy" {
-	provider = "venafi.cloud"
+	provider = "venafi"
 	zone="%s"
 	policy_specification_path = "%s"
 }
@@ -79,7 +77,7 @@ output "policy_specification" {
 	readPolicy = `
 %s
 resource "venafi_policy" "read_policy" {
-	provider = "venafi.cloud"
+	provider = "venafi"
 	zone="%s"
 	policy_specification_path = "%s"
 }`
@@ -327,40 +325,93 @@ func checkCreateTppPolicy(t *testing.T, data *testData, s *terraform.State, vali
 
 //-------------------------------------------------TPP test cases ends------------------------------------------------//
 
-/*
-func TestRadPolicy(t *testing.T) {
-	root_dir := GetRootDir()
-	filePath := root_dir + "/test_files/emptyPolicy.json"
-	config := fmt.Sprintf(readPolicy, cloudProvider, "vcert_cloud\\\\terraform-test", filePath)
-	t.Logf("Testing Creating empty Zone:\n %s", config)
+func TestReadCloudPolicy(t *testing.T) {
+	config := getConfig()
+	t.Logf("Testing importing VaaS Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
 			{
-				Config:        getConfig(),
-				ResourceName:  "venafi_policy.read_policy",
-				ImportStateId: "vcert-amoo-0004\\terraform-test-010",
-				ImportState:   true,
-				ImportStateVerify: true,
-				Check: func(s *terraform.State) error {
-					t.Log("Creating empty zone: ")
-					return checkReadEmptyPolicy(t, s)
-				},
+				Config:           config,
+				ResourceName:     "venafi_policy.read_policy",
+				ImportStateId:    os.Getenv("CLOUD_POLICY_SAMPLE"),
+				ImportState:      true,
+				ImportStateCheck: checkReadEmptyPolicy,
 			},
 		},
 	})
 }
 
+func checkReadEmptyPolicy(states []*terraform.InstanceState) error {
+	st := states[0]
 
-func checkReadEmptyPolicy(t *testing.T, s *terraform.State) error {
+	attributes := st.Attributes
+
+	ps := attributes["policy_specification"]
+	bytes := []byte(ps)
+
+	var policySpecification policy.PolicySpecification
+	err := json.Unmarshal(bytes, &policySpecification)
+	if err != nil {
+		return fmt.Errorf("policy specification is nil")
+	}
+
+	//get policy on directory.
+	path := GetAbsoluteFIlePath(policySpecCloud)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	var filePolicySpecification policy.PolicySpecification
+	err = json.Unmarshal(fileBytes, &filePolicySpecification)
+	if err != nil {
+		return err
+	}
+
+	domains := policy.ConvertToRegex(filePolicySpecification.Policy.Domains, *(filePolicySpecification.Policy.WildcardAllowed))
+	equal := IsArrayStringEqual(domains, policySpecification.Policy.Domains)
+	if !equal {
+		return fmt.Errorf("domains are different, expected %+q but get %+q", filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	}
+
+	//compare some attributes.
+
+	if *(filePolicySpecification.Policy.MaxValidDays) != *(policySpecification.Policy.MaxValidDays) {
+		return fmt.Errorf("max valid period is different, expected %s but get %s", strconv.Itoa(*(filePolicySpecification.Policy.MaxValidDays)), strconv.Itoa(*(policySpecification.Policy.MaxValidDays)))
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+
+	if !equal {
+		return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+
+	if !equal {
+		return fmt.Errorf("countries are different, expected %+q but get %+q", filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
 
 	return nil
 }
 
 func getConfig() string {
 	root_dir := GetRootDir()
-	filePath := root_dir + "/test_files/emptyPolicy.json"
-	config := fmt.Sprintf(readPolicy, cloudProvider, "vcert_cloud\\\\terraform-test", filePath)
+	filePath := root_dir + "/test_files/empty_policy.json"
+	config := fmt.Sprintf(readPolicy, cloudProv, "vcert_cloud\\\\terraform-test", filePath)
 	return config
 }
-*/
