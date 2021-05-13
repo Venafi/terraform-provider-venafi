@@ -479,9 +479,6 @@ func checkImportTppPolicy(states []*terraform.InstanceState) error {
 		return fmt.Errorf("wildcard allowed is different, expected %t but get %t", *(filePolicySpecification.Policy.WildcardAllowed), *(policySpecification.Policy.WildcardAllowed))
 	}
 
-	if *(filePolicySpecification.Policy.CertificateAuthority) != *(policySpecification.Policy.CertificateAuthority) {
-		return fmt.Errorf("certificate authority is different, expected %s but get %s", *(filePolicySpecification.Policy.CertificateAuthority), *(policySpecification.Policy.CertificateAuthority))
-	}
 
 	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
 
