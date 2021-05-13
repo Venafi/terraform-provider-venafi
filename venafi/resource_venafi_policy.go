@@ -96,7 +96,7 @@ func resourceVenafiPolicyCreate(d *schema.ResourceData, meta interface{}) error 
 
 func resourceVenafiPolicyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	ps, ok := d.GetOk("policy_specification")
-	//time.Sleep(10*time.Second)
+
 	if !ok {
 		return false, nil
 	}
