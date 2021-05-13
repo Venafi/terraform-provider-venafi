@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	emptyPolicy     = "/test_files/empty_policy.json"
-	policySpecCloud = "/test_files/policy_specification_cloud.json"
-	policySpecTpp   = "/test_files/policy_specification_tpp.json"
+	emptyPolicy       = "/test_files/empty_policy.json"
+	policySpecCloud   = "/test_files/policy_specification_cloud.json"
+	policySpecTpp     = "/test_files/policy_specification_tpp.json"
+	policyReadSpecTpp = "/test_files/policy_specification_tpp_management.json"
 )
 
 func RandAppName() string {

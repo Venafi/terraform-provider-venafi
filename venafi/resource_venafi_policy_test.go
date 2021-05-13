@@ -39,7 +39,6 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 
 	tokenProv = environmentVariables + `
 provider "venafi" {
-	alias = "token_tpp"
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE}"
@@ -67,7 +66,7 @@ output "policy_specification" {
 	tppPolicyResourceTest = `
 %s
 resource "venafi_policy" "tpp_policy" {
-	provider = "venafi.token_tpp"
+	provider = "venafi"
 	zone="%s"
 	policy_specification_path = "%s"
 }
@@ -196,15 +195,11 @@ func checkCreateCloudPolicy(t *testing.T, data *testData, s *terraform.State, va
 		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
 	}
 
-	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
-		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
-	}
-
 	return nil
 }
 
-func TestReadCloudPolicy(t *testing.T) {
-	config := getConfig()
+func TestImportCloudPolicy(t *testing.T) {
+	config := getImportCloudConfig()
 	t.Logf("Testing importing VaaS Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -216,14 +211,14 @@ func TestReadCloudPolicy(t *testing.T) {
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
 					t.Logf("Checking zone: %s's attributes", os.Getenv("CLOUD_POLICY_SAMPLE"))
-					return checkReadCloudPolicy(states)
+					return checkImportCloudPolicy(states)
 				},
 			},
 		},
 	})
 }
 
-func checkReadCloudPolicy(states []*terraform.InstanceState) error {
+func checkImportCloudPolicy(states []*terraform.InstanceState) error {
 	st := states[0]
 	attributes := st.Attributes
 
@@ -282,14 +277,10 @@ func checkReadCloudPolicy(states []*terraform.InstanceState) error {
 		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
 	}
 
-	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
-		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
-	}
-
 	return nil
 }
 
-func getConfig() string {
+func getImportCloudConfig() string {
 	path := GetAbsoluteFIlePath(policySpecCloud)
 	zone := os.Getenv("CLOUD_POLICY_SAMPLE")
 	zone = strings.Replace(zone, "\\", "\\\\", 1)
@@ -303,7 +294,9 @@ func getConfig() string {
 
 func TestCreateTppEmptyPolicy(t *testing.T) {
 	data := testData{}
-	data.zone = os.Getenv("TPP_PM_ROOT") + "\\\\" + RandTppPolicyName()
+	rootZone := os.Getenv("TPP_PM_ROOT")
+	rootZone = strings.Replace(rootZone, "\\", "\\\\", 4)
+	data.zone = rootZone + "\\\\" + RandTppPolicyName()
 
 	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
 
@@ -325,7 +318,9 @@ func TestCreateTppEmptyPolicy(t *testing.T) {
 
 func TestCreateTppPolicy(t *testing.T) {
 	data := testData{}
-	data.zone = os.Getenv("TPP_PM_ROOT") + "\\\\" + RandTppPolicyName()
+	rootZone := os.Getenv("TPP_PM_ROOT")
+	rootZone = strings.Replace(rootZone, "\\", "\\\\", 4)
+	data.zone = rootZone + "\\\\" + RandTppPolicyName()
 
 	data.filePath = GetAbsoluteFIlePath(policySpecTpp)
 
@@ -339,6 +334,26 @@ func TestCreateTppPolicy(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Creating TPP zone: ", data.zone)
 					return checkCreateCloudPolicy(t, &data, s, false)
+				},
+			},
+		},
+	})
+}
+
+func TestImportTppPolicy(t *testing.T) {
+	config := getImportTppConfig()
+	t.Logf("Testing importing TPP Zone:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			{
+				Config:        config,
+				ResourceName:  "venafi_policy.read_policy",
+				ImportStateId: os.Getenv("TPP_PM_ROOT"),
+				ImportState:   true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Logf("Checking zone: %s's attributes", os.Getenv("TPP_PM_ROOT"))
+					return checkImportTppPolicy(states)
 				},
 			},
 		},
@@ -411,8 +426,93 @@ func checkCreateTppPolicy(t *testing.T, data *testData, s *terraform.State, vali
 		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
 	}
 
+	return nil
+}
+
+func getImportTppConfig() string {
+	path := GetAbsoluteFIlePath(policyReadSpecTpp)
+	zone := os.Getenv("TPP_PM_ROOT")
+	zone = strings.Replace(zone, "\\", "\\\\", 4)
+	config := fmt.Sprintf(readPolicy, tokenProv, zone, path)
+	return config
+}
+
+func checkImportTppPolicy(states []*terraform.InstanceState) error {
+	st := states[0]
+	attributes := st.Attributes
+
+	ps := attributes["policy_specification"]
+	bytes := []byte(ps)
+
+	var policySpecification policy.PolicySpecification
+	err := json.Unmarshal(bytes, &policySpecification)
+	if err != nil {
+		return fmt.Errorf("policy specification is nil")
+	}
+
+	//get policy on directory.
+	path := GetAbsoluteFIlePath(policyReadSpecTpp)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	var filePolicySpecification policy.PolicySpecification
+	err = json.Unmarshal(fileBytes, &filePolicySpecification)
+	if err != nil {
+		return err
+	}
+
+	domains := policy.ConvertToRegex(filePolicySpecification.Policy.Domains, *(filePolicySpecification.Policy.WildcardAllowed))
+
+	equal := IsArrayStringEqual(domains, policySpecification.Policy.Domains)
+	if !equal {
+		return fmt.Errorf("domains are different, expected %+q but get %+q", filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	}
+
+	if *(filePolicySpecification.Policy.WildcardAllowed) != *(policySpecification.Policy.WildcardAllowed) {
+		return fmt.Errorf("wildcard allowed is different, expected %t but get %t", *(filePolicySpecification.Policy.WildcardAllowed), *(policySpecification.Policy.WildcardAllowed))
+	}
+
+	if *(filePolicySpecification.Policy.CertificateAuthority) != *(policySpecification.Policy.CertificateAuthority) {
+		return fmt.Errorf("certificate authority is different, expected %s but get %s", *(filePolicySpecification.Policy.CertificateAuthority), *(policySpecification.Policy.CertificateAuthority))
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+
+	if !equal {
+		return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+	}
+
 	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
 		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
+	if *(filePolicySpecification.Default.Subject.State) != *(policySpecification.Default.Subject.State) {
+		return fmt.Errorf("default state is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.State), *(policySpecification.Default.Subject.State))
+	}
+
+	if *(filePolicySpecification.Default.Subject.Country) != *(policySpecification.Default.Subject.Country) {
+		return fmt.Errorf("default state is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Country), *(policySpecification.Default.Subject.Country))
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Default.Subject.OrgUnits, policySpecification.Default.Subject.OrgUnits)
+
+	if !equal {
+		return fmt.Errorf("default org units are different, expected %+q but get %+q", filePolicySpecification.Default.Subject.OrgUnits, policySpecification.Default.Subject.OrgUnits)
+	}
+
+	if *(filePolicySpecification.Default.KeyPair.KeyType) != *(policySpecification.Default.KeyPair.KeyType) {
+		return fmt.Errorf("default key type is different, expected %s but get %s", *(filePolicySpecification.Default.KeyPair.KeyType), *(policySpecification.Default.KeyPair.KeyType))
+	}
+
+	if *(filePolicySpecification.Default.KeyPair.RsaKeySize) != *(policySpecification.Default.KeyPair.RsaKeySize) {
+		return fmt.Errorf("default rsa zise is different, expected %d but get %d", *(filePolicySpecification.Default.KeyPair.RsaKeySize), *(policySpecification.Default.KeyPair.RsaKeySize))
 	}
 
 	return nil
