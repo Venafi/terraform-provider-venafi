@@ -9,3 +9,4 @@ credentials
 chain.pem
 !*/**
 terraform.d
+.DS_Store

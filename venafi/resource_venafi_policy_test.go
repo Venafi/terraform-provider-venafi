@@ -57,7 +57,7 @@ provider "venafi" {
 resource "venafi_policy" "cloud_policy" {
 	provider = "venafi"
 	zone="%s"
-	policy_specification_path = "%s"
+	policy_specification = file("%s")
 }
 output "policy_specification" {
 	value = "${venafi_policy.cloud_policy.policy_specification}"
@@ -68,7 +68,7 @@ output "policy_specification" {
 resource "venafi_policy" "tpp_policy" {
 	provider = "venafi"
 	zone="%s"
-	policy_specification_path = "%s"
+	policy_specification = file("%s")
 }
 output "policy_specification" {
 	value = "${venafi_policy.tpp_policy.policy_specification}"
@@ -79,7 +79,7 @@ output "policy_specification" {
 resource "venafi_policy" "read_policy" {
 	provider = "venafi"
 	zone="%s"
-	policy_specification_path = "%s"
+    policy_specification = file("%s")
 }`
 )
 

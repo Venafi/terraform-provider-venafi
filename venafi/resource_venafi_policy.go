@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"io/ioutil"
 	"log"
-	"os"
+	"regexp"
 )
 
 func resourceVenafiPolicy() *schema.Resource {
@@ -20,19 +20,15 @@ func resourceVenafiPolicy() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"zone": &schema.Schema{
 				Type:        schema.TypeString,
-				Required:    true,
 				Description: "zone name",
 				ForceNew:    true,
-			},
-			"policy_specification_path": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "policy specification file path",
-				ForceNew:    true,
+				Optional:    true,
 			},
 			"policy_specification": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Description: "policy specification",
+				ForceNew:    true,
+				Optional:    true,
 			},
 		},
 		Importer: &schema.ResourceImporter{
@@ -52,23 +48,15 @@ func resourceVenafiPolicyCreate(d *schema.ResourceData, meta interface{}) error 
 	zoneName := d.Get("zone").(string)
 
 	if zoneName == "" {
-		return fmt.Errorf("zone name is empty")
+		return fmt.Errorf("zone is empty")
 	}
 
-	path := d.Get("policy_specification_path").(string)
-	if path == "" {
-		return fmt.Errorf("policy specification path is empty")
+	ps := d.Get("policy_specification").(string)
+	if ps == "" {
+		return fmt.Errorf("policy specification file is empty")
 	}
 
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return err
-	}
+	bytes := []byte(ps)
 
 	var policySpecification policy.PolicySpecification
 	err = json.Unmarshal(bytes, &policySpecification)
@@ -160,6 +148,29 @@ func resourceVenafiPolicyImport(d *schema.ResourceData, meta interface{}) ([]*sc
 
 	err = d.Set("policy_specification", stringPS)
 
+	if err != nil {
+		return nil, err
+	}
+
+	var byte []byte
+
+	fileName := id
+
+	regex, err := regexp.Compile("[^A-Za-z0-9]+")
+	if err != nil {
+		return nil, err
+	}
+
+	fileName = regex.ReplaceAllString(fileName, "_")
+
+	byte, err = json.MarshalIndent(ps, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	fileName = fmt.Sprint(fileName, policy.JsonExtension)
+
+	err = ioutil.WriteFile(fileName, byte, 0600)
 	if err != nil {
 		return nil, err
 	}
