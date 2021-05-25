@@ -5,8 +5,8 @@ terraform {
       version = "~> 0.11.2"
     }
     citrixadc = {
-      source = "localhost/citrix/citrixadc"
-      version = "~> 0.12.0"
+      source = "citrix/citrixadc"
+      version = "~> 1.0.0"
     }
   }
   required_version = ">= 0.13"
