@@ -16,9 +16,9 @@ and certficates to be created as part of a Terraform deployment.
 
 Use the navigation to the left to read about the available resources.
 
-## Example Usage for Venafi Cloud
+## Example Usage for Venafi as a Service
 
-You can sign up for a Venafi Cloud account by visiting https://www.venafi.com/platform/cloud/devops.
+You can sign up for a Venafi as a Service account by visiting https://vaas.venafi.com/.
 Once registered, find your API key by clicking your name in the top right of the web interface.  You 
 will also need to specify the `zone` to use when requesting certificates. Zones define the machine 
 identity policy that will be applied to certificate requests and the certificate authority that will 
@@ -49,8 +49,9 @@ a certificate your Terraform computer does not already trust.
 
 Obtain the required `access_token` for Trust Protection Platform using the 
 [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token)
-(`getcred action` with `--client-id "hashicorp-vault-by-venafi"` and `--scope "certificate:manage"`) or
-the Platform's Authorize REST API method.
+(`getcred action` with `--client-id "hashicorp-terraform-by-venafi"` and `--scope "certificate:manage"`) or
+the Platform's Authorize REST API method.  The *configuration:manage* scope is required to set certificate
+policy using the `venafi_policy` resource.
 
 ```hcl
 # Configure the Venafi provider
