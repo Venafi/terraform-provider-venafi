@@ -256,6 +256,42 @@ using the
 1. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
    `terraform show` from the directory containing the configuration file.
 
+## Certificate Policy Management
+
+1. Declare that the Venafi Provider and specify the connection and
+   authentication settings as described in the previous section.
+
+   >:pushpin: **NOTE**: For Trust Protection Platform, the 
+   `access_token` assigned to the `venafi` provider must have the
+   *configuration:manage* scope in order to apply certificate policy.
+
+1. Create a `venafi_policy` resource that will create or update the
+   certificate policy for a Venafi zone:
+
+   ```text
+   resource "venafi_policy" "tls_server_certificates" {
+     zone = "My Business App\\Server Certificates"
+     policy_specification = file("/path/to/tls_server_cert_policy.json")
+   }
+   ```
+
+   The `venafi_policy` resource has the following options, all of which
+   are required when setting policy:
+
+   | Property            | Type          |  Description                                                                      | Default   |
+   | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
+   | `zone` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | The *Trust Protection Plaform* policy folder or *Venafi as a Service* application and issuing template | `none` |
+   | `policy_specification` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | The JSON-formatted certificate policy specification.  Typically read from a file using the [file](https://www.terraform.io/docs/language/functions/file.html) function. Use the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#parameters-for-viewing-certificate-policy) to generate a policy specification template to get started (i.e. `vcert getpolicy --starter`) | `none` |
+
+   >:pushpin: **NOTE**: The `venafi_policy` resource supports the
+   `terraform import` method.  When used, the `zone` and 
+   `policy_specification` options are not required since the zone
+   is a required parameter of the import method and the policy
+   specification is populated from the existing infrastructure.
+   Policy that is successfully imported is also output to a file
+   named after the zone that was specified.  The 
+   *certificate:manage* scope is require to import policy from TPP.
+
 ## License
 
 Copyright &copy; Venafi, Inc. All rights reserved.

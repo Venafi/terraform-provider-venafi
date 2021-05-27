@@ -2,10 +2,11 @@
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
 ![Compatible with TPP 17.3+ & Cloud](https://img.shields.io/badge/Compatibility-TPP%2017.3+%20%26%20Cloud-f9a90c)  
-_This open source project is community-supported. To report a problem or share an idea, use the
-**[Issues](../../issues)** tab; and if you have a suggestion for fixing the issue, please include those details, too.
-In addition, use the **[Pull requests](../../pulls)** tab to contribute actual bug fixes or proposed enhancements.
-We welcome and appreciate all contributions._
+_**This open source project is community-supported.** To report a problem or share an idea, use
+**[Issues](../../issues)**; and if you have a suggestion for fixing the issue, please include those details, too.
+In addition, use **[Pull Requests](../../pulls)** to contribute actual bug fixes or proposed enhancements.
+We welcome and appreciate all contributions. Got questions or want to discuss something with our team?
+**[Join us on Slack](https://join.slack.com/t/venafi-integrations/shared_invite/zt-i8fwc379-kDJlmzU8OiIQOJFSwiA~dg)**!_
 
 # VCert
 
@@ -23,7 +24,7 @@ See [VCert CLI for Venafi Trust Protection Platform](README-CLI-PLATFORM.md) or
 
 VCert releases are tested using the latest version of Trust Protection Platform.  General functionality of the
 [latest VCert release](../../releases/latest) should be compatible with Trust Protection Platform 17.3 or higher.
-Custom Fields and Instance Tracking require TPP 18.2 or higher, and Token Authentication requires TPP 19.2 or higher.
+Custom Fields and Instance Tracking require TPP 18.2 or higher, and Token Authentication requires TPP 20.1 or higher.
 
 ## Developer Setup
 
@@ -103,7 +104,9 @@ Unit tests:
 make test
 ```
 
-Integration tests for Trust Protection Platform and Cloud products require endpoint connection variables (Venafi Cloud products display the API key and Zone values in the user interface):
+Integration tests for Trust Protection Platform and Venafi Cloud require access to those products. Environment 
+variables are used to specify required settings including credentials.  The Venafi Cloud API key and zone value
+fragments (i.e. `Application Name`\\`Issuing Template API Alias`) are readily available in the web interface.
 
 ```sh
 export TPP_URL=https://tpp.venafi.example/vedsdk
@@ -119,8 +122,8 @@ make tpp_test
 ```sh
 export CLOUD_URL=https://api.venafi.cloud/v1
 export CLOUD_APIKEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-export CLOUD_ZONE=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
-export CLOUD_ZONE_RESTRICTED=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+export CLOUD_ZONE='My Application\Permissive CIT'
+export CLOUD_ZONE_RESTRICTED='Your Application\Restrictive CIT'
 
 make cloud_test
 ```
