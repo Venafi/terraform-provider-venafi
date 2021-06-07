@@ -1,6 +1,6 @@
 ## 0.12.0 (June 07, 2021)
 
-Integrating the support for the Certificate Policy Management provided by VCert.
+Added venafi_policy resource that enables certificate policy management with Trust Protection Platform and Venafi as a Service.
 
 ## 0.11.2 (February 24, 2021)
 
