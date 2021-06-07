@@ -1,3 +1,7 @@
+## 0.12.0 (June 07, 2021)
+
+Added venafi_policy resource that enables certificate policy management with Trust Protection Platform and Venafi as a Service.
+
 ## 0.11.2 (February 24, 2021)
 
 Fixing a bug that broke TPP integrations when the customer's zone is in the "long form" way, that is using the "VED" prefix.
