@@ -72,9 +72,8 @@ func normalizeURL(url string) (normalizedURL string, err error) {
 		modified = modified + "/"
 	}
 
-	if strings.HasSuffix(modified, "vedsdk/") {
-		modified = modified[:len(modified)-7]
-	}
+	modified = strings.TrimSuffix(modified, "vedsdk/")
+
 	if loc := baseUrlRegex.FindStringIndex(modified); loc == nil {
 		return "", fmt.Errorf("The specified TPP URL is invalid. %s\nExpected TPP URL format 'https://tpp.company.com/vedsdk/'", url)
 	}
@@ -669,6 +668,10 @@ func (c *Connector) GetPolicy(name string) (*policy.PolicySpecification, error) 
 
 	log.Println("Collecting policy attributes")
 
+	if !strings.HasPrefix(name, policy.PathSeparator) {
+		name = policy.PathSeparator + name
+	}
+
 	if !strings.HasPrefix(name, policy.RootPath) {
 		name = policy.RootPath + name
 
@@ -745,6 +748,9 @@ func (c *Connector) SetPolicy(name string, ps *policy.PolicySpecification) (stri
 	log.Printf("policy specification is valid")
 	var status = ""
 	tppPolicy := policy.BuildTppPolicy(ps)
+	if !strings.HasPrefix(name, policy.PathSeparator) {
+		name = policy.PathSeparator + name
+	}
 
 	if !strings.HasPrefix(name, policy.RootPath) {
 		name = policy.RootPath + name
@@ -1642,4 +1648,14 @@ func resetTPPAttribute(c *Connector, at, zone string) error {
 	}
 
 	return nil
+}
+
+func (c *Connector) RequestSSHCertificate(req *certificate.SshCertRequest) (requestID string, err error) {
+
+	return RequestSSHCertificate(c, req)
+
+}
+
+func (c *Connector) RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertRetrieveDetails, err error) {
+	return RetrieveSSHCertificate(c, req)
 }

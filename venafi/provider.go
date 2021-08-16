@@ -83,8 +83,9 @@ Example:
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"venafi_certificate": resourceVenafiCertificate(),
-			"venafi_policy":      resourceVenafiPolicy(),
+			"venafi_certificate":     resourceVenafiCertificate(),
+			"venafi_policy":          resourceVenafiPolicy(),
+			"venafi_ssh_certificate": resourceVenafiSshCertificate(),
 		},
 
 		ConfigureFunc: providerConfigure,

@@ -5,11 +5,14 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/certificate"
 	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/Venafi/vcert/v4/pkg/util"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/pkg/errors"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -79,6 +82,11 @@ type testData struct {
 	valid_days           int
 	zone                 string
 	filePath             string
+	keyId                string
+	template             string
+	publicKeyMethod      string
+	sourceAddress        string
+	validityPeriod       string
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
@@ -140,4 +148,83 @@ func getConnection(meta interface{}) (endpoint.Connector, error) {
 	log.Println(messageVenafiPingSucessfull)
 
 	return cl, nil
+}
+
+func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {
+
+	req := certificate.SshCertRequest{}
+	id := d.Get("key_id").(string)
+	req.KeyId = id
+
+	template := d.Get("template").(string)
+	req.CADN = template
+
+	if keyPassphrase, ok := d.Get("key_passphrase").(string); ok {
+		req.PrivateKeyPassphrase = keyPassphrase
+	}
+	if folder, ok := d.Get("folder").(string); ok {
+		req.PolicyDN = folder
+	}
+	if forceCommand, ok := d.Get("force_command").(string); ok {
+		req.ForceCommand = forceCommand
+	}
+	if validHours, ok := d.Get("valid_hours").(int); ok {
+		req.ValidityPeriod = strconv.Itoa(validHours) + "h"
+	}
+	if objectName, ok := d.Get("object_name").(string); ok {
+		req.ObjectName = objectName
+	}
+	if principal, ok := d.GetOk("principal"); ok {
+		req.Principals = getStringList(principal)
+	}
+	if sourceAddress, ok := d.GetOk("source_address"); ok {
+		req.SourceAddresses = getStringList(sourceAddress)
+	}
+	if destinationAddress, ok := d.GetOk("destination_address"); ok {
+		req.DestinationAddresses = getStringList(destinationAddress)
+	}
+	if extension, ok := d.GetOk("extension"); ok {
+		req.Extensions = getStringList(extension)
+	}
+
+	return req
+}
+
+func getStringList(i interface{}) []string {
+
+	arr := i.([]interface{})
+
+	if len(arr) == 0 {
+		return nil
+	}
+
+	strs := make([]string, 0, len(arr))
+
+	for _, val := range arr {
+		strs = append(strs, val.(string))
+	}
+
+	return strs
+}
+
+func validateSshCertValues(d *schema.ResourceData) error {
+	id := d.Get("key_id").(string)
+	if id == "" {
+		return fmt.Errorf("key_id is empty")
+	}
+
+	if template := d.Get("template").(string); template == "" {
+		return fmt.Errorf("template is empty")
+	}
+
+	kpMethod := d.Get("public_key_method").(string)
+
+	if kpMethod == "file" {
+		public_key := d.Get("public_key").(string)
+		if public_key == "" {
+			return fmt.Errorf("file public key method is specified but public_key is empty")
+		}
+	}
+
+	return nil
 }

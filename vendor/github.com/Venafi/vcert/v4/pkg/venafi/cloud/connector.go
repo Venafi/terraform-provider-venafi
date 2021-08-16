@@ -78,6 +78,14 @@ type Connector struct {
 	client  *http.Client
 }
 
+func (c *Connector) RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertRetrieveDetails, err error) {
+	panic("operation is not supported yet")
+}
+
+func (c *Connector) RequestSSHCertificate(req *certificate.SshCertRequest) (requestID string, err error) {
+	panic("operation is not supported yet")
+}
+
 func (c *Connector) GetPolicy(name string) (*policy.PolicySpecification, error) {
 
 	appName := policy.GetApplicationName(name)
@@ -112,13 +120,18 @@ func (c *Connector) GetPolicy(name string) (*policy.PolicySpecification, error) 
 	return ps, nil
 }
 
-func PolicyExist(policyName string, c *Connector) bool {
+func PolicyExist(policyName string, c *Connector) (bool, error) {
 
 	c.zone.appName = policy.GetApplicationName(policyName)
-	c.zone.templateAlias = policy.GetCitName(policyName)
+	citName := policy.GetCitName(policyName)
+	if citName != "" {
+		c.zone.templateAlias = citName
+	} else {
+		return false, fmt.Errorf("cit name is not valid, please provide a valid zone name in the format: appName\\CitName")
+	}
 
 	_, err := c.getTemplateByID()
-	return err == nil
+	return err == nil, nil
 }
 
 func (c *Connector) SetPolicy(name string, ps *policy.PolicySpecification) (string, error) {
@@ -263,7 +276,13 @@ func (c *Connector) SetPolicy(name string, ps *policy.PolicySpecification) (stri
 
 	} else {
 		//update the application and assign the cit tho the application
-		if !PolicyExist(name, c) { // relation between app-cit doesn't exist so create it.
+		exist, err := PolicyExist(name, c)
+
+		if err != nil {
+			return "", err
+		}
+
+		if !exist { // relation between app-cit doesn't exist so create it.
 			log.Printf("updating application: %s", appName)
 
 			appReq := createAppUpdateRequest(appDetails, cit)
@@ -484,7 +503,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 			return nil, fmt.Errorf("failed to retrieve certificate: %s", err)
 		}
 		if len(searchResult.Certificates) == 0 {
-			return nil, fmt.Errorf("no certifiate found using fingerprint %s", req.Thumbprint)
+			return nil, fmt.Errorf("no certificate found using fingerprint %s", req.Thumbprint)
 		}
 
 		var reqIds []string
@@ -550,7 +569,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 
 	switch {
 	case req.CertID != "":
-		statusCode, status, body, err := c.request("GET", url, nil)
+		statusCode, status, body, err := c.waitForCertificate(url, req) //c.request("GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +585,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 		default:
 			url = fmt.Sprintf(url, condorChainOptionRootLast)
 		}
-		statusCode, status, body, err := c.request("GET", url, nil)
+		statusCode, status, body, err := c.waitForCertificate(url, req) //c.request("GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -584,6 +603,29 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (certificates 
 		}
 	}
 	return nil, fmt.Errorf("couldn't retrieve certificate because both PickupID and CertId are empty")
+}
+
+// Waits for the Certificate to be available. Fails when the timeout is exceeded
+func (c *Connector) waitForCertificate(url string, request *certificate.Request) (statusCode int, status string, body []byte, err error) {
+	startTime := time.Now()
+	for {
+		statusCode, status, body, err = c.request("GET", url, nil)
+		if err != nil {
+			return
+		}
+		if statusCode == http.StatusOK {
+			return
+		}
+		if request.Timeout == 0 {
+			err = endpoint.ErrCertificatePending{CertificateID: request.PickupID, Status: status}
+			return
+		}
+		if time.Now().After(startTime.Add(request.Timeout)) {
+			err = endpoint.ErrRetrieveCertificateTimeout{CertificateID: request.PickupID}
+			return
+		}
+		time.Sleep(2 * time.Second)
+	}
 }
 
 // RevokeCertificate attempts to revoke the certificate
@@ -1015,26 +1057,6 @@ func getUserDetails(c *Connector) (*userDetails, error) {
 	return ud, nil
 }
 
-func getCertificateAuthorityProductOptionId(caName string, c *Connector) (string, error) {
-
-	accounts, info, err := getAccounts(caName, c)
-	if err != nil {
-		return "", err
-	}
-
-	for _, account := range accounts.Accounts {
-		if account.Account.Key == info.CAAccountKey {
-			for _, productOption := range account.ProductOption {
-				if productOption.ProductName == info.VendorProductName {
-					return productOption.Id, nil
-				}
-			}
-		}
-	}
-
-	return "", nil
-}
-
 func getAccounts(caName string, c *Connector) (*policy.Accounts, *policy.CertificateAuthorityInfo, error) {
 	info, err := policy.GetCertAuthorityInfo(caName)
 	if err != nil {
@@ -1059,26 +1081,6 @@ func getAccounts(caName string, c *Connector) (*policy.Accounts, *policy.Certifi
 	}
 
 	return &accounts, &info, nil
-}
-
-func getCertificateAuthorityAccountId(caName string, c *Connector) (string, error) {
-
-	accounts, info, err := getAccounts(caName, c)
-	if err != nil {
-		return "", err
-	}
-
-	for _, account := range accounts.Accounts {
-		if account.Account.Key == info.CAAccountKey {
-			for _, productOption := range account.ProductOption {
-				if productOption.ProductName == info.VendorProductName {
-					return account.Account.Id, nil
-				}
-			}
-		}
-	}
-
-	return "", nil
 }
 
 func getCertificateAuthorityDetails(caName string, c *Connector) (*policy.CADetails, error) {

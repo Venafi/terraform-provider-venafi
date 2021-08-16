@@ -744,7 +744,7 @@ func ValidateCloudPolicySpecification(ps *PolicySpecification) error {
 			subjectAltNames := getSubjectAltNames(*(ps.Policy.SubjectAltNames))
 			if len(subjectAltNames) > 0 {
 				for k, v := range subjectAltNames {
-					if k != "DnsAllowed" && v {
+					if k != "dnsAllowed" && v {
 						return fmt.Errorf("specified subjectAltNames: %s value is true, this value is not allowed ", k)
 					}
 				}
@@ -1090,6 +1090,24 @@ func ConvertToRegex(values []string, wildcardAllowed bool) []string {
 	return nil
 }
 
+func RemoveRegex(values []string) []string {
+	var regexVals []string
+	for _, current := range values {
+
+		current = strings.TrimPrefix(current, "[*a-z]{1}[a-z0-9.-]*\\.")
+		current = strings.TrimPrefix(current, "[a-z]{1}[a-z0-9.-]*\\.")
+
+		current = strings.ReplaceAll(current, "\\.", ".")
+
+		regexVals = append(regexVals, current)
+	}
+	if len(regexVals) > 0 {
+		return regexVals
+	}
+
+	return nil
+}
+
 func GetApplicationName(zone string) string {
 	data := strings.Split(zone, "\\")
 	if data != nil && data[0] != "" {
@@ -1100,7 +1118,7 @@ func GetApplicationName(zone string) string {
 
 func GetCitName(zone string) string {
 	data := strings.Split(zone, "\\")
-	if data != nil && data[1] != "" {
+	if len(data) == 2 {
 		return data[1]
 	}
 	return ""
