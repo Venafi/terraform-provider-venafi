@@ -28,6 +28,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
 
 	tppSshCertResourceTest = `
