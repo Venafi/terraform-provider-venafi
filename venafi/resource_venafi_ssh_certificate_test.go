@@ -141,7 +141,7 @@ func TestSshCertLocalKP(t *testing.T) {
 func getTestData() testData {
 	return testData{
 		keyId:          RandTppSshCertName(),
-		template:       os.Getenv("SSH_CIT"),
+		template:       os.Getenv("TPP_SSH_CA"),
 		sourceAddress:  "test.com",
 		validityPeriod: "4",
 	}
