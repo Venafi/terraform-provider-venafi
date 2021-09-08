@@ -55,6 +55,14 @@ github.com/Venafi/vcert/v4 v4.14.2 h1:emXMyuRTUP+pDkFH9yeHxEDHx6gldxbmvgIGPuZ29e
 github.com/Venafi/vcert/v4 v4.14.2/go.mod h1:IL+6LA8QRWZbmcMzIr/vRhf9Aa6XDM2cQO50caWevjA=
 github.com/Venafi/vcert/v4 v4.14.3 h1:tlyhgQKTzMXn9B44hx8CDI4oiaisWEWSGH66KKUh088=
 github.com/Venafi/vcert/v4 v4.14.3/go.mod h1:IL+6LA8QRWZbmcMzIr/vRhf9Aa6XDM2cQO50caWevjA=
+github.com/Venafi/vcert/v4 v4.14.4-0.20210728205750-52c9b3b1e33b h1:0R1qCpT8IetHvpJfmzbLZmFarolQQ2kf5GcSKSmlSRs=
+github.com/Venafi/vcert/v4 v4.14.4-0.20210728205750-52c9b3b1e33b/go.mod h1:IL+6LA8QRWZbmcMzIr/vRhf9Aa6XDM2cQO50caWevjA=
+github.com/Venafi/vcert/v4 v4.14.4-0.20210809233411-de52a812f6b6 h1:tVeEJDRCsdZdB9TU9kkVTLyGlbqW6pJezQkP96lDl8I=
+github.com/Venafi/vcert/v4 v4.14.4-0.20210809233411-de52a812f6b6/go.mod h1:IL+6LA8QRWZbmcMzIr/vRhf9Aa6XDM2cQO50caWevjA=
+github.com/Venafi/vcert/v4 v4.15.0 h1:Tjr2vaB0nb+kNHYLkmkLuYj6BBKQ1hCIdOHZ2Nyw/44=
+github.com/Venafi/vcert/v4 v4.15.0/go.mod h1:IL+6LA8QRWZbmcMzIr/vRhf9Aa6XDM2cQO50caWevjA=
+github.com/Venafi/vcert/v4 v4.15.1 h1:WEOc1+j58Lycd8ACHaSkHiexa0pnkDcHStC83if0E4k=
+github.com/Venafi/vcert/v4 v4.15.1/go.mod h1:IL+6LA8QRWZbmcMzIr/vRhf9Aa6XDM2cQO50caWevjA=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=
 github.com/agext/levenshtein v1.2.1/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/agext/levenshtein v1.2.2 h1:0S/Yg6LYmFJ5stwQeRp6EeOcCbj7xiqQSdNelsXvaqE=

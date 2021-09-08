@@ -249,8 +249,7 @@ func checkImportCloudPolicy(states []*terraform.InstanceState) error {
 		return err
 	}
 
-	domains := policy.ConvertToRegex(filePolicySpecification.Policy.Domains, *(filePolicySpecification.Policy.WildcardAllowed))
-	equal := IsArrayStringEqual(domains, policySpecification.Policy.Domains)
+	equal := IsArrayStringEqual(filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
 	if !equal {
 		return fmt.Errorf("domains are different, expected %+q but get %+q", filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
 	}

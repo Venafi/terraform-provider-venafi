@@ -132,6 +132,7 @@ output "cert_chain_dev" {
 
 //output private key
 output "cert_private_key_dev" {
+  sensitive = true
   value = venafi_certificate.dev_certificate.private_key_pem
 }
 
@@ -163,6 +164,7 @@ output "cert_chain_dev_ecdsa" {
 }
 
 output "cert_private_key_dev_ecdsa" {
+  sensitive = true
   value = venafi_certificate.dev_certificate_ecdsa.private_key_pem
 }
 
@@ -180,6 +182,7 @@ output "cert_chain_cloud" {
 }
 
 output "cert_private_key_cloud" {
+  sensitive = true
   value = venafi_certificate.cloud_certificate.private_key_pem
 }
 
@@ -212,6 +215,7 @@ output "cert_chain_tpp" {
 }
 
 output "cert_private_key_tpp" {
+  sensitive = true
   value = venafi_certificate.tpp_certificate.private_key_pem
 }
 
@@ -244,5 +248,6 @@ output "cert_chain_tpp_token" {
 }
 
 output "cert_private_key_token" {
+  sensitive = true
   value = venafi_certificate.token_certificate.private_key_pem
 }

@@ -68,3 +68,7 @@ func GetAbsoluteFIlePath(filePath string) string {
 	absolutePath := rootDir + filePath
 	return absolutePath
 }
+
+func RandTppSshCertName() string {
+	return fmt.Sprintf("terraform-provider-%d-%sSSH-cert", time.Now().Unix(), randRunes(4))
+}
