@@ -48,7 +48,7 @@ The following arguments are supported:
 
 * `public_key` - (Optional, string) The OpenSSH formatted public key that will be used to generate the SSH certificate.
 
-* `public_key_method` - (Optional, string) Specifies whether the public key will be "local" (default) or "service" generated.
+* `public_key_method` - (Optional, string) Specifies whether the public key will be "local" (default), "file" or "service" generated.
 
 * `principal` - (Optional, set of strings) A list of user names for whom the requested certificate will be valid.
 
