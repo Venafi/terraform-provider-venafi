@@ -86,7 +86,7 @@ func resourceVenafiSshCertificate() *schema.Resource {
 			},
 			"public_key_method": &schema.Schema{
 				Type:        schema.TypeString,
-				Description: "If the plubic key will be: local, service, generated",
+				Description: "If the public key will be: file provided or local, service generated",
 				Optional:    true,
 				Default:     "local",
 				ForceNew:    true,
