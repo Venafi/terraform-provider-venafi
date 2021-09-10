@@ -4,7 +4,7 @@ In this example, we'll show you how to better secure application delivery using 
 
 ## Who should use this example?<!-- Suggest not using "Persona" as this is an UX term used more internally in software dev than a term that users would typically understand; while more techy people will use your example and might understand UX notion of personas, they are in this context a user. -->
 
-The steps described in this example are typically performed by _DevOps engineers_ or _system administrators_. Generally, you'll need a basic understanding of F5 BIG-IP, Venafi Trust Protection Platform or Venafi Cloud, and the required permissions for completing the tasks described in the example.
+The steps described in this example are typically performed by _DevOps engineers_ or _system administrators_. Generally, you'll need a basic understanding of F5 BIG-IP, Venafi Trust Protection Platform or Venafi as a Service, and the required permissions for completing the tasks described in the example.
 
 ## About this example 
 
@@ -12,7 +12,7 @@ In this example, we use Terraform's _infrastructure as code_ automation process 
 
 > **TIP** Having at least some basic knowledge of the Bash command language is helpful, such as when you need to set your provider locally.
 
-Later in this example, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using the _Venafi Provider for Hashicorp Terraform_ with either Venafi Trust Protection Platform (TPP) or Venafi Cloud. Then after adding them to your F5 BIG-IP resources, you'll use them in the ADC node. And finally, you'll configure the "pool" for your ADC nodes.
+Later in this example, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using the _Venafi Provider for Hashicorp Terraform_ with either Venafi Trust Protection Platform (TPP) or Venafi as a Service. Then after adding them to your F5 BIG-IP resources, you'll use them in the ADC node. And finally, you'll configure the "pool" for your ADC nodes.
 
 > **NOTE** While we'll be using a ``Round robin`` balancing method in our ADC configuration, keep in mind that there are [other methods](https://www.f5.com/services/resources/glossary/load-balancer) that might be more suitable for your specific use case.
 
@@ -39,7 +39,7 @@ We provided the needed files in this folder, except for _terraform.tfvars_. The 
 Before you continue, carefully review these prerequisites first:
 
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi Cloud Services        
+- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi as a Service        
 - If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
 - Verify that you have administrator access to your F5 BIG-IP instance
 - Verify that you have three (3) web servers that are running your application; for this example, we'll use NGINX servers.
@@ -60,7 +60,7 @@ Here are the steps we'll take as we go through this example:
 
 The _terraform.tfvars_ configuration for F5 is divided by the following:
 
-- Platform configuration (Venafi Cloud or TPP)
+- Platform configuration (Venafi as a Service or TPP)
 - Your F5 floating managment access
 - The configuration for your site
 - The F5 partition where your data is stored
@@ -78,7 +78,7 @@ bundle_path = "<bundle_path>"
 access_token = "<access_token>"
 ```
 
-**Venafi Cloud**:
+**Venafi as a Service**:
 ```JSON
 venafi_api_key = "<venafi_api_key>"
 ```
@@ -139,7 +139,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-    **Venafi Cloud**:
+    **Venafi as a Service**:
     ```
     variable "venafi_api_key" {
         type = string
@@ -204,7 +204,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-    **Venafi Cloud**:
+    **Venafi as a Service**:
     ```
     provider "venafi" {
         api_key = var.venafi_api_key
