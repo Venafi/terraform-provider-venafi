@@ -1,3 +1,7 @@
+## 0.13.0 (September 10, 2021)
+
+Added venafi_ssh_certificate resource that enables SSH certificate creation with Trust Protection Platform.
+
 ## 0.12.0 (June 07, 2021)
 
 Added venafi_policy resource that enables certificate policy management with Trust Protection Platform and Venafi as a Service.
