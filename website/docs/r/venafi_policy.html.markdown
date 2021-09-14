@@ -29,7 +29,8 @@ The following arguments are supported:
   *Venafi as a Service* application and issuing template.
 
 * `policy_specification` - (Required, string) The JSON-formatted certificate policy
-  specification.  Typically read from a file using the `file` function.
+  specification as documented [here](https://github.com/Venafi/vcert/blob/master/README-POLICY-SPEC.md).
+  Typically read from a file using the `file` function.
 
 ## Import
 
