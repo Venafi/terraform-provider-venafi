@@ -281,7 +281,7 @@ using the
    | Property            | Type          |  Description                                                                      | Default   |
    | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
    | `zone` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | The *Trust Protection Plaform* policy folder or *Venafi as a Service* application and issuing template | `none` |
-   | `policy_specification` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | The JSON-formatted certificate policy specification.  Typically read from a file using the [file](https://www.terraform.io/docs/language/functions/file.html) function. Use the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#parameters-for-viewing-certificate-policy) to generate a policy specification template to get started (i.e. `vcert getpolicy --starter`) | `none` |
+   | `policy_specification` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | The JSON-formatted certificate policy specification as documented [here](https://github.com/Venafi/vcert/blob/master/README-POLICY-SPEC.md).  Typically read from a file using the [file](https://www.terraform.io/docs/language/functions/file.html) function. Use the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#parameters-for-viewing-certificate-policy) to generate a policy specification template to get started (i.e. `vcert getpolicy --starter`) | `none` |
 
    >:pushpin: **NOTE**: The `venafi_policy` resource supports the
    `terraform import` method.  When used, the `zone` and 
