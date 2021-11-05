@@ -1,0 +1,31 @@
+# -- Venafi Cloud ---
+# Uncomment for Venafi Cloud
+
+// vaas_api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+// venafi_zone = "DevOps\\Terraform"
+
+# ------ TPP -------
+# Uncomment for Venafi Trust Protection Platform
+
+// tpp_url = "https://tpp.venafi.example"
+// bundle_path = "/path/to/bundle.pem"
+// access_token = "p0WTt3sDPbzm2BDIkoJROQ=="
+// venafi_zone = "DevOps\\Terraform"
+
+# -----------------
+
+# Windows Server Virtual Machine
+admin_user = "your_user"
+admin_password = "your_password"
+host = "my-windows-server.example.com"
+winrm_port = "5986"
+// winrm_ca_trust_path = "/path-to/trust-bundle.pem"
+
+# IIS
+binding_ip = "*"
+binding_port = "443"
+website_name = "Default Web Site"
+// ssl_flag = true
+
+test_site_name = "demo-iis"
+test_site_domain = "venafi.example"
