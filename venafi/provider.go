@@ -86,6 +86,7 @@ Example:
 			"venafi_certificate":     resourceVenafiCertificate(),
 			"venafi_policy":          resourceVenafiPolicy(),
 			"venafi_ssh_certificate": resourceVenafiSshCertificate(),
+			"venafi_ssh_config":      resourceVenafiSshConfig(),
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -138,6 +139,18 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			Zone:       zone,
 			LogVerbose: true,
 		}
+	} else if url != "" && accessToken == "" {
+		log.Printf("Using Platform with url %s to get ssh config\n", url)
+		cfg = vcert.Config{
+			ConnectorType: endpoint.ConnectorTypeTPP,
+			BaseUrl:       url,
+			Credentials: &endpoint.Authentication{
+				AccessToken: accessToken,
+			},
+			Zone:       zone,
+			LogVerbose: true,
+		}
+		log.Printf("Success created config\n")
 	} else if apiKey != "" {
 		if url != "" {
 			log.Println(messageUseCloud)
@@ -170,15 +183,26 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		cfg.ConnectionTrust = trustBundle
 	}
 	cl, err := vcert.NewClient(&cfg)
+	// We only ignore the errors from VCert if we are getting the SSH config without the Principals from TPP
 	if err != nil {
-		log.Printf(messageVenafiClientInitFailed + err.Error())
-		return nil, err
+		strErr := (err).Error()
+		if strErr != "vcert error: your data contains problems: auth error: failed to authenticate: missing credentials" {
+			log.Printf("Unable to build connector for %s: %s", cl.GetType(), err)
+		} else if strErr != "vcert error: your data contains problems: auth error: failed to authenticate: can't determine valid credentials set" {
+			log.Printf("Unable to build connector for %s: %s", cl.GetType(), err)
+		} else {
+			log.Printf("Successfully built connector for %s", cl.GetType())
+		}
+	} else {
+		log.Printf("Successfully built connector for %s", cl.GetType())
 	}
+
 	err = cl.Ping()
 	if err != nil {
 		log.Printf(messageVenafiPingFailed + err.Error())
 		return nil, err
 	}
+
 	return &cfg, nil
 }
 

@@ -87,6 +87,7 @@ type Connector interface {
 	RequestCertificate(req *certificate.Request) (requestID string, err error)
 	// RetrieveCertificate immediately returns an enrolled certificate. Otherwise, RetrieveCertificate waits and retries during req.Timeout.
 	RetrieveCertificate(req *certificate.Request) (certificates *certificate.PEMCollection, err error)
+	IsCSRServiceGenerated(req *certificate.Request) (bool, error)
 	RevokeCertificate(req *certificate.RevocationRequest) error
 	RenewCertificate(req *certificate.RenewalRequest) (requestID string, err error)
 	// ImportCertificate adds an existing certificate to Venafi Platform even if the certificate was not issued by Venafi Cloud or Venafi Platform. For information purposes.
@@ -99,6 +100,7 @@ type Connector interface {
 	GetPolicy(name string) (*policy.PolicySpecification, error)
 	RequestSSHCertificate(req *certificate.SshCertRequest) (requestID string, err error)
 	RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertRetrieveDetails, err error)
+	RetrieveSshConfig(ca *certificate.SshCaTemplateRequest) (*certificate.SshConfig, error)
 }
 
 type Filter struct {
@@ -140,6 +142,18 @@ func (err ErrCertificatePending) Error() string {
 		return fmt.Sprintf("Issuance is pending. You may try retrieving the certificate later using Pickup ID: %s", err.CertificateID)
 	}
 	return fmt.Sprintf("Issuance is pending. You may try retrieving the certificate later using Pickup ID: %s\n\tStatus: %s", err.CertificateID, err.Status)
+}
+
+type ErrCertificateRejected struct {
+	CertificateID string
+	Status        string
+}
+
+func (err ErrCertificateRejected) Error() string {
+	if err.Status == "" {
+		return fmt.Sprintf("Certificate request was rejected. You may need to verify the certificate id: %s", err.CertificateID)
+	}
+	return fmt.Sprintf("Certificate request was rejected. You may need to verify the certificate using Pickup ID: %s\n\tStatus: %s", err.CertificateID, err.Status)
 }
 
 // Policy is struct that contains restrictions for certificates. Most of the fields contains list of regular expression.

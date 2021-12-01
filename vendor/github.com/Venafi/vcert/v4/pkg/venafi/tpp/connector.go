@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v4/pkg/policy"
 	"log"
 	"net/http"
 	neturl "net/url"
@@ -29,6 +28,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Venafi/vcert/v4/pkg/policy"
 
 	"github.com/Venafi/vcert/v4/pkg/util"
 
@@ -46,6 +47,14 @@ type Connector struct {
 	trust       *x509.CertPool
 	zone        string
 	client      *http.Client
+}
+
+func (c *Connector) IsCSRServiceGenerated(req *certificate.Request) (bool, error) {
+	panic("operation is not supported yet")
+}
+
+func (c *Connector) RetrieveSshConfig(ca *certificate.SshCaTemplateRequest) (*certificate.SshConfig, error) {
+	return RetrieveSshConfig(c, ca)
 }
 
 // NewConnector creates a new TPP Connector object used to communicate with TPP
@@ -440,6 +449,8 @@ func prepareRequest(req *certificate.Request, zone string) (tppReq certificateRe
 	default:
 		return tppReq, fmt.Errorf("Unexpected option in PrivateKeyOrigin")
 	}
+
+	tppReq.CertificateType = "AUTO"
 	tppReq.PolicyDN = getPolicyDN(zone)
 	tppReq.CADN = req.CADN
 	tppReq.ObjectName = req.FriendlyName
@@ -668,8 +679,8 @@ func (c *Connector) GetPolicy(name string) (*policy.PolicySpecification, error) 
 
 	log.Println("Collecting policy attributes")
 
-	if !strings.HasPrefix(name, policy.PathSeparator) {
-		name = policy.PathSeparator + name
+	if !strings.HasPrefix(name, util.PathSeparator) {
+		name = util.PathSeparator + name
 	}
 
 	if !strings.HasPrefix(name, policy.RootPath) {
@@ -748,8 +759,8 @@ func (c *Connector) SetPolicy(name string, ps *policy.PolicySpecification) (stri
 	log.Printf("policy specification is valid")
 	var status = ""
 	tppPolicy := policy.BuildTppPolicy(ps)
-	if !strings.HasPrefix(name, policy.PathSeparator) {
-		name = policy.PathSeparator + name
+	if !strings.HasPrefix(name, util.PathSeparator) {
+		name = util.PathSeparator + name
 	}
 
 	if !strings.HasPrefix(name, policy.RootPath) {
@@ -1652,10 +1663,10 @@ func resetTPPAttribute(c *Connector, at, zone string) error {
 
 func (c *Connector) RequestSSHCertificate(req *certificate.SshCertRequest) (requestID string, err error) {
 
-	return RequestSSHCertificate(c, req)
+	return RequestSshCertificate(c, req)
 
 }
 
 func (c *Connector) RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertRetrieveDetails, err error) {
-	return RetrieveSSHCertificate(c, req)
+	return RetrieveSshCertificate(c, req)
 }

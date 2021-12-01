@@ -83,6 +83,7 @@ type certificateRequest struct {
 	DisableAutomaticRenewal bool            `json:",omitempty"`
 	CustomFields            []customField   `json:",omitempty"`
 	Devices                 []device        `json:",omitempty"`
+	CertificateType         string          `json:",omitempty"`
 }
 
 type certificateRetrieveRequest struct {
@@ -317,6 +318,8 @@ const (
 	urlResourceCleanPolicy            urlResource = "vedsdk/config/clearpolicyattribute"
 	urlResourceSshCertReq             urlResource = "vedsdk/SSHCertificates/request"
 	urlResourceSshCertRet             urlResource = "vedsdk/SSHCertificates/retrieve"
+	urlResourceSshCAPubKey            urlResource = "vedsdk/SSHCertificates/Template/Retrieve/PublicKeyData"
+	urlResourceSshCADetails           urlResource = "vedsdk/SSHCertificates/Template/Retrieve"
 )
 
 const (
