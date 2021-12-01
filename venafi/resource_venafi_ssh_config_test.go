@@ -145,16 +145,15 @@ func checkSshPrincipals(t *testing.T, data *testData, s *terraform.State) error 
 		if !ok {
 			return fmt.Errorf("Principal is not a string")
 		}
-		if principal == "" {
+		if principalString == "" {
 			return fmt.Errorf("Principal is empty")
 		}
-		principals = append(principals, principalString)
 	}
 	return nil
 }
 
 func getTestConfigData() testData {
 	return testData{
-		template:       os.Getenv("TPP_SSH_CA"),
+		template: os.Getenv("TPP_SSH_CA"),
 	}
 }

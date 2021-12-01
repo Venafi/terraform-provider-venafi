@@ -56,7 +56,7 @@ func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) err
 	err = cl.Ping()
 	if err != nil {
 		log.Printf(messageVenafiPingFailed + err.Error())
-		return fmt.Errorf("%s", messageVenafiPingFailed + err.Error())
+		return fmt.Errorf("%s", messageVenafiPingFailed+err.Error())
 	}
 	log.Println(messageVenafiPingSucessfull)
 
@@ -91,16 +91,6 @@ func resourceVenafiSshConfigExists(d *schema.ResourceData, meta interface{}) (bo
 
 	capubstr := caPubKeyUntyped.(string)
 	if capubstr == "" {
-		return false, nil
-	}
-
-	principalUntyped, ok := d.GetOk("principal")
-	if !ok {
-		return false, nil
-	}
-
-	principalstr := principalUntyped.(string)
-	if principalstr == "" {
 		return false, nil
 	}
 
