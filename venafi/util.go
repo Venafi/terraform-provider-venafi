@@ -157,7 +157,7 @@ func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {
 	req.KeyId = id
 
 	template := d.Get("template").(string)
-	req.CADN = template
+	req.Template = template
 
 	if keyPassphrase, ok := d.Get("key_passphrase").(string); ok {
 		req.PrivateKeyPassphrase = keyPassphrase
@@ -169,7 +169,9 @@ func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {
 		req.ForceCommand = forceCommand
 	}
 	if validHours, ok := d.Get("valid_hours").(int); ok {
-		req.ValidityPeriod = strconv.Itoa(validHours) + "h"
+		if validHours > 0 {
+			req.ValidityPeriod = strconv.Itoa(validHours) + "h"
+		}
 	}
 	if objectName, ok := d.Get("object_name").(string); ok {
 		req.ObjectName = objectName
