@@ -77,7 +77,10 @@ func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if conf.Principals != nil {
-		d.Set("principal", conf.Principals)
+		err = d.Set("principal", conf.Principals)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
