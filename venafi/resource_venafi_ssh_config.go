@@ -92,8 +92,8 @@ func resourceVenafiSshConfigExists(d *schema.ResourceData, meta interface{}) (bo
 		return false, nil
 	}
 
-	capubstr := caPubKeyUntyped.(string)
-	if capubstr == "" {
+	caPubKeyStr := caPubKeyUntyped.(string)
+	if caPubKeyStr == "" {
 		return false, nil
 	}
 
