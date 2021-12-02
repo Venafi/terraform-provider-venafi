@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4/pkg/util"
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"os"
@@ -228,6 +229,89 @@ output "certificate" {
 }
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}`
+	tppCsrServiceBasic = `
+%s
+resource "venafi_certificate" "token_certificate" {
+	provider = "venafi.token_tpp"
+	common_name = "%s"
+	san_dns = [
+		"%s"
+	]
+	key_password = "%s"
+	csr_origin = "service"
+}
+output "certificate" {
+	value = "${venafi_certificate.token_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}`
+
+	tppCsrService = `
+%s
+resource "venafi_certificate" "token_certificate" {
+	provider = "venafi.token_tpp"
+	common_name = "%s"
+	san_dns = [
+		"%s"
+	]
+	key_password = "%s"
+	state = "%s"
+	country = "%s"
+	locality = "%s"
+	organization = "%s"
+	organizational_units=[
+		"%s"
+	]
+	csr_origin = "service"
+}
+output "certificate" {
+	value = "${venafi_certificate.token_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}`
+
+	cloudCsrServiceBasicConfig = `
+%s
+resource "venafi_certificate" "cloud_certificate" {
+	provider = "venafi.cloud"
+	common_name = "%s"
+	%s
+	key_password = "%s"
+	expiration_window = %d
+	csr_origin = "service"
+}
+output "certificate" {
+	value = "${venafi_certificate.cloud_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
+}`
+
+	cloudCsrServiceConfig = `
+%s
+resource "venafi_certificate" "cloud_certificate" {
+	provider = "venafi.cloud"
+	common_name = "%s"
+	%s
+	key_password = "%s"
+	expiration_window = %d
+	state = "%s"
+	country = "%s"
+	locality = "%s"
+	organization = "%s"
+	organizational_units=[
+		"%s"
+	]
+	csr_origin = "service"
+}
+output "certificate" {
+	value = "${venafi_certificate.cloud_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
 }`
 )
 
@@ -928,4 +1012,107 @@ xA==
 	}
 
 	//return nil
+}
+
+func TestTppCsrService(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.private_key_password = "newPassword!"
+
+	config := fmt.Sprintf(tppCsrServiceBasic, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
+	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
+					return checkStandardCert(t, &data, s)
+				},
+			},
+		},
+	})
+}
+
+func TestCloudCsrService(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.expiration_window = 48
+	data.key_algo = rsa2048
+
+	config := fmt.Sprintf(cloudCsrServiceBasicConfig, cloudProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkCsrServiceStandardCert(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+			},
+		},
+	})
+}
+
+func checkCsrServiceStandardCert(t *testing.T, data *testData, s *terraform.State) error {
+	t.Log("Testing certificate with cn", data.cn)
+	certUntyped := s.RootModule().Outputs["certificate"].Value
+	certificate, ok := certUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"certificate\" is not a string")
+	}
+
+	t.Logf("Testing certificate PEM:\n %s", certificate)
+	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+		return fmt.Errorf("key is missing cert PEM preamble")
+	}
+	block, _ := pem.Decode([]byte(certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+	if expected, got := data.cn, cert.Subject.CommonName; got != expected {
+		return fmt.Errorf("incorrect subject common name: expected %v, certificate %v", expected, got)
+	}
+	if len(data.dns_ns) > 0 {
+		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
+			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
+		}
+	} else {
+		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
+			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
+		}
+	}
+
+	data.serial = cert.SerialNumber.String()
+	data.timeCheck = time.Now().String()
+
+	keyUntyped := s.RootModule().Outputs["private_key"].Value
+	privateKey, ok := keyUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"private_key\" is not a string")
+	}
+
+	t.Logf("Testing private key PEM:\n %s", privateKey)
+	privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
+
+	_, err = tls.X509KeyPair([]byte(certificate), []byte(privateKeyString))
+	if err != nil {
+		return fmt.Errorf("error comparing certificate and key: %s", err)
+	}
+
+	return nil
 }

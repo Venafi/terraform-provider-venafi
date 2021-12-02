@@ -210,16 +210,16 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 		req.PublicKeyData = pubKeyS
 	}
 
-	dn, err := cl.RequestSSHCertificate(&req)
+	reqData, err := cl.RequestSSHCertificate(&req)
 
 	if err != nil {
 		return err
 	}
 
-	d.SetId(dn)
+	d.SetId(reqData.DN)
 
 	retReq := certificate.SshCertRequest{
-		PickupID:                  dn,
+		PickupID:                  reqData.DN,
 		IncludeCertificateDetails: true,
 	}
 
