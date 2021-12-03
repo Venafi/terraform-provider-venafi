@@ -230,7 +230,7 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
 }`
-	tppCsrServiceBasic = `
+	tppCsrServiceConfig = `
 %s
 resource "venafi_certificate" "token_certificate" {
 	provider = "venafi.token_tpp"
@@ -246,48 +246,6 @@ output "certificate" {
 }
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
-}`
-
-	tppCsrService = `
-%s
-resource "venafi_certificate" "token_certificate" {
-	provider = "venafi.token_tpp"
-	common_name = "%s"
-	san_dns = [
-		"%s"
-	]
-	key_password = "%s"
-	state = "%s"
-	country = "%s"
-	locality = "%s"
-	organization = "%s"
-	organizational_units=[
-		"%s"
-	]
-	csr_origin = "service"
-}
-output "certificate" {
-	value = "${venafi_certificate.token_certificate.certificate}"
-}
-output "private_key" {
-	value = "${venafi_certificate.token_certificate.private_key_pem}"
-}`
-
-	cloudCsrServiceBasicConfig = `
-%s
-resource "venafi_certificate" "cloud_certificate" {
-	provider = "venafi.cloud"
-	common_name = "%s"
-	%s
-	key_password = "%s"
-	expiration_window = %d
-	csr_origin = "service"
-}
-output "certificate" {
-	value = "${venafi_certificate.cloud_certificate.certificate}"
-}
-output "private_key" {
-	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
 }`
 
 	cloudCsrServiceConfig = `
@@ -298,13 +256,6 @@ resource "venafi_certificate" "cloud_certificate" {
 	%s
 	key_password = "%s"
 	expiration_window = %d
-	state = "%s"
-	country = "%s"
-	locality = "%s"
-	organization = "%s"
-	organizational_units=[
-		"%s"
-	]
 	csr_origin = "service"
 }
 output "certificate" {
@@ -1022,8 +973,8 @@ func TestTppCsrService(t *testing.T) {
 	data.dns_ns = "alt-" + data.cn
 	data.private_key_password = "newPassword!"
 
-	config := fmt.Sprintf(tppCsrServiceBasic, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
-	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
+	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
+	t.Logf("Testing TPP Token certificate with Service CSR generated and config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -1047,8 +998,8 @@ func TestCloudCsrService(t *testing.T) {
 	data.expiration_window = 48
 	data.key_algo = rsa2048
 
-	config := fmt.Sprintf(cloudCsrServiceBasicConfig, cloudProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	config := fmt.Sprintf(cloudCsrServiceConfig, cloudProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Cloud certificate with CSR service and config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
