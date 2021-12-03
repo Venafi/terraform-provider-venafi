@@ -1030,7 +1030,7 @@ func TestTppCsrService(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
+					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
