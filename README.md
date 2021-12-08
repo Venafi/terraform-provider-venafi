@@ -324,12 +324,10 @@ using the
     }
     ```
 
-
-
    The `venafi_ssh_certificate` resource has the following options:
 
    | Property            | Type          |  Description                                                                      | Default   |
-       | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
+   | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
    |`key_id`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The identifier of the requested certificate|`none`|
    |`template`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The certificate issuing template|`none`|
    |`key_passphrase` (optional)|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|Passphrase for encrypting the private key|`none`|
