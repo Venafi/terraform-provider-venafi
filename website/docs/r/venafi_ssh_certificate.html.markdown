@@ -6,7 +6,7 @@ description: |-
   Provides access to request and retrieve SSH certificates from Venafi Trust Protection Platform.
 ---
 
-# venafi_ssh_certificate (BETA)
+# venafi_ssh_certificate
 
 Provides access to request and retrieve SSH certificates from *Venafi Trust Protection Platform*.
 
