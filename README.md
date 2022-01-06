@@ -295,7 +295,7 @@ using the
 
 ## SSH Certificate Management
 
-1. Declare the Venafi Provider and specify the connection and authentication settings as described in the previous sections.
+1. Declare the Venafi provider and specify the connection and authentication settings as described in the previous sections.
 
    >:pushpin: **NOTE**: For Trust Protection Platform, the access_token assigned to the venafi provider must have the ssh:manage scope in order to create SSH certificates.
 
@@ -331,17 +331,17 @@ using the
    |`key_id`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The identifier of the requested certificate|`none`|
    |`template`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The certificate issuing template|`none`|
    |`key_passphrase` (optional)|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|Passphrase for encrypting the private key|`none`|
-   |`folder`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The DN of the policy folder where the certificate object will be created. It will overwrite the default folder set at the template | The default folder set at the template|
+   |`folder`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The DN of the policy folder where the certificate object will be created. It will overwrite the default folder set at the template |`none`|
    |`force_command`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The requested force command|`none`|
    |`key_size`|[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|The key size bits, they will be used for creating keypair|`3072`|
-   |`windows`|[Bool](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)|If the line endings of service's private key will end on MS windows format|`false`|
+   |`windows`|[Bool](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)|Output certificate and key files in Windows format (i.e. with \r\n line endings) instead of Unix format (i.e. \n line endings).|`false`|
    |`valid_hours`|[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|How much time the requester wants to have the certificate valid, the format is hours|`none`|
-   |`object_name`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The friendly name for the certificate object|`none`|
+   |`object_name`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The friendly name for the certificate object. If not specified, the value of the `key_id` is used.|`none`|
    |`public_key`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The path of the public key that will be used to generate the certificate if `public_key_method` set to `file`|`none`|
    |`public_key_method` (optional) |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | If the public key will be: `local` or `service` generated or `file` provided|`local`|
    |`principal`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested principals|`none`|
    |`source_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested source addresses as list of IP/CIDR|`none`|
-   |`destination_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used to authenticate to|`none`|
+   |`destination_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used for authentication. Applicable for client certificates and is used for reporting/auditing only.|`none`|
    |`extension`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested certificate extensions|`none`|
 
 ## License
