@@ -297,7 +297,7 @@ using the
 
 1. Declare the Venafi provider and specify the connection and authentication settings as described in the previous sections.
 
-   >:pushpin: **NOTE**: For Trust Protection Platform, the access_token assigned to the venafi provider must have the ssh:manage scope in order to create SSH certificates.
+   >:pushpin: **NOTE**: For Trust Protection Platform, the access_token assigned to the Venafi provider must have the ssh:manage scope in order to create SSH certificates.
 
    **Trust Protection Platform**:
 
