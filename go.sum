@@ -25,6 +25,8 @@ github.com/OpenPeeDeeP/depguard v1.0.1/go.mod h1:xsIw86fROiiwelg+jB2uM9PiKihMMmU
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/Venafi/vcert/v4 v4.16.0 h1:eILnJU1+I2izJPCe3IWy6OUi2895PgfiZQASY6ZB58Y=
 github.com/Venafi/vcert/v4 v4.16.0/go.mod h1:VcojF47VAzBnYHSRrb0SwOCmMpWJczajTuPiZNDJJSo=
+github.com/Venafi/vcert/v4 v4.16.1 h1:dvouBME70T8wT0rBW73vpR6AmbHOmtMGB+4SEUcAGlw=
+github.com/Venafi/vcert/v4 v4.16.1/go.mod h1:VcojF47VAzBnYHSRrb0SwOCmMpWJczajTuPiZNDJJSo=
 github.com/agext/levenshtein v1.2.1/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/agext/levenshtein v1.2.2 h1:0S/Yg6LYmFJ5stwQeRp6EeOcCbj7xiqQSdNelsXvaqE=
 github.com/agext/levenshtein v1.2.2/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=

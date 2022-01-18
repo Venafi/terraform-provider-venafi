@@ -22,11 +22,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v4/pkg/policy"
 	"log"
 	"net"
 	"net/http"
 	"regexp"
+
+	"github.com/Venafi/vcert/v4/pkg/policy"
 
 	"github.com/Venafi/vcert/v4/pkg/certificate"
 )
@@ -98,8 +99,8 @@ type Connector interface {
 	ListCertificates(filter Filter) ([]certificate.CertificateInfo, error)
 	SetPolicy(name string, ps *policy.PolicySpecification) (string, error)
 	GetPolicy(name string) (*policy.PolicySpecification, error)
-	RequestSSHCertificate(req *certificate.SshCertRequest) (requestID string, err error)
-	RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertRetrieveDetails, err error)
+	RequestSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertificateObject, err error)
+	RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertificateObject, err error)
 	RetrieveSshConfig(ca *certificate.SshCaTemplateRequest) (*certificate.SshConfig, error)
 }
 
@@ -153,7 +154,7 @@ func (err ErrCertificateRejected) Error() string {
 	if err.Status == "" {
 		return fmt.Sprintf("Certificate request was rejected. You may need to verify the certificate id: %s", err.CertificateID)
 	}
-	return fmt.Sprintf("Certificate request was rejected. You may need to verify the certificate using Pickup ID: %s\n\tStatus: %s", err.CertificateID, err.Status)
+	return fmt.Sprintf("Status: %s", err.Status)
 }
 
 // Policy is struct that contains restrictions for certificates. Most of the fields contains list of regular expression.

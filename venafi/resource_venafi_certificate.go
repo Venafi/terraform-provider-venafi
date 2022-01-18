@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/Venafi/vcert/v4/pkg/endpoint"
+	"github.com/Venafi/vcert/v4/pkg/util"
 	"net"
 	"software.sslmate.com/src/go-pkcs12"
 	"time"
@@ -27,6 +28,13 @@ func resourceVenafiCertificate() *schema.Resource {
 		Exists: resourceVenafiCertificateExists,
 
 		Schema: map[string]*schema.Schema{
+			"csr_origin": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "csr origin",
+				ForceNew:    true,
+				Default:     "local",
+			},
 			"common_name": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
@@ -186,9 +194,26 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	//Checking Private Key
 	var pk []byte
 	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-		pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
+		origin := d.Get("csr_origin")
+
+		cfg := meta.(*vcert.Config)
+		cl, err := vcert.NewClient(cfg)
 		if err != nil {
-			return false, fmt.Errorf("error getting key: %s", err)
+			log.Printf(messageVenafiClientInitFailed + err.Error())
+			return false, err
+		}
+
+		if origin == "service" && cl.GetType() == endpoint.ConnectorTypeCloud {
+			keyStr, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
+			if err != nil {
+				return false, err
+			}
+			pk = []byte(keyStr)
+		} else {
+			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
+			if err != nil {
+				return false, fmt.Errorf("error getting key: %s", err)
+			}
 		}
 	} else {
 		return false, fmt.Errorf("error getting key")
@@ -232,6 +257,21 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	req := &certificate.Request{
 		CsrOrigin:    certificate.LocalGeneratedCSR,
 		CustomFields: []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: utilityName}},
+	}
+
+	origin := d.Get("csr_origin").(string)
+	if origin == csrService {
+		req.CsrOrigin = certificate.ServiceGeneratedCSR
+
+		if pass, ok := d.GetOk("key_password"); ok {
+			resolvedPass := pass.(string)
+			if strings.TrimSpace(resolvedPass) == "" {
+				return fmt.Errorf("key_password is empty")
+			}
+		} else {
+			return fmt.Errorf("key_password is required")
+		}
+
 	}
 
 	//Configuring keys
@@ -322,17 +362,19 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	log.Printf("Requested SAN: %s", req.DNSNames)
 
-	switch req.KeyType {
-	case certificate.KeyTypeECDSA:
-		req.PrivateKey, err = certificate.GenerateECDSAPrivateKey(req.KeyCurve)
-	case certificate.KeyTypeRSA:
-		req.PrivateKey, err = certificate.GenerateRSAPrivateKey(req.KeyLength)
-	default:
-		return fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
-	}
+	if origin != csrService {
+		switch req.KeyType {
+		case certificate.KeyTypeECDSA:
+			req.PrivateKey, err = certificate.GenerateECDSAPrivateKey(req.KeyCurve)
+		case certificate.KeyTypeRSA:
+			req.PrivateKey, err = certificate.GenerateRSAPrivateKey(req.KeyLength)
+		default:
+			return fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
+		}
 
-	if err != nil {
-		return fmt.Errorf("error generating key: %s", err)
+		if err != nil {
+			return fmt.Errorf("error generating key: %s", err)
+		}
 	}
 
 	//Adding custom fields to request
@@ -387,6 +429,20 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		//TODO: make timeout configurable
 		Timeout: 180 * time.Second,
 	}
+
+	if origin == csrService {
+
+		if pass, ok := d.GetOk("key_password"); ok {
+			pickupReq.KeyPassword = pass.(string)
+		}
+
+		//for tpp we should set FetchPrivateKey = true
+		if cl.GetType() == endpoint.ConnectorTypeTPP {
+			pickupReq.FetchPrivateKey = true
+		}
+
+	}
+
 	err = d.Set("certificate_dn", requestID)
 	if err != nil {
 		return err
@@ -402,13 +458,15 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		return err
 	}
 
-	if pass, ok := d.GetOk("key_password"); ok {
-		err = pcc.AddPrivateKey(req.PrivateKey, []byte(pass.(string)))
-	} else {
-		err = pcc.AddPrivateKey(req.PrivateKey, []byte(""))
-	}
-	if err != nil {
-		return err
+	if origin != csrService {
+		if pass, ok := d.GetOk("key_password"); ok {
+			err = pcc.AddPrivateKey(req.PrivateKey, []byte(pass.(string)))
+		} else {
+			err = pcc.AddPrivateKey(req.PrivateKey, []byte(""))
+		}
+		if err != nil {
+			return err
+		}
 	}
 	if err = d.Set("certificate", pcc.Certificate); err != nil {
 		return fmt.Errorf("Error setting certificate: %s", err)
@@ -424,13 +482,24 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	log.Println("Setting up private key")
 
 	KeyPassword := d.Get("key_password").(string)
-	pkcs12_cert, err := AsPKCS12(pcc.Certificate, pcc.PrivateKey, pcc.Chain, KeyPassword)
 
-	if err == nil {
-		s := base64.StdEncoding.EncodeToString(pkcs12_cert)
-		if err = d.Set("pkcs12", s); err != nil {
-			return fmt.Errorf("error setting pkcs12: %s", err)
+	privKey := pcc.PrivateKey
+	if origin == csrService && cl.GetType() == endpoint.ConnectorTypeCloud {
+		privKey, err = util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
+		if err != nil {
+			return err
 		}
+	}
+
+	pkcs12_cert, err := AsPKCS12(pcc.Certificate, privKey, pcc.Chain, KeyPassword)
+
+	if err != nil {
+		return err
+	}
+
+	s := base64.StdEncoding.EncodeToString(pkcs12_cert)
+	if err = d.Set("pkcs12", s); err != nil {
+		return fmt.Errorf("error setting pkcs12: %s", err)
 	}
 
 	return d.Set("private_key_pem", pcc.PrivateKey)
@@ -481,6 +550,9 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 		privKey, err = x509.ParseECPrivateKey(privDER)
 	case "RSA PRIVATE KEY":
 		privKey, err = x509.ParsePKCS1PrivateKey(privDER)
+		if err != nil {
+			privKey, err = x509.ParsePKCS8PrivateKey(privDER)
+		}
 	default:
 		return nil, fmt.Errorf("unexpected private key PEM type: %s", p.Type)
 	}
