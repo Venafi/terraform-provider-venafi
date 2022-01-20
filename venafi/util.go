@@ -149,7 +149,7 @@ func getConnection(meta interface{}) (endpoint.Connector, error) {
 		log.Printf(messageVenafiPingFailed + err.Error())
 		return nil, err
 	}
-	log.Println(messageVenafiPingSucessfull)
+	log.Println(messageVenafiPingSucessful)
 
 	return cl, nil
 }

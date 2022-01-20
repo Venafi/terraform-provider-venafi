@@ -47,7 +47,7 @@ output "ca_public_key"{
 	value = venafi_ssh_config.test1.ca_public_key
 }
 output "principals"{
-	value = venafi_ssh_config.test1.principal
+	value = venafi_ssh_config.test1.principals
 }`
 	tppSshConfigResourceTest2 = `
 %s
@@ -81,32 +81,6 @@ func TestSshConfig(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					return nil
-				},
-				ExpectNonEmptyPlan: true,
-			},
-		},
-	})
-}
-
-func TestSshCerConfigWithoutPrincipals(t *testing.T) {
-	t.Log("Testing getting ssh config that returns the CA Public Key without principals from TPP")
-	data := getTestConfigData()
-	resourceName := "test2"
-
-	config := fmt.Sprintf(tppSshConfigResourceTest2, tokenSshConfigProvWihoutAccessToken, data.template)
-	t.Logf("Testing SSH config with config:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkSshCaPubKey(t, &data, s)
-					if err != nil {
-						return err
-					}
-					r.TestCheckResourceAttr(fmt.Sprintf("venafi_ssh_config[%s]", resourceName), "principal", "")
 					return nil
 				},
 				ExpectNonEmptyPlan: true,

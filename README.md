@@ -297,7 +297,7 @@ using the
 
 1. Declare the Venafi provider and specify the connection and authentication settings as described in the previous sections.
 
-   >:pushpin: **NOTE**: For Trust Protection Platform, the access_token assigned to the venafi provider must have the ssh:manage scope in order to create SSH certificates.
+   >:pushpin: **NOTE**: For Trust Protection Platform, the access_token assigned to the Venafi provider must have the ssh:manage scope in order to create SSH certificates.
 
    **Trust Protection Platform**:
 
@@ -312,25 +312,25 @@ using the
 2. Create a resource `venafi_ssh_certificate` that will generate a new key pair and
    enroll the ssh certificate needed by a remote host:
 
-    ```
-    resource "venafi_ssh_certificate" "remote-host" {
-      key_id = "my_remote"
-      template = "devops-terraform"
-      public_key_method = "service"
-      source_address = ["test.com"]
-      key_passphrase = "abcd"
-      extension = ["login@github.com:alice@github.com"]
-      valid_hours = 4
-    }
-    ```
+   ```
+   resource "venafi_ssh_certificate" "remote-host" {
+     key_id = "my_remote"
+     template = "devops-terraform"
+     public_key_method = "service"
+     source_address = ["test.com"]
+     key_passphrase = "abcd"
+     extension = ["login@github.com:alice@github.com"]
+     valid_hours = 4
+   }
+   ```
 
-   The `venafi_ssh_certificate` resource has the following options:
+   The `venafi_ssh_certificate` resource has the following options, which only `key_id` and `template` are required:
 
    | Property            | Type          |  Description                                                                      | Default   |
    | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
    |`key_id`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The identifier of the requested certificate|`none`|
    |`template`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The certificate issuing template|`none`|
-   |`key_passphrase` (optional)|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|Passphrase for encrypting the private key|`none`|
+   |`key_passphrase`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|Passphrase for encrypting the private key|`none`|
    |`folder`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The DN of the policy folder where the certificate object will be created. It will overwrite the default folder set at the template |`none`|
    |`force_command`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The requested force command|`none`|
    |`key_size`|[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|The key size bits, they will be used for creating keypair|`3072`|
@@ -338,11 +338,35 @@ using the
    |`valid_hours`|[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|How much time the requester wants to have the certificate valid, the format is hours|`none`|
    |`object_name`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The friendly name for the certificate object. If not specified, the value of the `key_id` is used.|`none`|
    |`public_key`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The path of the public key that will be used to generate the certificate if `public_key_method` set to `file`|`none`|
-   |`public_key_method` (optional) |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | If the public key will be: `local` or `service` generated or `file` provided|`local`|
-   |`principal`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested principals|`none`|
+   |`public_key_method`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | If the public key will be: `local` or `service` generated or `file` provided|`local`|
+   |`principal` |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|**[DEPRECATED]** This will be removed in the future. Use `principals` instead. The requested principals|`none`|
+   |`principals`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested principals|`none`|
    |`source_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested source addresses as list of IP/CIDR|`none`|
    |`destination_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used for authentication. Applicable for client certificates and is used for reporting/auditing only.|`none`|
    |`extension`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested certificate extensions|`none`|
+
+3. Create a resource `venafi_ssh_config` that will hold configuration needed by a remote host:
+
+   ```
+   resource "venafi_ssh_config" "cit" {
+     template = "devops-terraform-cit"
+   }
+   ```   
+
+   The `venafi_ssh_config` resource has the following option, which is required when obtaining configuration from the template:
+
+   | Property            | Type          |  Description                                                                      | Default   |
+   | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
+   |`template`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The certificate issuing template|`none`|
+
+    In addition, the following attributes are exported:
+
+   | Property            | Type          |  Description                                                                      |
+   | ------------------- | ------------- | --------------------------------------------------------------------------------- |
+   |`ca_public_key`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The template's CA PublicKey|
+   |`principals`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested principals|
+
+
 
 ## License
 

@@ -102,6 +102,16 @@ func resourceVenafiSshCertificate() *schema.Resource {
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
+				ConflictsWith: []string{"principals"},
+				Deprecated: "This will be removed in the future. Use \"principals\" instead",
+			},
+			"principals": &schema.Schema{
+				Type:        schema.TypeList,
+				Description: "The requested principals.",
+				ForceNew:    true,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				ConflictsWith: []string{"principal"},
 			},
 			"source_address": &schema.Schema{
 				Type:        schema.TypeList,

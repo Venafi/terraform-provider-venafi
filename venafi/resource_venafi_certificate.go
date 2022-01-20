@@ -167,7 +167,7 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 		log.Printf(messageVenafiPingFailed + err.Error())
 		return err
 	}
-	log.Println(messageVenafiPingSucessfull)
+	log.Println(messageVenafiPingSucessful)
 
 	err = enrollVenafiCertificate(d, cl)
 	if err != nil {
