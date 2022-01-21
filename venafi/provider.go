@@ -12,7 +12,7 @@ import (
 
 const (
 	messageVenafiPingFailed       = "Failed to ping Venafi endpoint: "
-	messageVenafiPingSucessful   = "Venafi ping sucessful"
+	messageVenafiPingSucessful    = "Venafi ping sucessful"
 	messageVenafiClientInitFailed = "Failed to initialize Venafi client: "
 	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer: "
 	messageUseDevMode             = "Using dev mode to issue certificate"
