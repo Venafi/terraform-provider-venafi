@@ -149,7 +149,7 @@ func getConnection(meta interface{}) (endpoint.Connector, error) {
 		log.Printf(messageVenafiPingFailed + err.Error())
 		return nil, err
 	}
-	log.Println(messageVenafiPingSucessful)
+	log.Println(messageVenafiPingSuccessful)
 
 	return cl, nil
 }
@@ -179,6 +179,9 @@ func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {
 	}
 	if objectName, ok := d.Get("object_name").(string); ok {
 		req.ObjectName = objectName
+	}
+	if principals, ok := d.GetOk("principals"); ok {
+		req.Principals = getStringList(principals)
 	}
 	if principal, ok := d.GetOk("principal"); ok {
 		req.Principals = getStringList(principal)
