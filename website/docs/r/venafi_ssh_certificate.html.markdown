@@ -50,7 +50,9 @@ The following arguments are supported:
 
 * `public_key_method` - (Optional, string) Specifies whether the public key will be "local" (default), "file" or "service" generated.
 
-* `principal` - (Optional, set of strings) A list of user names for whom the requested certificate will be valid.
+* `principal` [DEPRECATED] - (Optional, set of strings) Use "principals" instead. A list of user names for whom the requested certificate will be valid.
+
+* `principals` - (Optional, set of strings) A list of user names for whom the requested certificate will be valid.
 
 * `source_address` - (Optional, set of strings) A list of one or more valid IP or CIDR addresses that can use the SSH certificate.
 
