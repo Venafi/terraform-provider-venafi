@@ -36,6 +36,9 @@ func resourceVenafiSshConfig() *schema.Resource {
 
 func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) error {
 	cl, err := getConnection(meta)
+	if err != nil {
+		return err
+	}
 	template := d.Get("template").(string)
 	req := &certificate.SshCaTemplateRequest{}
 	req.Template = template
@@ -74,6 +77,10 @@ func resourceVenafiSshConfigExists(d *schema.ResourceData, meta interface{}) (bo
 	}
 
 	principalsUntyped, ok := d.GetOk("principals")
+	if !ok {
+		return false, nil
+	}
+
 	principals, ok := principalsUntyped.([]interface{})
 	if !ok {
 		return false, nil
