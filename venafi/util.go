@@ -91,6 +91,7 @@ type testData struct {
 	publicKeyMethod      string
 	sourceAddress        string
 	validityPeriod       string
+	principals           string
 }
 
 func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
