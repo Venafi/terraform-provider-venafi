@@ -49,15 +49,6 @@ output "ca_public_key"{
 output "principals"{
 	value = venafi_ssh_config.test1.principals
 }`
-	tppSshConfigResourceTest2 = `
-%s
-resource "venafi_ssh_config" "test2" {
-	provider = "venafi"
-	template="%s"
-}
-output "ca_public_key"{
-	value = venafi_ssh_config.test2.ca_public_key
-}`
 )
 
 func TestSshConfig(t *testing.T) {
