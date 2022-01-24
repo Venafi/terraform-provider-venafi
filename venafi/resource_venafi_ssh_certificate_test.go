@@ -60,7 +60,7 @@ output "private_key"{
 output "principals"{
 	value = venafi_ssh_certificate.test1.principal
 }`
-	tppSshCertResourceTest2 = `
+	tppSshCertResourceTestNewAttrPrincipals = `
 %s
 resource "venafi_ssh_certificate" "test2" {
 	provider = "venafi"
@@ -96,6 +96,7 @@ func TestSshCert(t *testing.T) {
 	data := getTestData()
 	data.publicKeyMethod = "service"
 
+	// data.principals only holds the values for principals, actually we are testing "principal" attribute defined at the resource.
 	config := fmt.Sprintf(tppSshCertResourceTest, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -122,7 +123,7 @@ func TestSshCertNewAttrPrincipals(t *testing.T) {
 	data := getTestData()
 	data.publicKeyMethod = "service"
 
-	config := fmt.Sprintf(tppSshCertResourceTest2, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
+	config := fmt.Sprintf(tppSshCertResourceTestNewAttrPrincipals, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -142,12 +143,13 @@ func TestSshCertNewAttrPrincipals(t *testing.T) {
 	})
 }
 
-func TestSshCertLocalKP(t *testing.T) {
+func TestSshCertLocalPublicKey(t *testing.T) {
 	t.Log("Testing creating ssh certificate")
 
 	data := getTestData()
 	data.publicKeyMethod = "local"
 
+	// data.principals only holds the values for principals, actually we are testing "principal" attribute defined at the resource.
 	config := fmt.Sprintf(tppSshCertResourceTest, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -168,13 +170,13 @@ func TestSshCertLocalKP(t *testing.T) {
 	})
 }
 
-func TestSshCertLocalKPNewAttrPrincipals(t *testing.T) {
+func TestSshCertLocalPublicKeyNewAttrPrincipals(t *testing.T) {
 	t.Log("Testing creating ssh certificate with new attribute for principals")
 
 	data := getTestData()
 	data.publicKeyMethod = "local"
 
-	config := fmt.Sprintf(tppSshCertResourceTest2, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
+	config := fmt.Sprintf(tppSshCertResourceTestNewAttrPrincipals, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
