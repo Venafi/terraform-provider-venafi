@@ -1,11 +1,8 @@
 package venafi
 
 import (
-	"fmt"
-	"github.com/Venafi/vcert/v4"
 	"github.com/Venafi/vcert/v4/pkg/certificate"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
 )
 
 func resourceVenafiSshConfig() *schema.Resource {
@@ -27,7 +24,7 @@ func resourceVenafiSshConfig() *schema.Resource {
 				Description: "The template's CA PublicKey",
 				Computed:    true,
 			},
-			"principal": &schema.Schema{
+			"principals": &schema.Schema{
 				Type:        schema.TypeList,
 				Description: "The requested principals.",
 				Computed:    true,
@@ -38,28 +35,10 @@ func resourceVenafiSshConfig() *schema.Resource {
 }
 
 func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) error {
-	cfg := meta.(*vcert.Config)
-	cl, err := vcert.NewClient(cfg)
+	cl, err := getConnection(meta)
 	if err != nil {
-		strErr := (err).Error()
-		log.Printf("strErr: %s", strErr)
-		if strErr != "vcert error: your data contains problems: auth error: failed to authenticate: missing credentials" {
-			log.Printf("Unable to build connector for %s: %s", cl.GetType(), err)
-		} else if strErr != "vcert error: your data contains problems: auth error: failed to authenticate: can't determine valid credentials set" {
-			log.Printf("Unable to build connector for %s: %s", cl.GetType(), err)
-		} else {
-			log.Printf("Successfully built connector for %s", cl.GetType())
-		}
-	} else {
-		log.Printf("Successfully built connector for %s", cl.GetType())
+		return err
 	}
-	err = cl.Ping()
-	if err != nil {
-		log.Printf(messageVenafiPingFailed + err.Error())
-		return fmt.Errorf("%s", messageVenafiPingFailed+err.Error())
-	}
-	log.Println(messageVenafiPingSucessfull)
-
 	template := d.Get("template").(string)
 	req := &certificate.SshCaTemplateRequest{}
 	req.Template = template
@@ -77,7 +56,7 @@ func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if conf.Principals != nil {
-		err = d.Set("principal", conf.Principals)
+		err = d.Set("principals", conf.Principals)
 		if err != nil {
 			return err
 		}
@@ -95,6 +74,30 @@ func resourceVenafiSshConfigExists(d *schema.ResourceData, meta interface{}) (bo
 	caPubKeyStr := caPubKeyUntyped.(string)
 	if caPubKeyStr == "" {
 		return false, nil
+	}
+
+	principalsUntyped, ok := d.GetOk("principals")
+	if !ok {
+		return false, nil
+	}
+
+	principals, ok := principalsUntyped.([]interface{})
+	if !ok {
+		return false, nil
+	}
+
+	if len(principals) <= 0 {
+		return false, nil
+	}
+
+	for _, principal := range principals {
+		principalString, ok := principal.(string)
+		if !ok {
+			return false, nil
+		}
+		if principalString == "" {
+			return false, nil
+		}
 	}
 
 	return true, nil
