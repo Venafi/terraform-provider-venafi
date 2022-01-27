@@ -14,7 +14,7 @@ Later in this example, you'll generate a certificate for `demo-iis.venafi.exampl
 
 > **NOTE** Since there is no native or third-party support for Microsoft IIS with Terraform, we'll be using Terraform's provisioners and PowerShell to configure IIS so bear in mind that means we won't be managing data using Terraform's state.  More details in the next section.
 
-![Using Venafi with Terraform to obtain and provision certificates for IIS](diagram_venafi_terraform_iis.png)
+![Using Venafi with Terraform to obtain and provision certificates for IIS](scenario.png)
 
 ### Why Provisioners?
 
