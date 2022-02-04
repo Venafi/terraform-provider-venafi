@@ -69,6 +69,8 @@ The following arguments are supported:
 * `expiration_window` - (Optional, integer) Number of hours before certificate expiry
   to request a new certificate.
 
+* `csr_origin` - (Optional, string) Whether key-pair generation will be `local` or `service` generated. Default is `local`.
+
 ## Attributes Reference
 
 The following attributes are exported:
