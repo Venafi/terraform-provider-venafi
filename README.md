@@ -142,7 +142,7 @@ using the
    }
    ```
 
-1. Specify the connection and authentication settings for the `venafi` provider:
+2. Specify the connection and authentication settings for the `venafi` provider:
 
    **Trust Protection Platform**:
 
@@ -183,7 +183,7 @@ using the
    Service since that variable is used by the provider to decide which Venafi product
    to use.
 
-1. Create a `venafi_certificate` resource that will generate a new key pair and
+3. Create a `venafi_certificate` resource that will generate a new key pair and
    enroll the certificate needed by a "tls_server" application:
 
    ```text
@@ -216,6 +216,7 @@ using the
    | `valid_days` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Desired number of days for which the new certificate will be valid | `none` |
    | `issuer_hint` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Used with `valid_days` to indicate the target issuer when using Trust Protection Platform and the CA is DigiCert, Entrust, or Microsoft.<br/>Example: `issuer_hint = "Microsoft"` | `none` |
    | `expiration_window` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of hours before certificate expiry to request a new certificate            | 168    |
+   | `csr_origin` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Option to decide whether key-pair generation will be `local` or `service` generated | `local` |
 
    >:pushpin: **NOTE**: The `venafi_certificate` resource handles certificate
    renewals as long as a `terraform apply` is done within the `expiration_window`
@@ -232,7 +233,7 @@ using the
    | `certificate`     | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | End-entity certificate in PEM format |
    | `pkcs12`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Base64-encoded PKCS#12 keystore encrypted using `key_password`, if specified. Useful when working with resources like [azurerm_key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html). Base64 decode to obtain file bytes. |
 
-1. For verification purposes, output the certificate, private key, and
+4. For verification purposes, output the certificate, private key, and
    chain in PEM format and as a PKCS#12 keystore (base64-encoded):
 
    ```text
@@ -254,7 +255,7 @@ using the
    }
    ```
 
-1. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
+5. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
    `terraform show` from the directory containing the configuration file.
 
 ## Certificate Policy Management
