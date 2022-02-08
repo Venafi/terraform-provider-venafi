@@ -1,3 +1,7 @@
+## 0.14.0 (February 8, 2022)
+
+Added support for CSR service generated and retrieval of SSH configuration from template.
+
 ## 0.13.0 (September 10, 2021)
 
 Added venafi_ssh_certificate resource that enables SSH certificate creation with Trust Protection Platform.
