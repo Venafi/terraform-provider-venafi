@@ -150,6 +150,9 @@ func resourceVenafiCertificate() *schema.Resource {
 				Description: "Indicate the target issuer to enable valid days with Venafi Platform; DigiCert, Entrust, and Microsoft are supported values.",
 			},
 		},
+		Importer: &schema.ResourceImporter{
+			State: resourceVenafiCertificateImport,
+		},
 	}
 }
 
@@ -566,4 +569,80 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 	}
 
 	return bytes, nil
+}
+func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+
+	id := d.Id()
+
+	if id == "" {
+		return nil, fmt.Errorf("the id is empty")
+	}
+
+	// splitting values, [0].-id, [1].- key-password
+	parameters := strings.Split(id, ",")
+
+	if len(parameters) < 2{
+			return nil, fmt.Errorf("there are missing attributes")
+	}
+
+	cl, err := getConnection(meta)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := meta.(*vcert.Config)
+	zone := cfg.Zone
+
+	pickupReq := fillRetrieveRequest(d, zone, parameters[0])
+	pickupReq.KeyPassword =  parameters[1]
+
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		pickupReq.FetchPrivateKey = true
+	}
+
+
+	data, err := cl.RetrieveCertificate(pickupReq)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = fillSchemaProperties(d, data, parameters[1])
+
+	if err != nil {
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
+}
+
+func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollection, p string) error {
+	err := d.Set("certificate", data.Certificate)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("private_key_pem", data.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("key_password", p)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func fillRetrieveRequest(d *schema.ResourceData, z, id string) *certificate.Request {
+	pickupReq := &certificate.Request{}
+
+	pickupReq.Timeout = 180 * time.Second
+
+	pickupId := fmt.Sprintf("%s\\%s", z, id)
+	pickupReq.PickupID = pickupId
+
+	return pickupReq
+
 }
