@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/Venafi/vcert/v4/pkg/endpoint"
+	"github.com/Venafi/vcert/v4/pkg/policy"
 	"github.com/Venafi/vcert/v4/pkg/util"
 	"net"
 	"software.sslmate.com/src/go-pkcs12"
@@ -578,11 +579,24 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		return nil, fmt.Errorf("the id is empty")
 	}
 
-	// splitting values, [0].-id, [1].- key-password
 	parameters := strings.Split(id, ",")
 
-	if len(parameters) < 2{
-			return nil, fmt.Errorf("there are missing attributes")
+	if len(parameters) < 2 {
+		return nil, fmt.Errorf("there are missing attributes")
+	}
+	pickupID := parameters[0]
+	keyPassword := parameters[1]
+	if pickupID == "" {
+		return nil, fmt.Errorf("empty pickupID")
+	}
+	if keyPassword == "" {
+		return nil, fmt.Errorf("empty key-password")
+	}
+
+	cfg := meta.(*vcert.Config)
+	zone := cfg.Zone
+	if zone == "" {
+		return nil, fmt.Errorf("zone cannot be empty when importing certificate")
 	}
 
 	cl, err := getConnection(meta)
@@ -591,16 +605,8 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		return nil, err
 	}
 
-	cfg := meta.(*vcert.Config)
-	zone := cfg.Zone
-
-	pickupReq := fillRetrieveRequest(d, zone, parameters[0])
-	pickupReq.KeyPassword =  parameters[1]
-
-	if cl.GetType() == endpoint.ConnectorTypeTPP {
-		pickupReq.FetchPrivateKey = true
-	}
-
+	pickupReq := fillRetrieveRequest(zone, pickupID, cl.GetType())
+	pickupReq.KeyPassword = keyPassword
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 
@@ -608,7 +614,7 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		return nil, err
 	}
 
-	err = fillSchemaProperties(d, data, parameters[1])
+	err = fillSchemaProperties(d, data, pickupID, keyPassword, cl.GetType())
 
 	if err != nil {
 		return nil, err
@@ -617,7 +623,7 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 	return []*schema.ResourceData{d}, nil
 }
 
-func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollection, p string) error {
+func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollection, id string, p string, c endpoint.ConnectorType) error {
 	err := d.Set("certificate", data.Certificate)
 	if err != nil {
 		return err
@@ -632,17 +638,112 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 	if err != nil {
 		return err
 	}
+
+	err = d.Set("csr_origin", "service")
+	if err != nil {
+		return err
+	}
+
+	if err = d.Set("chain", strings.Join(data.Chain, "")); err != nil {
+		return fmt.Errorf("error setting chain: %s", err)
+	}
+
+	block, _ := pem.Decode([]byte(data.Certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+
+	err = d.Set("common_name", cert.Subject.CommonName)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("san_email", cert.EmailAddresses)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("san_dns", cert.DNSNames)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("algorithm", cert.PublicKeyAlgorithm.String())
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("certificate_dn", id)
+	if err != nil {
+		return err
+	}
+
+	privKey := data.PrivateKey
+	if c == endpoint.ConnectorTypeCloud {
+		privKey, err = util.DecryptPkcs8PrivateKey(data.PrivateKey, p)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Our connector is for TPP
+		ipAddresses := IPArrayToStringArray(cert.IPAddresses)
+		err = d.Set("san_ip", ipAddresses)
+		if err != nil {
+			return err
+		}
+	}
+
+	certPkcs12, err := AsPKCS12(data.Certificate, privKey, data.Chain, p)
+	if err != nil {
+		return err
+	}
+	s := base64.StdEncoding.EncodeToString(certPkcs12)
+
+	err = d.Set("pkcs12", s)
+	if err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
-func fillRetrieveRequest(d *schema.ResourceData, z, id string) *certificate.Request {
+func fillRetrieveRequest(z, id string, c endpoint.ConnectorType) *certificate.Request {
 	pickupReq := &certificate.Request{}
-
+	pickupReq.FetchPrivateKey = true
 	pickupReq.Timeout = 180 * time.Second
 
-	pickupId := fmt.Sprintf("%s\\%s", z, id)
-	pickupReq.PickupID = pickupId
+	if c == endpoint.ConnectorTypeTPP {
+		zone := buildAbsoluteZoneTPP(z)
+		pickupId := fmt.Sprintf("%s\\%s", zone, id)
+		pickupReq.PickupID = pickupId
+	} else {
+		// We are building retrieveRequest for VaaS (Venafi Cloud)
+		pickupReq.PickupID = id
+	}
 
 	return pickupReq
+}
 
+func buildAbsoluteZoneTPP(zone string) string {
+	//Add leading forward slash e.g. Policy1\\Policy2 -> \\Policy1\\Policy2
+	if !strings.HasPrefix(zone, util.PathSeparator) {
+		zone = util.PathSeparator + zone
+	}
+
+	//Add leading ved-policy prefix e.g. \\Policy1\\Policy2 -> \\VED\\Policy\\Policy1\\Policy2
+	if !strings.HasPrefix(zone, policy.RootPath) {
+		zone = policy.RootPath + zone
+	}
+
+	return zone
+}
+
+func IPArrayToStringArray(ipArray []net.IP) []string {
+	s := make([]string, 0)
+	for _, ip := range ipArray {
+		s = append(s, ip.String())
+	}
+	return s
 }
