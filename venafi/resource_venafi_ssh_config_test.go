@@ -61,7 +61,7 @@ func TestSshConfig(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkSshCaPubKey(t, &data, s)

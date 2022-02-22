@@ -82,7 +82,7 @@ type Snapshot struct {
 func NewEmptySnapshot() *Snapshot {
 	return &Snapshot{
 		Modules: map[string]*SnapshotModule{
-			"": &SnapshotModule{
+			"": {
 				Files: map[string][]byte{},
 			},
 		},

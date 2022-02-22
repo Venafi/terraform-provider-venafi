@@ -282,7 +282,7 @@ func TestDevSignedCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -307,7 +307,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -335,7 +335,7 @@ func TestCloudSignedCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -346,7 +346,7 @@ func TestCloudSignedCert(t *testing.T) {
 
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing Cloud certificate second run")
@@ -385,7 +385,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -397,7 +397,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 				},
 				ExpectNonEmptyPlan: true,
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
@@ -439,7 +439,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
@@ -447,7 +447,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				},
 				ExpectNonEmptyPlan: true,
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
@@ -487,14 +487,14 @@ func TestTPPSignedCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -533,14 +533,14 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -581,7 +581,7 @@ func TestTokenSignedCertUpdate(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
@@ -589,7 +589,7 @@ func TestTokenSignedCertUpdate(t *testing.T) {
 				},
 				ExpectNonEmptyPlan: true,
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP Token certificate update")
@@ -629,14 +629,14 @@ func TestTokenSignedCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -675,14 +675,14 @@ func TestTokenECDSASignedCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -723,14 +723,14 @@ func TestSignedCertCustomFields(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -772,14 +772,14 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
 					return checkCertValidDays(t, &data, s)
 				},
 			},
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 
@@ -978,7 +978,7 @@ func TestTppCsrService(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
@@ -1003,7 +1003,7 @@ func TestCloudCsrService(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkCsrServiceStandardCert(t, &data, s)

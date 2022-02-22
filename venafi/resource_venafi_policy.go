@@ -18,13 +18,13 @@ func resourceVenafiPolicy() *schema.Resource {
 		Exists: resourceVenafiPolicyExists,
 
 		Schema: map[string]*schema.Schema{
-			"zone": &schema.Schema{
+			"zone": {
 				Type:        schema.TypeString,
 				Description: "zone name",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"policy_specification": &schema.Schema{
+			"policy_specification": {
 				Type:        schema.TypeString,
 				Description: "policy specification",
 				ForceNew:    true,

@@ -96,7 +96,7 @@ func TestCreateCloudEmptyPolicy(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS empty zone: ", data.zone)
@@ -118,7 +118,7 @@ func TestCreateCloudPolicy(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS zone: ", data.zone)
@@ -304,7 +304,7 @@ func TestCreateTppEmptyPolicy(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating empty zone: ", data.zone)
@@ -328,7 +328,7 @@ func TestCreateTppPolicy(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating TPP zone: ", data.zone)

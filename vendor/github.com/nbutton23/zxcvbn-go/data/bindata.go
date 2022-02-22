@@ -382,17 +382,17 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"data": &bintree{nil, map[string]*bintree{
-		"Dvorak.json":      &bintree{dataDvorakJson, map[string]*bintree{}},
-		"English.json":     &bintree{dataEnglishJson, map[string]*bintree{}},
-		"FemaleNames.json": &bintree{dataFemalenamesJson, map[string]*bintree{}},
-		"Keypad.json":      &bintree{dataKeypadJson, map[string]*bintree{}},
-		"L33t.json":        &bintree{dataL33tJson, map[string]*bintree{}},
-		"MacKeypad.json":   &bintree{dataMackeypadJson, map[string]*bintree{}},
-		"MaleNames.json":   &bintree{dataMalenamesJson, map[string]*bintree{}},
-		"Passwords.json":   &bintree{dataPasswordsJson, map[string]*bintree{}},
-		"Qwerty.json":      &bintree{dataQwertyJson, map[string]*bintree{}},
-		"Surnames.json":    &bintree{dataSurnamesJson, map[string]*bintree{}},
+	"data": {nil, map[string]*bintree{
+		"Dvorak.json":      {dataDvorakJson, map[string]*bintree{}},
+		"English.json":     {dataEnglishJson, map[string]*bintree{}},
+		"FemaleNames.json": {dataFemalenamesJson, map[string]*bintree{}},
+		"Keypad.json":      {dataKeypadJson, map[string]*bintree{}},
+		"L33t.json":        {dataL33tJson, map[string]*bintree{}},
+		"MacKeypad.json":   {dataMackeypadJson, map[string]*bintree{}},
+		"MaleNames.json":   {dataMalenamesJson, map[string]*bintree{}},
+		"Passwords.json":   {dataPasswordsJson, map[string]*bintree{}},
+		"Qwerty.json":      {dataQwertyJson, map[string]*bintree{}},
+		"Surnames.json":    {dataSurnamesJson, map[string]*bintree{}},
 	}},
 }}
 

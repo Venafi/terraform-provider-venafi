@@ -13,18 +13,18 @@ func resourceVenafiSshConfig() *schema.Resource {
 		Exists: resourceVenafiSshConfigExists,
 
 		Schema: map[string]*schema.Schema{
-			"template": &schema.Schema{
+			"template": {
 				Type:        schema.TypeString,
 				Description: "The certificate issuing template",
 				ForceNew:    true,
 				Required:    true,
 			},
-			"ca_public_key": &schema.Schema{
+			"ca_public_key": {
 				Type:        schema.TypeString,
 				Description: "The template's CA PublicKey",
 				Computed:    true,
 			},
-			"principals": &schema.Schema{
+			"principals": {
 				Type:        schema.TypeList,
 				Description: "The requested principals.",
 				Computed:    true,

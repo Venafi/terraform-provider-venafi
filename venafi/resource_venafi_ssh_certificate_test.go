@@ -102,7 +102,7 @@ func TestSshCert(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkSshCertificate(t, &data, s)
@@ -128,7 +128,7 @@ func TestSshCertNewAttrPrincipals(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkSshCertificate(t, &data, s)
@@ -155,7 +155,7 @@ func TestSshCertLocalPublicKey(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkSshCertificate(t, &data, s)
@@ -181,7 +181,7 @@ func TestSshCertLocalPublicKeyNewAttrPrincipals(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkSshCertificate(t, &data, s)

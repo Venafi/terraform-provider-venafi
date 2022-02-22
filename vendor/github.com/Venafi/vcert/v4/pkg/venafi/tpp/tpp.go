@@ -282,12 +282,25 @@ type metadataSetResponse struct {
 	Locked bool `json:",omitempty"`
 	Result int  `json:",omitempty"`
 }
+
+type DNToGUIDResponse struct {
+	ClassName        string `json:"ClassName"`
+	GUID             string `json:"GUID"`
+	HierarchicalGUID string `json:"HierarchicalGUID"`
+	Result           int    `json:"Result"`
+	Revision         int    `json:"Revision"`
+}
+
+type DNToGUIDRequest struct {
+	ObjectDN string `json:"ObjectDN"`
+}
 type systemStatusVersionResponse string
 
 type urlResource string
 
 const (
 	urlResourceAuthorize              urlResource = "vedsdk/authorize/"
+	urlResourceAuthorizeIsAuthServer  urlResource = "vedauth/authorize/isAuthServer"
 	urlResourceAuthorizeCertificate   urlResource = "vedauth/authorize/certificate"
 	urlResourceAuthorizeOAuth         urlResource = "vedauth/authorize/oauth"
 	urlResourceAuthorizeVerify        urlResource = "vedauth/authorize/verify"
@@ -320,6 +333,8 @@ const (
 	urlResourceSshCertRet             urlResource = "vedsdk/SSHCertificates/retrieve"
 	urlResourceSshCAPubKey            urlResource = "vedsdk/SSHCertificates/Template/Retrieve/PublicKeyData"
 	urlResourceSshCADetails           urlResource = "vedsdk/SSHCertificates/Template/Retrieve"
+	urlResourceSshTemplateAvaliable   urlResource = "vedsdk/SSHCertificates/Template/Available"
+	urlResourceDNToGUID               urlResource = "vedsdk/Config/DnToGuid"
 )
 
 const (

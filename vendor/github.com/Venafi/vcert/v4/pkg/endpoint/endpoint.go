@@ -61,9 +61,9 @@ func (t ConnectorType) String() string {
 	case ConnectorTypeFake:
 		return "Fake Endpoint"
 	case ConnectorTypeCloud:
-		return "Venafi Cloud"
+		return "Venafi as a Service"
 	case ConnectorTypeTPP:
-		return "TPP"
+		return "Trust Protection Platform"
 	default:
 		return fmt.Sprintf("unexpected connector type: %d", t)
 	}
@@ -102,6 +102,9 @@ type Connector interface {
 	RequestSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertificateObject, err error)
 	RetrieveSSHCertificate(req *certificate.SshCertRequest) (response *certificate.SshCertificateObject, err error)
 	RetrieveSshConfig(ca *certificate.SshCaTemplateRequest) (*certificate.SshConfig, error)
+	SearchCertificates(req *certificate.SearchRequest) (*certificate.CertSearchResponse, error)
+	RetrieveAvailableSSHTemplates() ([]certificate.SshAvaliableTemplate, error)
+	RetrieveCertificateMetaData(dn string) (*certificate.CertificateMetaData, error)
 }
 
 type Filter struct {
