@@ -261,7 +261,7 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) error {
-	time.Sleep(10 * time.Second)
+
 	req := &certificate.Request{
 		CsrOrigin:    certificate.LocalGeneratedCSR,
 		CustomFields: []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: utilityName}},
@@ -509,9 +509,6 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		return fmt.Errorf("error setting pkcs12: %s", err)
 	}
 
-	//if origin != csrService {
-	//	return d.Set("private_key_pem", req.PrivateKey)
-	//}
 	return d.Set("private_key_pem", pcc.PrivateKey)
 }
 
@@ -627,13 +624,12 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 	var certMetadata *certificate.CertificateMetaData
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
 		certMetadata, err = cl.RetrieveCertificateMetaData(pickupID)
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = fillSchemaProperties(d, data, certMetadata, pickupID, keyPassword, cl.GetType())
-
 	if err != nil {
 		return nil, err
 	}

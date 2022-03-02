@@ -341,16 +341,13 @@ output "cert_id" {
 }`
 )
 
-const (
-	issuer_hint        = "MICROSOFT"
-	valid_days         = 30
-	vaas_id_path       = "/test_files/vaas_id"
-	custom_fields_path = "/test_files/custom_fields.json"
-)
-
 type KeyFormat int
 
 const (
+	issuer_hint                    = "MICROSOFT"
+	valid_days                     = 30
+	vaas_id_path                   = "/test_files/vaas_id"
+	custom_fields_path             = "/test_files/custom_fields.json"
 	expectedPrivKeyPKCS1 KeyFormat = iota
 	expectedPrivKeyPKCS8
 )
