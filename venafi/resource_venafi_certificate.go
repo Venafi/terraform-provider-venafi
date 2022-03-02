@@ -164,7 +164,6 @@ func resourceVenafiCertificate() *schema.Resource {
 
 func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("Creating certificate\n")
-	//venafi := meta.(*VenafiClient)
 	cfg := meta.(*vcert.Config)
 	cl, err := vcert.NewClient(cfg)
 	if err != nil {
@@ -203,27 +202,27 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	//Checking Private Key
 	var pk []byte
 	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-		origin := d.Get("csr_origin")
-
 		cfg := meta.(*vcert.Config)
 		_, err := vcert.NewClient(cfg)
 		if err != nil {
 			log.Printf(messageVenafiClientInitFailed + err.Error())
 			return false, err
 		}
-
-		if origin == csrService {
+		origin := d.Get("csr_origin")
+		keyType := d.Get("algorithm")
+		if origin != csrService && keyType == "ECDSA" {
+			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
+			if err != nil {
+				return false, fmt.Errorf("error getting key: %s", err)
+			}
+		} else {
 			keyStr, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
 			if err != nil {
 				return false, err
 			}
 			pk = []byte(keyStr)
-		} else {
-			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
-			if err != nil {
-				return false, fmt.Errorf("error getting key: %s", err)
-			}
 		}
+
 	} else {
 		return false, fmt.Errorf("error getting key")
 	}
@@ -262,6 +261,7 @@ func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) error {
+	time.Sleep(10 * time.Second)
 	req := &certificate.Request{
 		CsrOrigin:    certificate.LocalGeneratedCSR,
 		CustomFields: []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: utilityName}},
@@ -270,7 +270,6 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	origin := d.Get("csr_origin").(string)
 	if origin == csrService {
 		req.CsrOrigin = certificate.ServiceGeneratedCSR
-
 		if pass, ok := d.GetOk("key_password"); ok {
 			resolvedPass := pass.(string)
 			if strings.TrimSpace(resolvedPass) == "" {
@@ -295,17 +294,9 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	}
 
 	if keyType == "RSA" || len(keyType) == 0 {
-		err = d.Set("ecdsa_curve", nil)
-		if err != nil {
-			return err
-		}
 		req.KeyLength = d.Get("rsa_bits").(int)
 		req.KeyType = certificate.KeyTypeRSA
 	} else if keyType == "ECDSA" {
-		err = d.Set("rsa_bits", nil)
-		if err != nil {
-			return err
-		}
 		keyCurve := d.Get("ecdsa_curve").(string)
 		req.KeyType = certificate.KeyTypeECDSA
 		err = req.KeyCurve.Set(keyCurve)
@@ -497,9 +488,14 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	KeyPassword := d.Get("key_password").(string)
 
-	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
-	if err != nil {
-		return err
+	privKey := pcc.PrivateKey
+	// For RSA private keys for both local and service we are getting PKCS8 private keys, same applies
+	// for service ECDSA private keys, but when getting locally, we are getting PKCS1 formatted private keys
+	if !(origin != csrService && keyType == "ECDSA") {
+		privKey, err = util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
+		if err != nil {
+			return err
+		}
 	}
 
 	certPkcs12, err := AsPKCS12(pcc.Certificate, privKey, pcc.Chain, KeyPassword)
@@ -513,6 +509,9 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		return fmt.Errorf("error setting pkcs12: %s", err)
 	}
 
+	//if origin != csrService {
+	//	return d.Set("private_key_pem", req.PrivateKey)
+	//}
 	return d.Set("private_key_pem", pcc.PrivateKey)
 }
 
@@ -720,6 +719,10 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 		if err != nil {
 			return err
 		}
+		err = d.Set("ecdsa_curve", "P521")
+		if err != nil {
+			return err
+		}
 		err = d.Set("algorithm", "RSA")
 		if err != nil {
 			return err
@@ -731,6 +734,10 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 		}
 		keySize := strconv.Itoa(keyValue.Curve.Params().BitSize)
 		err = d.Set("ecdsa_curve", fmt.Sprintf("P%s", keySize))
+		if err != nil {
+			return err
+		}
+		err = d.Set("rsa_bits", 2048)
 		if err != nil {
 			return err
 		}
@@ -754,6 +761,15 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 		for _, customField := range customFields {
 			if customField.Type == "List" {
 				newCustomFields[customField.Name] = strings.Join(customField.Value, "|")
+			} else if customField.Type == "DateTime" {
+				dateFormatRFC3339 := customField.Value[0]
+				currentFormat, err := time.Parse(time.RFC3339, dateFormatRFC3339)
+				if err != nil {
+					return err
+				}
+				// Our date field at TPP currently only supports until minutes: yyyy-mm-dd HH:mm
+				newCustomFields[customField.Name] = currentFormat.Format("2006-01-02 15:04")
+
 			} else {
 				newCustomFields[customField.Name] = customField.Value[0]
 			}
