@@ -258,6 +258,43 @@ using the
 5. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
    `terraform show` from the directory containing the configuration file.
 
+### Importing
+
+The `venafi_certificate` resource supports the Terraform [import](https://www.terraform.io/docs/cli/import/index.html)
+method.
+
+The `import_id` is composed by an `id` which is different for each platform, a comma (,) and the `key-password`.
+
+The `id` for each platform is:
+
+**TPP:**
+
+The `common name` of the certificate, internally we built the `pickup_id` using the `zone` defined at the provider block.
+
+**VaaS:**
+
+The `pickup-id`.
+
+>:pushpin: **NOTE**: You can learn more about the `pickup-id` and pickup actions for TPP, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#certificate-retrieval-parameters), and for Vaas, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-CLOUD.md)
+```sh
+terraform import "venafi_certificate.<resource_name>" "<id>,<key-password>"
+```
+Example (assuming our resource name is `imported_certificate`):
+
+```hcl
+resource "venafi_certificate" "imported_certificate" {}
+```
+
+**TPP:**
+```sh
+terraform import "venafi_certificate.imported_certificate" "tpp.venafi.example,my_key_password"
+```
+
+**VaaS:**
+```sh
+terraform import "venafi_certificate.imported_certificate" "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,my_key_password"
+```
+
 ## Certificate Policy Management
 
 1. Declare that the Venafi Provider and specify the connection and
