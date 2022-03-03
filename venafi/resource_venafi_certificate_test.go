@@ -1200,6 +1200,7 @@ func TestImportCertificateTppPartCreate(t *testing.T) {
 }
 
 func TestImportCertificateTppPartImport(t *testing.T) {
+	// Important!: TestImportCertificateTppPartCreate must be run before this test to ensure proper import
 	name := "import"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
@@ -1225,7 +1226,7 @@ func TestImportCertificateTppPartImport(t *testing.T) {
 func TestImportCertificateTppPartCreateWithCustomFields(t *testing.T) {
 	data := getCertTppImportConfigWithCustomFields()
 	config := fmt.Sprintf(tppCsrServiceConfigWithCustomFields, tokenProvider, data.cn, data.dns_ns, data.private_key_password, data.custom_fields)
-	t.Logf("Creating TPP Token certificate with Service CSR generated and config to be be imported on next test:\n %s", config)
+	t.Logf("Creating TPP Token certificate with Service CSR generated and config with custom fields to be be imported on next test:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -1241,6 +1242,7 @@ func TestImportCertificateTppPartCreateWithCustomFields(t *testing.T) {
 }
 
 func TestImportCertificateTppPartImportWithCustomFields(t *testing.T) {
+	// Important!: TestImportCertificateTppPartCreateWithCustomFields must be run before this test to ensure proper import
 	data := getCertTppImportConfigWithCustomFields()
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
 	data.custom_fields = getCustomFields(cfEnvVarName)
@@ -1345,6 +1347,7 @@ func TestImportCertificateECDSATppPartCreate(t *testing.T) {
 }
 
 func TestImportCertificateECDSATppPartImport(t *testing.T) {
+	// Important!: TestImportCertificateECDSATppPartCreate must be run before this test to ensure proper import
 	name := "import.ecdsa"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportECDSA)
@@ -1394,6 +1397,7 @@ func TestImportCertificateCloudPartCreate(t *testing.T) {
 }
 
 func TestImportCertificateCloudPartImport(t *testing.T) {
+	// Important!: TestImportCertificateCloudPartCreate must be run before this test to ensure proper import
 	data := getCertCloudImportConfig()
 	vaasIdp, err := getVaasId()
 	if err != nil {
