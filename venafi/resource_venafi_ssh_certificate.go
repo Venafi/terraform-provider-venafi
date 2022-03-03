@@ -18,85 +18,85 @@ func resourceVenafiSshCertificate() *schema.Resource {
 		Exists: resourceVenafiSshCertExists,
 
 		Schema: map[string]*schema.Schema{
-			"key_id": {
+			"key_id": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "The identifier of the requested certificate",
 				ForceNew:    true,
 				Required:    true,
 			},
-			"template": {
+			"template": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "The certificate issuing template",
 				ForceNew:    true,
 				Required:    true,
 			},
-			"key_passphrase": {
+			"key_passphrase": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Passphrase for encrypting the private key",
 				ForceNew:    true,
 				Optional:    true,
 				Sensitive:   true,
 			},
-			"folder": {
+			"folder": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "The DN of the policy folder where the certificate object will be created",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"force_command": {
+			"force_command": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "The requested force command.",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"key_size": {
+			"key_size": &schema.Schema{
 				Type:        schema.TypeInt,
 				Description: "The key size bits, they will be used for creating keypair",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"windows": {
+			"windows": &schema.Schema{
 				Type:        schema.TypeBool,
 				Description: "If the line endings of service's private key will end on MS windows format",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"valid_hours": {
+			"valid_hours": &schema.Schema{
 				Type:        schema.TypeInt,
 				Description: "How much time the requester wants to have the certificate valid, the format is hours",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"object_name": {
+			"object_name": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "The friendly name for the certificate object.",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"public_key": {
+			"public_key": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Public key that will be used to generate the certificate",
 				Optional:    true,
 				ForceNew:    true,
 			},
-			"certificate": {
+			"certificate": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "The SSH Certificate",
 				Computed:    true,
 			},
-			"public_key_method": {
+			"public_key_method": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "If the public key will be: file provided or local, service generated",
 				Optional:    true,
 				Default:     "local",
 				ForceNew:    true,
 			},
-			"private_key": {
+			"private_key": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Private key",
 				Computed:    true,
 			},
-			"principal": {
+			"principal": &schema.Schema{
 				Type:          schema.TypeList,
 				Description:   "The requested principals.",
 				ForceNew:      true,
@@ -105,7 +105,7 @@ func resourceVenafiSshCertificate() *schema.Resource {
 				ConflictsWith: []string{"principals"},
 				Deprecated:    "This will be removed in the future. Use \"principals\" instead",
 			},
-			"principals": {
+			"principals": &schema.Schema{
 				Type:          schema.TypeList,
 				Description:   "The requested principals.",
 				ForceNew:      true,
@@ -113,53 +113,53 @@ func resourceVenafiSshCertificate() *schema.Resource {
 				Elem:          &schema.Schema{Type: schema.TypeString},
 				ConflictsWith: []string{"principal"},
 			},
-			"source_address": {
+			"source_address": &schema.Schema{
 				Type:        schema.TypeList,
 				Description: "The requested source addresses as list of IP/CIDR",
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"destination_address": {
+			"destination_address": &schema.Schema{
 				Type:        schema.TypeList,
 				Description: "The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used to authenticate to",
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"extension": {
+			"extension": &schema.Schema{
 				Type:        schema.TypeList,
 				Description: "The requested certificate extensions.",
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"certificate_type": {
+			"certificate_type": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Certificate type, server or client",
 				Computed:    true,
 			},
-			"public_key_fingerprint": {
+			"public_key_fingerprint": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Public key fingerprint SHA256",
 				Computed:    true,
 			},
-			"signing_ca": {
+			"signing_ca": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "CA fingerprint SHA256",
 				Computed:    true,
 			},
-			"serial": {
+			"serial": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Serial number",
 				Computed:    true,
 			},
-			"valid_from": {
+			"valid_from": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Valid from",
 				Computed:    true,
 			},
-			"valid_to": {
+			"valid_to": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Valid to",
 				Computed:    true,

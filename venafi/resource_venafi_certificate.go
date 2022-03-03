@@ -34,27 +34,27 @@ func resourceVenafiCertificate() *schema.Resource {
 		Exists: resourceVenafiCertificateExists,
 
 		Schema: map[string]*schema.Schema{
-			"csr_origin": {
+			"csr_origin": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "csr origin",
 				ForceNew:    true,
 				Default:     "local",
 			},
-			"common_name": {
+			"common_name": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Common name of certificate",
 				ForceNew:    true,
 			},
-			"algorithm": {
+			"algorithm": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
 				Default:     "RSA",
 				Description: "Key encryption algorithm. RSA or ECDSA. RSA is default.",
 			},
-			"rsa_bits": {
+			"rsa_bits": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Number of bits to use when generating an RSA key",
@@ -62,7 +62,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				Default:     2048,
 			},
 
-			"ecdsa_curve": {
+			"ecdsa_curve": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "ECDSA curve to use when generating a key",
@@ -70,71 +70,71 @@ func resourceVenafiCertificate() *schema.Resource {
 				Default:     "P521",
 			},
 
-			"san_dns": {
+			"san_dns": &schema.Schema{
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of DNS names to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"san_email": {
+			"san_email": &schema.Schema{
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of email addresses to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"san_ip": {
+			"san_ip": &schema.Schema{
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of IP addresses to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"key_password": {
+			"key_password": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Private key password.",
 				Sensitive:   true,
 			},
-			"expiration_window": {
+			"expiration_window": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     168,
 				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
 				ForceNew:    true,
 			},
-			"private_key_pem": {
+			"private_key_pem": &schema.Schema{
 				Type:      schema.TypeString,
 				Optional:  true,
 				Computed:  true,
 				Sensitive: true,
 			},
-			"chain": {
+			"chain": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"certificate": {
+			"certificate": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"csr_pem": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"pkcs12": {
+			"csr_pem": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"certificate_dn": {
+			"pkcs12": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"custom_fields": {
+			"certificate_dn": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"custom_fields": &schema.Schema{
 				Type:        schema.TypeMap,
 				Optional:    true,
 				ForceNew:    true,
@@ -143,13 +143,13 @@ func resourceVenafiCertificate() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"valid_days": {
+			"valid_days": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The desired certificate requested time of validity",
 			},
-			"issuer_hint": {
+			"issuer_hint": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -489,8 +489,7 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	KeyPassword := d.Get("key_password").(string)
 
 	privKey := pcc.PrivateKey
-	// For RSA private keys for both local and service we are getting PKCS8 private keys, same applies
-	// for service ECDSA private keys, but when getting locally, we are getting PKCS1 formatted private keys
+	// for locally generated ECDSA private keys we get PKCS1 format, in other cases we get PKCS8
 	if !(origin != csrService && keyType == "ECDSA") {
 		privKey, err = util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
 		if err != nil {
