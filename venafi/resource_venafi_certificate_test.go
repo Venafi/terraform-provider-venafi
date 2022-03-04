@@ -8,7 +8,6 @@ import (
 	"github.com/Venafi/vcert/v4/pkg/util"
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -334,9 +333,6 @@ output "certificate" {
 }
 output "private_key" {
 	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
-}
-output "cert_id" {
-	value = "${venafi_certificate.cloud_certificate.id}"
 }`
 )
 
@@ -345,8 +341,6 @@ type KeyFormat int
 const (
 	issuer_hint                    = "MICROSOFT"
 	valid_days                     = 30
-	vaas_id_path                   = "/test_files/vaas_id"
-	custom_fields_path             = "/test_files/custom_fields.json"
 	expectedPrivKeyPKCS1 KeyFormat = iota
 	expectedPrivKeyPKCS8
 )
@@ -933,23 +927,6 @@ func checkStandardCertOutputs(t *testing.T, data *testData, s *terraform.State, 
 	return nil
 }
 
-func checkStandardCertId(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Getting ID of certificate with cn:", data.cn)
-	certIdUntyped := s.RootModule().Outputs["cert_id"].Value
-	certificateId, ok := certIdUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"id\" is not a string")
-	}
-	path := GetAbsoluteFIlePath(vaas_id_path)
-	var file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	fmt.Fprintf(file, "%s", certificateId)
-	return nil
-}
-
 func checkStandardCertInfo(t *testing.T, data *testData, certificate string, privateKey string, kf KeyFormat) error {
 	block, _ := pem.Decode([]byte(certificate))
 	cert, err := x509.ParseCertificate(block.Bytes)
@@ -1173,34 +1150,14 @@ func getCertTppImportConfigWithCustomFields() *testData {
 func getCertCloudImportConfig() *testData {
 	data := testData{}
 	domain := "venafi.example.com"
-	data.cn = "import" + "." + domain
+	data.cn = "new.import" + "." + domain
 	data.key_algo = rsa2048
 	data.private_key_password = "123xxx"
 	data.expiration_window = 48
 	return &data
 }
 
-func TestImportCertificateTppPartCreate(t *testing.T) {
-	name := "import"
-	data := getCertTppImportConfig(name)
-	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
-	t.Logf("Creating TPP Token certificate with Service CSR generated and config to be be imported on next test:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: config,
-				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
-					return checkStandardCertPKCS8(t, data, s)
-				},
-			},
-		},
-	})
-}
-
 func TestImportCertificateTppPartImport(t *testing.T) {
-	// Important!: TestImportCertificateTppPartCreate must be run before this test to ensure proper import
 	name := "import"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
@@ -1223,25 +1180,7 @@ func TestImportCertificateTppPartImport(t *testing.T) {
 	})
 }
 
-func TestImportCertificateTppPartCreateWithCustomFields(t *testing.T) {
-	data := getCertTppImportConfigWithCustomFields()
-	config := fmt.Sprintf(tppCsrServiceConfigWithCustomFields, tokenProvider, data.cn, data.dns_ns, data.private_key_password, data.custom_fields)
-	t.Logf("Creating TPP Token certificate with Service CSR generated and config with custom fields to be be imported on next test:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: config,
-				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
-					return checkStandardCertPKCS8(t, data, s)
-				},
-			},
-		},
-	})
-}
-
-func TestImportCertificateTppPartImportWithCustomFields(t *testing.T) {
+func TestImportCertificateTppWithCustomFields(t *testing.T) {
 	// Important!: TestImportCertificateTppPartCreateWithCustomFields must be run before this test to ensure proper import
 	data := getCertTppImportConfigWithCustomFields()
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
@@ -1327,27 +1266,7 @@ func checkImportedCustomFields(t *testing.T, data_cf string, attr map[string]str
 	return nil
 }
 
-func TestImportCertificateECDSATppPartCreate(t *testing.T) {
-	name := "import.ecdsa"
-	data := getCertTppImportConfig(name)
-	config := fmt.Sprintf(tppCsrServiceConfig, tokenProviderECDSA, data.cn, data.dns_ns, data.private_key_password)
-	t.Logf("Creating TPP Token certificate with Service CSR generated and config to be be imported on next test:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: config,
-				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
-					return checkStandardCertPKCS8(t, data, s)
-				},
-			},
-		},
-	})
-}
-
-func TestImportCertificateECDSATppPartImport(t *testing.T) {
-	// Important!: TestImportCertificateECDSATppPartCreate must be run before this test to ensure proper import
+func TestImportCertificateECDSA(t *testing.T) {
 	name := "import.ecdsa"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportECDSA)
@@ -1370,43 +1289,11 @@ func TestImportCertificateECDSATppPartImport(t *testing.T) {
 	})
 }
 
-func TestImportCertificateCloudPartCreate(t *testing.T) {
+func TestImportCertificateCloud(t *testing.T) {
 	data := getCertCloudImportConfig()
-	config := fmt.Sprintf(cloudCsrServiceConfigImportCreate, cloudProviderImport, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Creating VaaS Token certificate with Service CSR generated and config to be be imported on next test:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: config,
-				Check: func(s *terraform.State) error {
-					t.Log("Issuing VaaS certificate with CSR Service Generated", data.cn)
-					err := checkStandardCertPKCS8(t, data, s)
-					if err != nil {
-						return err
-					}
-					err = checkStandardCertId(t, data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
-			},
-		},
-	})
-}
-
-func TestImportCertificateCloudPartImport(t *testing.T) {
-	// Important!: TestImportCertificateCloudPartCreate must be run before this test to ensure proper import
-	data := getCertCloudImportConfig()
-	vaasIdp, err := getVaasId()
-	if err != nil {
-		fmt.Errorf(err.Error())
-	}
-	var vaasId string
-	vaasId = *vaasIdp
+	pickupId := "52cd8d80-9bed-11ec-8c50-0dc409977760"
 	config := fmt.Sprintf(cloudCsrServiceConfigImport, cloudProviderImport)
-	importId := fmt.Sprintf("%s,%s", vaasId, data.private_key_password)
+	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
 	t.Logf("Testing importing VaaS cert:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -1423,26 +1310,4 @@ func TestImportCertificateCloudPartImport(t *testing.T) {
 			},
 		},
 	})
-}
-
-func getVaasId() (*string, error) {
-	vaasIdBytes, err := getBytesFromFile(vaas_id_path)
-	if err != nil {
-		return nil, err
-	}
-	vaasId := string(vaasIdBytes)
-	return &vaasId, nil
-}
-
-func getBytesFromFile(p string) ([]byte, error) {
-	path := GetAbsoluteFIlePath(p)
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	fileBytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-	return fileBytes, nil
 }
