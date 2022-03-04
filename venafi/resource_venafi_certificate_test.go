@@ -1157,7 +1157,7 @@ func getCertCloudImportConfig() *testData {
 	return &data
 }
 
-func TestImportCertificateTppPartImport(t *testing.T) {
+func TestImportCertificateTpp(t *testing.T) {
 	name := "import"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
@@ -1181,7 +1181,6 @@ func TestImportCertificateTppPartImport(t *testing.T) {
 }
 
 func TestImportCertificateTppWithCustomFields(t *testing.T) {
-	// Important!: TestImportCertificateTppPartCreateWithCustomFields must be run before this test to ensure proper import
 	data := getCertTppImportConfigWithCustomFields()
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
 	data.custom_fields = getCustomFields(cfEnvVarName)
