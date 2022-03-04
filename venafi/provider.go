@@ -25,14 +25,14 @@ const (
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"url": {
+			"url": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_URL", nil),
 				Description: `The Venafi Web Service URL.. Example: https://tpp.venafi.example/vedsdk`,
 			},
 
-			"zone": {
+			"zone": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_ZONE", "Default"),
@@ -41,40 +41,40 @@ Example for Platform: testpolicy\\vault
 Example for Venafi Cloud: Default`,
 			},
 
-			"tpp_username": {
+			"tpp_username": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_USER", nil),
 				Description: `WebSDK user for Venafi Platform. Example: admin`,
 				Deprecated:  ", please use access_token instead",
 			},
-			"tpp_password": {
+			"tpp_password": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_PASS", nil),
 				Description: `Password for WebSDK user. Example: password`,
 				Deprecated:  ", please use access_token instead",
 			},
-			"access_token": {
+			"access_token": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_TOKEN", nil),
 				Description: `Access token for TPP, user should use this for authentication`,
 			},
-			"api_key": {
+			"api_key": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_API", nil),
 				Description: `API key for Venafi Cloud. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
 			},
-			"trust_bundle": {
+			"trust_bundle": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `Use to specify a PEM-formatted file that contains certificates to be trust anchors for all communications with the Venafi Web Service.
 Example:
   trust_bundle = "${file("chain.pem")}"`,
 			},
-			"dev_mode": {
+			"dev_mode": &schema.Schema{
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_DEVMODE", nil),

@@ -202,12 +202,6 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	//Checking Private Key
 	var pk []byte
 	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-		cfg := meta.(*vcert.Config)
-		_, err := vcert.NewClient(cfg)
-		if err != nil {
-			log.Printf(messageVenafiClientInitFailed + err.Error())
-			return false, err
-		}
 		origin := d.Get("csr_origin")
 		keyType := d.Get("algorithm")
 		if origin != csrService && keyType == "ECDSA" {
