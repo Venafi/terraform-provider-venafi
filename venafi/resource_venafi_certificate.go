@@ -395,7 +395,10 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	}
 	// setting by default a value if not set
 	if _, ok := d.GetOk("expiration_window"); !ok {
-		d.Set("expiration_window", expirationWindow)
+		err := d.Set("expiration_window", expirationWindow)
+		if err != nil {
+			return err
+		}
 	}
 
 	if ttl, ok := d.GetOk("valid_days"); ok {
