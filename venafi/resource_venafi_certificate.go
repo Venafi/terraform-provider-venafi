@@ -32,6 +32,7 @@ func resourceVenafiCertificate() *schema.Resource {
 		Read:   resourceVenafiCertificateRead,
 		Delete: resourceVenafiCertificateDelete,
 		Exists: resourceVenafiCertificateExists,
+		Update: resourceVenafiCertificateUpdate,
 
 		Schema: map[string]*schema.Schema{
 			"csr_origin": &schema.Schema{
@@ -102,7 +103,8 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
-				ForceNew:    true,
+				ForceNew:    false,
+				Default:     expirationWindowDefault,
 			},
 			"private_key_pem": &schema.Schema{
 				Type:      schema.TypeString,
@@ -179,6 +181,17 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 	err = enrollVenafiCertificate(d, cl)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func resourceVenafiCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
+	if d.HasChange("expiration_window") {
+		expiration_window := d.Get("expiration_window").(int)
+		err := d.Set("expiration_window", expiration_window)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -393,13 +406,6 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 			}
 		}
 	}
-	// setting by default a value if not set
-	if _, ok := d.GetOk("expiration_window"); !ok {
-		err := d.Set("expiration_window", expirationWindow)
-		if err != nil {
-			return err
-		}
-	}
 
 	if ttl, ok := d.GetOk("valid_days"); ok {
 
@@ -576,6 +582,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 
 	return bytes, nil
 }
+
 func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	id := d.Id()
 
@@ -803,6 +810,10 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 		return err
 	}
 
+	err = d.Set("expiration_window", expirationWindowDefault)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

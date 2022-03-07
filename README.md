@@ -202,6 +202,8 @@ using the
    The `venafi_certificate` resource has the following options, only
    `common_name` is required:
 
+   >:pushpin: **NOTE**: Updating `expiration_window` will not trigger another resource to be created by itself.
+
    | Property            | Type          |  Description                                                                      | Default   |
    | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
    | `common_name`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Common name of certificate                                                        | `none` |
@@ -260,7 +262,9 @@ using the
 
 ### Importing
 
->:pushpin: **NOTE**: This operation doesn't support `expiration_window` and `issuer_hint` among the attributes for importing, neither local generated certificate key-pair.
+>:pushpin: **NOTE**: Don't specify an `expiration_window` within your Terraform file when importing, since will trigger a new update on re-applying your configuration unless that's desired. By default we set a value of `168` hours.
+
+>:pushpin: **NOTE**: This operation doesn't support `issuer_hint` among the attributes for importing, neither local generated certificate key-pair.
 
 The `venafi_certificate` resource supports the Terraform [import](https://www.terraform.io/docs/cli/import/index.html)
 method.

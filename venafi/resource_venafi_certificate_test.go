@@ -1150,10 +1150,9 @@ func getCertTppImportConfigWithCustomFields() *testData {
 func getCertCloudImportConfig() *testData {
 	data := testData{}
 	domain := "venafi.example.com"
-	data.cn = "new.import" + "." + domain
+	data.cn = "new.import.vaas" + "." + domain
 	data.key_algo = rsa2048
 	data.private_key_password = "123xxx"
-	data.expiration_window = 48
 	return &data
 }
 
@@ -1245,6 +1244,9 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 	// creating map from string
 	var customFieldsMap map[string]string
 	// cleaning data string from special characters
+	if strings.HasSuffix(dataCf, ",\n") {
+		dataCf = strings.TrimSuffix(dataCf, ",\n")
+	}
 	dataCf = strings.ReplaceAll(dataCf, "\n", "")
 	dataCf = strings.ReplaceAll(dataCf, "\"", "")
 	customFieldsRow := strings.Split(dataCf, ",")
@@ -1287,7 +1289,9 @@ func TestImportCertificateECDSA(t *testing.T) {
 
 func TestImportCertificateCloud(t *testing.T) {
 	data := getCertCloudImportConfig()
-	pickupId := "52cd8d80-9bed-11ec-8c50-0dc409977760"
+	//TODO: Currently pointing to a very long-lived certificate to avoid check for renewal with our default expiration_window
+	// within the import operation. This test needs to be adjusted to be dynamic.
+	pickupId := "08dc2030-9e57-11ec-ad50-13356989274f"
 	config := fmt.Sprintf(cloudCsrServiceConfigImport, cloudProviderImport)
 	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
 	t.Logf("Testing importing VaaS cert:\n %s", config)

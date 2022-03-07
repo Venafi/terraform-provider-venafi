@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	csrService       = "service"
-	expirationWindow = 168 // hours
+	csrService              = "service"
+	expirationWindowDefault = 168 // hours
 )
 
 func sliceContains(slice []string, item string) bool {
