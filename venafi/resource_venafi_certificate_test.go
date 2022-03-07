@@ -1239,18 +1239,15 @@ func checkImportCert(t *testing.T, data *testData, attr map[string]string) error
 	return nil
 }
 
-func checkImportedCustomFields(t *testing.T, data_cf string, attr map[string]string) error {
+func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]string) error {
 	t.Logf("Comparing imported custom fields with the ones in the test file")
 
 	// creating map from string
 	var customFieldsMap map[string]string
-	if strings.HasSuffix(data_cf, ",\n") {
-		data_cf = strings.TrimSuffix(data_cf, ",\n")
-	}
-	data_cf = strings.ReplaceAll(data_cf, "\n", "")
-	data_cf = strings.ReplaceAll(data_cf, "\r", "")
-	data_cf = strings.ReplaceAll(data_cf, "\"", "")
-	customFieldsRow := strings.Split(data_cf, ",")
+	// cleaning data string from special characters
+	dataCf = strings.ReplaceAll(dataCf, "\n", "")
+	dataCf = strings.ReplaceAll(dataCf, "\"", "")
+	customFieldsRow := strings.Split(dataCf, ",")
 	customFieldsMap = make(map[string]string)
 	for _, pair := range customFieldsRow {
 		z := strings.Split(pair, "=")

@@ -260,6 +260,8 @@ using the
 
 ### Importing
 
+>:pushpin: **NOTE**: This operation doesn't support `expiration_window` and `issuer_hint` among the attributes for importing, neither local generated certificate key-pair.
+
 The `venafi_certificate` resource supports the Terraform [import](https://www.terraform.io/docs/cli/import/index.html)
 method.
 

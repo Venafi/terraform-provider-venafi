@@ -101,7 +101,6 @@ func resourceVenafiCertificate() *schema.Resource {
 			"expiration_window": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     168,
 				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
 				ForceNew:    true,
 			},
@@ -394,6 +393,10 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 			}
 		}
 	}
+	// setting by default a value if not set
+	if _, ok := d.GetOk("expiration_window"); !ok {
+		d.Set("expiration_window", expirationWindow)
+	}
 
 	if ttl, ok := d.GetOk("valid_days"); ok {
 
@@ -611,6 +614,10 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
+		strErr := (err).Error()
+		if strErr == "unable to retrieve: Unexpected status code on TPP Certificate Retrieval. Status: 400 Failed to lookup private key, error: Failed to lookup private key vault id" {
+			return nil, fmt.Errorf("%s - private key was service generated? Import method does not support importing of local generated private keys", err)
+		}
 		return nil, err
 	}
 
