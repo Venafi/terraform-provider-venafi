@@ -86,7 +86,7 @@ provider "venafi" {
 	zone = "${var.TPP_ZONE_ECDSA}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
-	cloudProviderImport = environmentVariables + `
+	vaasProviderImport = environmentVariables + `
 provider "venafi" {
 	url = "${var.CLOUD_URL}"
 	api_key = "${var.CLOUD_APIKEY}"
@@ -319,7 +319,7 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
 }`
-	cloudCsrServiceConfigImportCreate = `
+	vaasCsrServiceConfigImportCreate = `
 %s
 resource "venafi_certificate" "cloud_certificate" {
 	common_name = "%s"
@@ -329,10 +329,10 @@ resource "venafi_certificate" "cloud_certificate" {
 	csr_origin = "service"
 }
 output "certificate" {
-	value = "${venafi_certificate.cloud_certificate.certificate}"
+	value = "${venafi_certificate.vaas_certificate.certificate}"
 }
 output "private_key" {
-	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
+	value = "${venafi_certificate.vaas_certificate.private_key_pem}"
 }`
 )
 
@@ -1120,7 +1120,6 @@ func TestCloudCsrService(t *testing.T) {
 						return err
 					}
 					return nil
-
 				},
 			},
 		},
@@ -1147,7 +1146,7 @@ func getCertTppImportConfigWithCustomFields() *testData {
 	return &data
 }
 
-func getCertCloudImportConfig() *testData {
+func getCertVaasImportConfig() *testData {
 	data := testData{}
 	domain := "venafi.example.com"
 	data.cn = "new.import.vaas" + "." + domain
@@ -1287,12 +1286,12 @@ func TestImportCertificateECDSA(t *testing.T) {
 	})
 }
 
-func TestImportCertificateCloud(t *testing.T) {
-	data := getCertCloudImportConfig()
+func TestImportCertificateVaas(t *testing.T) {
+	data := getCertVaasImportConfig()
 	//TODO: Currently pointing to a very long-lived certificate to avoid check for renewal with our default expiration_window
 	// within the import operation. This test needs to be adjusted to be dynamic.
-	pickupId := "08dc2030-9e57-11ec-ad50-13356989274f"
-	config := fmt.Sprintf(cloudCsrServiceConfigImport, cloudProviderImport)
+	pickupId := os.Getenv("VAAS_CERTIFICATE_ID")
+	config := fmt.Sprintf(cloudCsrServiceConfigImport, vaasProviderImport)
 	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
 	t.Logf("Testing importing VaaS cert:\n %s", config)
 	r.Test(t, r.TestCase{
