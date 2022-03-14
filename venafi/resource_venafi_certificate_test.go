@@ -9,6 +9,7 @@ import (
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -71,6 +72,33 @@ provider "venafi" {
 	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE_ECDSA}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
+	tppTokenProviderImport = environmentVariables + `
+provider "venafi" {
+	url = "${var.TPP_URL}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
+	zone = "${var.TPP_ZONE}"
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
+	tppTokenProviderImportEmptyZone = environmentVariables + `
+provider "venafi" {
+	url = "${var.TPP_URL}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
+	zone = ""
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
+	tppTokenProviderImportECDSA = environmentVariables + `
+provider "venafi" {
+	url = "${var.TPP_URL}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
+	zone = "${var.TPP_ZONE_ECDSA}"
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
+	vaasProviderImport = environmentVariables + `
+provider "venafi" {
+	url = "${var.CLOUD_URL}"
+	api_key = "${var.CLOUD_APIKEY}"
+	zone = "${var.CLOUD_ZONE}"
 }`
 	cloudProvider = environmentVariables + `
 provider "venafi" {
@@ -248,6 +276,41 @@ output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
 }`
 
+	tppCsrServiceConfigWithCustomFields = `
+%s
+resource "venafi_certificate" "token_certificate" {
+    provider = "venafi.token_tpp"
+	common_name = "%s"
+	san_dns = [
+		"%s"
+	]
+	key_password = "%s"
+	custom_fields = {
+		%s
+	}
+	csr_origin = "service"
+}
+output "certificate" {
+	value = "${venafi_certificate.token_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}
+output "custom_fields" {
+	value = "${venafi_certificate.token_certificate.custom_fields}"
+}`
+
+	tppCsrServiceConfigImport = `
+%s
+resource "venafi_certificate" "token_tpp_certificate_import" {
+	provider = "venafi"
+}`
+	cloudCsrServiceConfigImport = `
+%s
+resource "venafi_certificate" "token_cloud_certificate_import" {
+	provider = "venafi"
+}`
+
 	cloudCsrServiceConfig = `
 %s
 resource "venafi_certificate" "cloud_certificate" {
@@ -264,11 +327,30 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
 }`
+	vaasCsrServiceConfigImportCreate = `
+%s
+resource "venafi_certificate" "cloud_certificate" {
+	common_name = "%s"
+	%s
+	key_password = "%s"
+	expiration_window = %d
+	csr_origin = "service"
+}
+output "certificate" {
+	value = "${venafi_certificate.vaas_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.vaas_certificate.private_key_pem}"
+}`
 )
 
+type KeyFormat int
+
 const (
-	issuer_hint = "MICROSOFT"
-	valid_days  = 30
+	issuer_hint                    = "MICROSOFT"
+	valid_days                     = 30
+	expectedPrivKeyPKCS1 KeyFormat = iota
+	expectedPrivKeyPKCS8
 )
 
 func TestDevSignedCert(t *testing.T) {
@@ -285,7 +367,7 @@ func TestDevSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -310,7 +392,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS1(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -338,7 +420,7 @@ func TestCloudSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -351,7 +433,7 @@ func TestCloudSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing Cloud certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -388,7 +470,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -402,7 +484,7 @@ func TestCloudSignedCertUpdate(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -443,7 +525,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
 			},
@@ -452,7 +534,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -491,7 +573,7 @@ func TestTPPSignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -499,7 +581,7 @@ func TestTPPSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -537,7 +619,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS1(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -545,7 +627,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS1(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -585,7 +667,7 @@ func TestTokenSignedCertUpdate(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
 			},
@@ -594,7 +676,7 @@ func TestTokenSignedCertUpdate(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP Token certificate update")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -633,7 +715,7 @@ func TestTokenSignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -641,7 +723,7 @@ func TestTokenSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -679,7 +761,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS1(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -687,7 +769,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS1(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -727,7 +809,7 @@ func TestSignedCertCustomFields(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -735,7 +817,7 @@ func TestSignedCertCustomFields(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -812,7 +894,23 @@ func getCustomFields(variableName string) string {
 //TODO: make test on invalid options fo RSA, ECSA keys
 //TODO: make test with too big expiration window
 
-func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
+func checkStandardCertPKCS1(t *testing.T, data *testData, s *terraform.State) error {
+	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkStandardCertPKCS8(t *testing.T, data *testData, s *terraform.State) error {
+	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS8)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkStandardCertOutputs(t *testing.T, data *testData, s *terraform.State, kf KeyFormat) error {
 	t.Log("Testing certificate with cn", data.cn)
 	certUntyped := s.RootModule().Outputs["certificate"].Value
 	certificate, ok := certUntyped.(string)
@@ -824,6 +922,20 @@ func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
 		return fmt.Errorf("key is missing cert PEM preamble")
 	}
+	keyUntyped := s.RootModule().Outputs["private_key"].Value
+	privateKey, ok := keyUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"private_key\" is not a string")
+	}
+
+	err := checkStandardCertInfo(t, data, certificate, privateKey, kf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkStandardCertInfo(t *testing.T, data *testData, certificate string, privateKey string, kf KeyFormat) error {
 	block, _ := pem.Decode([]byte(certificate))
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
@@ -845,20 +957,25 @@ func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	data.serial = cert.SerialNumber.String()
 	data.timeCheck = time.Now().String()
 
-	keyUntyped := s.RootModule().Outputs["private_key"].Value
-	privateKey, ok := keyUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"private_key\" is not a string")
+	t.Logf("Testing private key PEM:\n %s", privateKey)
+	privKeyPEMbytes := make([]byte, 0)
+	if kf == expectedPrivKeyPKCS1 {
+		privKeyPEMbytes, err = getPrivateKey([]byte(privateKey), data.private_key_password)
+		if err != nil {
+			return fmt.Errorf("error trying to decrypt key: %s", err)
+		}
+	} else if kf == expectedPrivKeyPKCS8 {
+		privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
+		if err != nil {
+			return fmt.Errorf("error trying to decrypt key: %s", err)
+		}
+		privKeyPEMbytes = []byte(privateKeyString)
 	}
 
-	t.Logf("Testing private key PEM:\n %s", privateKey)
-	privKeyPEM, err := getPrivateKey([]byte(privateKey), data.private_key_password)
-
-	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEM)
+	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEMbytes)
 	if err != nil {
 		return fmt.Errorf("error comparing certificate and key: %s", err)
 	}
-
 	return nil
 }
 
@@ -982,7 +1099,7 @@ func TestTppCsrService(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
-					return checkStandardCert(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 			},
 		},
@@ -1006,64 +1123,246 @@ func TestCloudCsrService(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkCsrServiceStandardCert(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					}
 					return nil
-
 				},
 			},
 		},
 	})
 }
 
-func checkCsrServiceStandardCert(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Testing certificate with cn", data.cn)
-	certUntyped := s.RootModule().Outputs["certificate"].Value
-	certificate, ok := certUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"certificate\" is not a string")
-	}
+func getCertTppImportConfig(name string) *testData {
+	data := testData{}
+	domain := "venafi.example.com"
+	data.cn = name + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.private_key_password = "newPassword!"
+	return &data
+}
 
-	t.Logf("Testing certificate PEM:\n %s", certificate)
-	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
-		return fmt.Errorf("key is missing cert PEM preamble")
-	}
-	block, _ := pem.Decode([]byte(certificate))
-	cert, err := x509.ParseCertificate(block.Bytes)
+func getCertTppImportConfigWithCustomFields() *testData {
+	data := testData{}
+	domain := "venafi.example.com"
+	data.cn = "import.custom_fields" + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.private_key_password = "newPassword!"
+	cfEnvVarName := "TPP_CUSTOM_FIELDS"
+	data.custom_fields = getCustomFields(cfEnvVarName)
+	return &data
+}
+
+func getCertVaasImportConfig() *testData {
+	data := testData{}
+	domain := "venafi.example.com"
+	data.cn = "new.import.vaas" + "." + domain
+	data.key_algo = rsa2048
+	data.private_key_password = "123xxx"
+	return &data
+}
+
+func TestImportCertificateTpp(t *testing.T) {
+	name := "import"
+	data := getCertTppImportConfig(name)
+	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
+	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
+	t.Logf("Testing importing TPP cert:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: importId,
+				ImportState:   true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					return checkStandardImportCert(t, data, states)
+				},
+			},
+		},
+	})
+}
+
+func TestImportCertificateTppWithCustomFields(t *testing.T) {
+	data := getCertTppImportConfigWithCustomFields()
+	cfEnvVarName := "TPP_CUSTOM_FIELDS"
+	data.custom_fields = getCustomFields(cfEnvVarName)
+	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
+	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
+	t.Logf("Testing importing TPP cert with custom fields:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: importId,
+				ImportState:   true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					return checkImportTppCertWithCustomFields(t, data, states)
+				},
+			},
+		},
+	})
+}
+
+func checkStandardImportCert(t *testing.T, data *testData, states []*terraform.InstanceState) error {
+	st := states[0]
+	attributes := st.Attributes
+	err := checkImportCert(t, data, attributes)
 	if err != nil {
-		return fmt.Errorf("error parsing cert: %s", err)
+		return err
 	}
-	if expected, got := data.cn, cert.Subject.CommonName; got != expected {
-		return fmt.Errorf("incorrect subject common name: expected %v, certificate %v", expected, got)
-	}
-	if len(data.dns_ns) > 0 {
-		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
-			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
-		}
-	} else {
-		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
-			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
-		}
-	}
-
-	data.serial = cert.SerialNumber.String()
-	data.timeCheck = time.Now().String()
-
-	keyUntyped := s.RootModule().Outputs["private_key"].Value
-	privateKey, ok := keyUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"private_key\" is not a string")
-	}
-
-	t.Logf("Testing private key PEM:\n %s", privateKey)
-	privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
-
-	_, err = tls.X509KeyPair([]byte(certificate), []byte(privateKeyString))
-	if err != nil {
-		return fmt.Errorf("error comparing certificate and key: %s", err)
-	}
-
 	return nil
+
+}
+
+func checkImportTppCertWithCustomFields(t *testing.T, data *testData, states []*terraform.InstanceState) error {
+	st := states[0]
+	attributes := st.Attributes
+	err := checkImportCert(t, data, attributes)
+	if err != nil {
+		return err
+	}
+	err = checkImportedCustomFields(t, data.custom_fields, attributes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkImportCert(t *testing.T, data *testData, attr map[string]string) error {
+	certificate := attr["certificate"]
+	privateKey := attr["private_key_pem"]
+	err := checkStandardCertInfo(t, data, certificate, privateKey, expectedPrivKeyPKCS8)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]string) error {
+	t.Logf("Comparing imported custom fields with the ones in the test file")
+
+	// creating map from string
+	var customFieldsMap map[string]string
+	// cleaning data string from special characters
+	if strings.HasSuffix(dataCf, ",\n") {
+		dataCf = strings.TrimSuffix(dataCf, ",\n")
+	}
+	dataCf = strings.ReplaceAll(dataCf, "\n", "")
+	dataCf = strings.ReplaceAll(dataCf, "\"", "")
+	customFieldsRow := strings.Split(dataCf, ",")
+	customFieldsMap = make(map[string]string)
+	for _, pair := range customFieldsRow {
+		z := strings.Split(pair, "=")
+		customFieldsMap[z[0]] = z[1]
+	}
+	for key, value := range customFieldsMap {
+		keyAttr := fmt.Sprintf("custom_fields.%s", key)
+		if attr[keyAttr] != value {
+			return fmt.Errorf("\"%s\" custom field is different, expected: %s, got: %s", key, value, attr[keyAttr])
+		}
+	}
+	return nil
+}
+
+func TestImportCertificateECDSA(t *testing.T) {
+	name := "import.ecdsa"
+	data := getCertTppImportConfig(name)
+	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportECDSA)
+	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
+	t.Logf("Testing importing TPP cert:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: importId,
+				ImportState:   true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					return checkStandardImportCert(t, data, states)
+				},
+			},
+		},
+	})
+}
+
+func TestImportCertificateVaas(t *testing.T) {
+	data := getCertVaasImportConfig()
+	//TODO: Currently pointing to a very long-lived certificate to avoid check for renewal with our default expiration_window
+	// within the import operation. This test needs to be adjusted to be dynamic.
+	pickupId := os.Getenv("VAAS_CERTIFICATE_ID")
+	config := fmt.Sprintf(cloudCsrServiceConfigImport, vaasProviderImport)
+	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
+	t.Logf("Testing importing VaaS cert:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_cloud_certificate_import",
+				ImportStateId: importId,
+				ImportState:   true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("Importing VaaS certificate with CSR Service Generated", data.cn)
+					return checkStandardImportCert(t, data, states)
+				},
+			},
+		},
+	})
+}
+
+func TestValidateWrongImportEntries(t *testing.T) {
+	name := "import"
+	data := getCertTppImportConfig(name)
+	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
+	configWithoutZone := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportEmptyZone)
+	t.Logf("Testing importing TPP cert:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s,%s,exceeded", data.cn, data.private_key_password),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importIdFailExceededValues),
+			},
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s", data.cn),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importIdFailMissingValues),
+			},
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s,", data.cn),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importKeyPasswordFailEmpty),
+			},
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf(",%s", data.private_key_password),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importPickupIdFailEmpty),
+			},
+			r.TestStep{
+				Config:        configWithoutZone,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s,%s", data.cn, data.private_key_password),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importZoneFailEmpty),
+			},
+		},
+	})
 }

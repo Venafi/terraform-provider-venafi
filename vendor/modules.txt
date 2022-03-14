@@ -12,7 +12,7 @@ cloud.google.com/go/storage
 github.com/BurntSushi/toml
 # github.com/OpenPeeDeeP/depguard v1.0.1
 github.com/OpenPeeDeeP/depguard
-# github.com/Venafi/vcert/v4 v4.16.1
+# github.com/Venafi/vcert/v4 v4.17.1
 github.com/Venafi/vcert/v4
 github.com/Venafi/vcert/v4/pkg/certificate
 github.com/Venafi/vcert/v4/pkg/endpoint

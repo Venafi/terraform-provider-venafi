@@ -204,7 +204,7 @@ func TestImportCloudPolicy(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			{
+			r.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
 				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE"),
@@ -340,12 +340,12 @@ func TestCreateTppPolicy(t *testing.T) {
 }
 
 func TestImportTppPolicy(t *testing.T) {
-	config := getImportTppConfig()
+	config := getPolicyImportTppConfig()
 	t.Logf("Testing importing TPP Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
-			{
+			r.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
 				ImportStateId: os.Getenv("TPP_PM_ROOT"),
@@ -428,7 +428,7 @@ func checkCreateTppPolicy(t *testing.T, data *testData, s *terraform.State, vali
 	return nil
 }
 
-func getImportTppConfig() string {
+func getPolicyImportTppConfig() string {
 	path := GetAbsoluteFIlePath(policyReadSpecTpp)
 	zone := os.Getenv("TPP_PM_ROOT")
 	zone = strings.Replace(zone, "\\", "\\\\", 4)
