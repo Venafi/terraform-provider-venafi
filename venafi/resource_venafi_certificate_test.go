@@ -9,6 +9,7 @@ import (
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -77,6 +78,13 @@ provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE}"
+	trust_bundle = "${file(var.TRUST_BUNDLE)}"
+}`
+	tppTokenProviderImportEmptyZone = environmentVariables + `
+provider "venafi" {
+	url = "${var.TPP_URL}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
+	zone = ""
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
 	tppTokenProviderImportECDSA = environmentVariables + `
@@ -1306,6 +1314,54 @@ func TestImportCertificateVaas(t *testing.T) {
 					t.Log("Importing VaaS certificate with CSR Service Generated", data.cn)
 					return checkStandardImportCert(t, data, states)
 				},
+			},
+		},
+	})
+}
+
+func TestValidateWrongImportEntries(t *testing.T) {
+	name := "import"
+	data := getCertTppImportConfig(name)
+	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
+	configWithoutZone := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportEmptyZone)
+	t.Logf("Testing importing TPP cert:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s,%s,exceeded", data.cn, data.private_key_password),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importIdFailExceededValues),
+			},
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s", data.cn),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importIdFailMissingValues),
+			},
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s,", data.cn),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importKeyPasswordFailEmpty),
+			},
+			r.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf(",%s", data.private_key_password),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importPickupIdFailEmpty),
+			},
+			r.TestStep{
+				Config:        configWithoutZone,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: fmt.Sprintf("%s,%s", data.cn, data.private_key_password),
+				ImportState:   true,
+				ExpectError:   regexp.MustCompile(importZoneFailEmpty),
 			},
 		},
 	})

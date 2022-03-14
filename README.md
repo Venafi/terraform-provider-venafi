@@ -202,7 +202,7 @@ using the
    The `venafi_certificate` resource has the following options, only
    `common_name` is required:
 
-   >:pushpin: **NOTE**: Updating `expiration_window` will not trigger another resource to be created by itself.
+   >:pushpin: **NOTE**: Updating only `expiration_window` will not trigger another resource to be created by itself, thus won't enroll a new certificate. This won't apply if the expiration_window constraint allows it, this means, if time to expire of the certificate is within the expiration window.
 
    | Property            | Type          |  Description                                                                      | Default   |
    | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |

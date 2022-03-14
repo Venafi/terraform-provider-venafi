@@ -26,6 +26,15 @@ import (
 	"strings"
 )
 
+const (
+	importIdFailEmpty          = "the id for import method is empty"
+	importIdFailMissingValues  = "there are missing attributes in the import id being passed"
+	importIdFailExceededValues = "there are more attributes than expected in the import id being passed"
+	importPickupIdFailEmpty    = "empty pickupID for VaaS or common_name for TPP during import method"
+	importKeyPasswordFailEmpty = "empty key_password for import method"
+	importZoneFailEmpty        = "zone cannot be empty when importing certificate"
+)
+
 func resourceVenafiCertificate() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceVenafiCertificateCreate,
@@ -587,27 +596,29 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 	id := d.Id()
 
 	if id == "" {
-		return nil, fmt.Errorf("the id is empty")
+		return nil, fmt.Errorf(importIdFailEmpty)
 	}
 
 	parameters := strings.Split(id, ",")
 
 	if len(parameters) < 2 {
-		return nil, fmt.Errorf("there are missing attributes")
+		return nil, fmt.Errorf(importIdFailMissingValues)
+	} else if len(parameters) > 2 {
+		return nil, fmt.Errorf(importIdFailExceededValues)
 	}
 	pickupID := parameters[0]
 	keyPassword := parameters[1]
 	if pickupID == "" {
-		return nil, fmt.Errorf("empty pickupID")
+		return nil, fmt.Errorf(importPickupIdFailEmpty)
 	}
 	if keyPassword == "" {
-		return nil, fmt.Errorf("empty key-password")
+		return nil, fmt.Errorf(importKeyPasswordFailEmpty)
 	}
 
 	cfg := meta.(*vcert.Config)
 	zone := cfg.Zone
 	if zone == "" {
-		return nil, fmt.Errorf("zone cannot be empty when importing certificate")
+		return nil, fmt.Errorf(importZoneFailEmpty)
 	}
 
 	cl, err := getConnection(meta)
@@ -630,6 +641,9 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		}
 		return nil, err
 	}
+	if data.PrivateKey == "" {
+		return nil, fmt.Errorf("private key was not found. Was certificate service generated? Import method does not support importing of local generated private keys")
+	}
 
 	var certMetadata *certificate.CertificateMetaData
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
@@ -639,7 +653,7 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		}
 	}
 
-	err = fillSchemaProperties(d, data, certMetadata, pickupID, keyPassword, cl.GetType())
+	err = fillSchemaPropertiesImport(d, data, certMetadata, pickupID, keyPassword, cl.GetType())
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +673,7 @@ func fillRetrieveRequest(id string, p string, c endpoint.ConnectorType) *certifi
 	return pickupReq
 }
 
-func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollection, certMetadata *certificate.CertificateMetaData, id string, p string, c endpoint.ConnectorType) error {
+func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCollection, certMetadata *certificate.CertificateMetaData, id string, p string, c endpoint.ConnectorType) error {
 	err := d.Set("certificate", data.Certificate)
 	if err != nil {
 		return err
@@ -719,17 +733,20 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 
 	var pemType string
 
+	// We are adding the default values for other algorithms,
+	// since Terraform expects them as they are defined as defaults in the schema
 	switch keyValue := key.(type) {
 	case *rsa.PrivateKey:
+		err = d.Set("algorithm", "RSA")
+		if err != nil {
+			return err
+		}
 		err = d.Set("rsa_bits", keyValue.N.BitLen())
 		if err != nil {
 			return err
 		}
+		// Setting default value for other algorithm as mentioned above
 		err = d.Set("ecdsa_curve", "P521")
-		if err != nil {
-			return err
-		}
-		err = d.Set("algorithm", "RSA")
 		if err != nil {
 			return err
 		}
@@ -747,6 +764,7 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 		if err != nil {
 			return err
 		}
+		// Setting default value for other algorithm as mentioned above
 		err = d.Set("algorithm", "ECDSA")
 		if err != nil {
 			return err
@@ -803,9 +821,9 @@ func fillSchemaProperties(d *schema.ResourceData, data *certificate.PEMCollectio
 	if err != nil {
 		return err
 	}
-	s := base64.StdEncoding.EncodeToString(certPkcs12)
+	certPkcs12string := base64.StdEncoding.EncodeToString(certPkcs12)
 
-	err = d.Set("pkcs12", s)
+	err = d.Set("pkcs12", certPkcs12string)
 	if err != nil {
 		return err
 	}

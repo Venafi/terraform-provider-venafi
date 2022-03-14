@@ -34,7 +34,7 @@ resource "venafi_certificate" "webserver" {
 
 The following arguments are supported:
 
-~>**Note:** Updating `expiration_window` will not trigger another resource to be created by itself.
+~>**Note:** Updating `expiration_window` will not trigger another resource to be created by itself, thus won't enroll a new certificate. This won't apply if the `expiration_window` constraint allows it, this means, if time to expire of the certificate is within the expiration window.
 
 * `common_name` - (Required, string) The common name of the certificate.
 

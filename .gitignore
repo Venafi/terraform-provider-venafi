@@ -10,4 +10,3 @@ chain.pem
 !*/**
 terraform.d
 .DS_Store
-test_files/vaas_id
