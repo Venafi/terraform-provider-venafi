@@ -1,3 +1,7 @@
+## 0.15.0 (March 14, 2022)
+
+Added support for Certificate importing.
+
 ## 0.14.0 (February 8, 2022)
 
 Added support for CSR service generated and retrieval of SSH configuration from template.
