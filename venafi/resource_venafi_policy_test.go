@@ -207,7 +207,7 @@ func TestImportVaasPolicy(t *testing.T) {
 			r.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
-				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE")
+				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE"),
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
 					t.Logf("Checking zone: %s's attributes", os.Getenv("CLOUD_POLICY_SAMPLE"))
