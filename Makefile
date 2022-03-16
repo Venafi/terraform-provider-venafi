@@ -155,7 +155,7 @@ test_e2e_tpp:
 	cat /tmp/cert_certificate_tpp.pem
 	cat /tmp/cert_certificate_tpp.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
-test_e2e_cloud:
+test_e2e_vaas:
 	echo yes|terraform apply -target=venafi_certificate.cloud_certificate -auto-approve
 	terraform state show venafi_certificate.cloud_certificate
 	terraform output cert_certificate_cloud > /tmp/cert_certificate_cloud.pem

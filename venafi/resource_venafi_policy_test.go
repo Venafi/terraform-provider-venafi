@@ -45,22 +45,22 @@ provider "venafi" {
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
 
-	cloudProv = environmentVariables + `
+	vaasProv = environmentVariables + `
 provider "venafi" {
 	url = "${var.CLOUD_URL}"
 	api_key = "${var.CLOUD_APIKEY}"
 }
 `
 
-	cloudPolicyResourceTest = `
+	vaasPolicyResourceTest = `
 %s
-resource "venafi_policy" "cloud_policy" {
+resource "venafi_policy" "vaas_policy" {
 	provider = "venafi"
 	zone="%s"
 	policy_specification = file("%s")
 }
 output "policy_specification" {
-	value = "${venafi_policy.cloud_policy.policy_specification}"
+	value = "${venafi_policy.vaas_policy.policy_specification}"
 }`
 
 	tppPolicyResourceTest = `
@@ -83,15 +83,15 @@ resource "venafi_policy" "read_policy" {
 }`
 )
 
-//-----------------------------------------------cloud test cases begins----------------------------------------------//
+//-----------------------------------------------VaaS test cases begins----------------------------------------------//
 
-func TestCreateCloudEmptyPolicy(t *testing.T) {
+func TestCreateVaasEmptyPolicy(t *testing.T) {
 	data := testData{}
 	data.zone = RandAppName() + "\\\\" + RandCitName()
 
 	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
 
-	config := fmt.Sprintf(cloudPolicyResourceTest, cloudProv, data.zone, data.filePath)
+	config := fmt.Sprintf(vaasPolicyResourceTest, vaasProv, data.zone, data.filePath)
 	t.Logf("Testing Creating empty Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -100,20 +100,20 @@ func TestCreateCloudEmptyPolicy(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS empty zone: ", data.zone)
-					return checkCreateCloudPolicy(t, &data, s, false)
+					return checkCreateVaasPolicy(t, &data, s, false)
 				},
 			},
 		},
 	})
 }
 
-func TestCreateCloudPolicy(t *testing.T) {
+func TestCreateVaasPolicy(t *testing.T) {
 	data := testData{}
 	data.zone = RandAppName() + "\\\\" + RandCitName()
 
-	data.filePath = GetAbsoluteFIlePath(policySpecCloud)
+	data.filePath = GetAbsoluteFIlePath(policySpecVaas)
 
-	config := fmt.Sprintf(cloudPolicyResourceTest, cloudProv, data.zone, data.filePath)
+	config := fmt.Sprintf(vaasPolicyResourceTest, vaasProv, data.zone, data.filePath)
 	t.Logf("Testing creating VaaS Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -122,14 +122,14 @@ func TestCreateCloudPolicy(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS zone: ", data.zone)
-					return checkCreateCloudPolicy(t, &data, s, false)
+					return checkCreateVaasPolicy(t, &data, s, false)
 				},
 			},
 		},
 	})
 }
 
-func checkCreateCloudPolicy(t *testing.T, data *testData, s *terraform.State, validateAttr bool) error {
+func checkCreateVaasPolicy(t *testing.T, data *testData, s *terraform.State, validateAttr bool) error {
 	t.Log("Validate Creating VaaS empty policy", data.zone)
 
 	pstUntyped := s.RootModule().Outputs["policy_specification"].Value
@@ -198,8 +198,8 @@ func checkCreateCloudPolicy(t *testing.T, data *testData, s *terraform.State, va
 	return nil
 }
 
-func TestImportCloudPolicy(t *testing.T) {
-	config := getImportCloudConfig()
+func TestImportVaasPolicy(t *testing.T) {
+	config := getImportVaasConfig()
 	t.Logf("Testing importing VaaS Zone:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -207,18 +207,18 @@ func TestImportCloudPolicy(t *testing.T) {
 			r.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
-				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE"),
+				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE")
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
 					t.Logf("Checking zone: %s's attributes", os.Getenv("CLOUD_POLICY_SAMPLE"))
-					return checkImportCloudPolicy(states)
+					return checkImportVaasPolicy(states)
 				},
 			},
 		},
 	})
 }
 
-func checkImportCloudPolicy(states []*terraform.InstanceState) error {
+func checkImportVaasPolicy(states []*terraform.InstanceState) error {
 	st := states[0]
 	attributes := st.Attributes
 
@@ -232,7 +232,7 @@ func checkImportCloudPolicy(states []*terraform.InstanceState) error {
 	}
 
 	//get policy on directory.
-	path := GetAbsoluteFIlePath(policySpecCloud)
+	path := GetAbsoluteFIlePath(policySpecVaas)
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -279,15 +279,15 @@ func checkImportCloudPolicy(states []*terraform.InstanceState) error {
 	return nil
 }
 
-func getImportCloudConfig() string {
-	path := GetAbsoluteFIlePath(policySpecCloud)
+func getImportVaasConfig() string {
+	path := GetAbsoluteFIlePath(policySpecVaas)
 	zone := os.Getenv("CLOUD_POLICY_SAMPLE")
 	zone = strings.Replace(zone, "\\", "\\\\", 1)
-	config := fmt.Sprintf(readPolicy, cloudProv, zone, path)
+	config := fmt.Sprintf(readPolicy, vaasProv, zone, path)
 	return config
 }
 
-//------------------------------------------------cloud test cases ends-----------------------------------------------//
+//------------------------------------------------VaaS test cases ends------------------------------------------------//
 
 //------------------------------------------------TPP test cases begins-----------------------------------------------//
 
@@ -332,7 +332,7 @@ func TestCreateTppPolicy(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating TPP zone: ", data.zone)
-					return checkCreateCloudPolicy(t, &data, s, false)
+					return checkCreateVaasPolicy(t, &data, s, false)
 				},
 			},
 		},

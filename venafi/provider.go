@@ -16,7 +16,7 @@ const (
 	messageVenafiClientInitFailed = "Failed to initialize Venafi client: "
 	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer: "
 	messageUseDevMode             = "Using dev mode to issue certificate"
-	messageUseCloud               = "Using Cloud to issue certificate"
+	messageUseVaas                = "Using VaaS to issue certificate"
 
 	utilityName = "HashiCorp Terraform"
 )
@@ -36,9 +36,9 @@ func Provider() terraform.ResourceProvider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_ZONE", "Default"),
-				Description: `DN of the Venafi Platform policy folder or name of the Venafi Cloud zone. 
+				Description: `DN of the Venafi Platform policy folder or name of the Venafi as a Service application. 
 Example for Platform: testpolicy\\vault
-Example for Venafi Cloud: Default`,
+Example for Venafi as a Service: Default`,
 			},
 
 			"tpp_username": &schema.Schema{
@@ -65,7 +65,7 @@ Example for Venafi Cloud: Default`,
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_API", nil),
-				Description: `API key for Venafi Cloud. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
 			},
 			"trust_bundle": &schema.Schema{
 				Type:     schema.TypeString,
@@ -78,7 +78,7 @@ Example:
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_DEVMODE", nil),
-				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi Cloud or Platform. Useful for development and testing.`,
+				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi as a Service or Trust Protection Platform. Useful for development and testing.`,
 			},
 		},
 
@@ -141,7 +141,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 	} else if apiKey != "" {
 		if url != "" {
-			log.Println(messageUseCloud)
+			log.Println(messageUseVaas)
 			cfg = vcert.Config{
 				ConnectorType: endpoint.ConnectorTypeCloud,
 				BaseUrl:       url,
@@ -152,7 +152,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 				LogVerbose: true,
 			}
 		} else {
-			log.Println(messageUseCloud)
+			log.Println(messageUseVaas)
 			cfg = vcert.Config{
 				ConnectorType: endpoint.ConnectorTypeCloud,
 				Credentials: &endpoint.Authentication{

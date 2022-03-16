@@ -445,32 +445,18 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		return err
 	}
 
-	pickupReq := &certificate.Request{
-		PickupID: requestID,
-		//TODO: make timeout configurable
-		Timeout: 180 * time.Second,
-	}
-
+	pickupPass := ""
 	if origin == csrService {
 		if pass, ok := d.GetOk("key_password"); ok {
-			pickupReq.KeyPassword = pass.(string)
+			pickupPass = pass.(string)
 		}
-
-		//for tpp we should set FetchPrivateKey = true
-		if cl.GetType() == endpoint.ConnectorTypeTPP {
-			pickupReq.FetchPrivateKey = true
-		}
-
 	}
+
+	pickupReq := fillRetrieveRequest(requestID, pickupPass, cl.GetType(), origin)
 
 	err = d.Set("certificate_dn", requestID)
 	if err != nil {
 		return err
-	}
-
-	if cl.GetType() == endpoint.ConnectorTypeTPP {
-		log.Println("Waiting 2 seconds as workaround for VEN-46960")
-		time.Sleep(2 * time.Second)
 	}
 
 	pcc, err := cl.RetrieveCertificate(pickupReq)
@@ -631,7 +617,7 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
 	}
 
-	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType())
+	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), csrService)
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
@@ -661,13 +647,13 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 	return []*schema.ResourceData{d}, nil
 }
 
-func fillRetrieveRequest(id string, p string, c endpoint.ConnectorType) *certificate.Request {
+func fillRetrieveRequest(id string, password string, connectorType endpoint.ConnectorType, origin string) *certificate.Request {
 	pickupReq := &certificate.Request{}
 	pickupReq.Timeout = 180 * time.Second
 	pickupReq.PickupID = id
-	pickupReq.KeyPassword = p
+	pickupReq.KeyPassword = password
 
-	if c == endpoint.ConnectorTypeTPP {
+	if connectorType == endpoint.ConnectorTypeTPP && origin == csrService {
 		pickupReq.FetchPrivateKey = true
 	}
 	return pickupReq
