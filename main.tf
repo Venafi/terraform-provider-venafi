@@ -56,11 +56,11 @@ provider "venafi" {
 }
 
 /*
-Cloud provider configuration (alias = "cloud")
+VaaS provider configuration (alias = "vaas")
 Here we are getting credentials from variables TF_VAR_CLOUDAPIKEY and TF_VAR_CLOUDZONE
 */
 provider "venafi" {
-  alias   = "cloud"
+  alias   = "vaas"
   api_key = var.CLOUD_APIKEY
   zone    = var.CLOUD_ZONE
   url     = var.CLOUD_URL
@@ -168,22 +168,22 @@ output "cert_private_key_dev_ecdsa" {
   value = venafi_certificate.dev_certificate_ecdsa.private_key_pem
 }
 
-resource "venafi_certificate" "cloud_certificate" {
-  provider    = venafi.cloud
-  common_name = "cloud-${random_string.cn.result}.venafi.example.com"
+resource "venafi_certificate" "vaas_certificate" {
+  provider    = venafi.vaas
+  common_name = "vaas-${random_string.cn.result}.venafi.example.com"
 }
 
-output "cert_certificate_cloud" {
-  value = venafi_certificate.cloud_certificate.certificate
+output "cert_certificate_vaas" {
+  value = venafi_certificate.vaas_certificate.certificate
 }
 
-output "cert_chain_cloud" {
-  value = venafi_certificate.cloud_certificate.chain
+output "cert_chain_vaas" {
+  value = venafi_certificate.vaas_certificate.chain
 }
 
-output "cert_private_key_cloud" {
+output "cert_private_key_vaas" {
   sensitive = true
-  value = venafi_certificate.cloud_certificate.private_key_pem
+  value = venafi_certificate.vaas_certificate.private_key_pem
 }
 
 resource "venafi_certificate" "tpp_certificate" {
