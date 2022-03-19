@@ -79,6 +79,7 @@ build:
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin_arm/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	#Build with debugging options, use it for remote debugging. Comment the above line
 	#env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build '-gcflags="all=-N -l" -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
@@ -86,13 +87,14 @@ build:
 	chmod +x $(PLUGIN_DIR)/*
 
 compress:
-	$(foreach var,linux linux86 darwin windows windows86,cp LICENSE $(PLUGIN_DIR)/$(var);)
-	$(foreach var,linux linux86 darwin windows windows86,cp README.md $(PLUGIN_DIR)/$(var);)
+	$(foreach var,linux linux86 darwin darwin_arm windows windows86,cp LICENSE $(PLUGIN_DIR)/$(var);)
+	$(foreach var,linux linux86 darwin darwin_arm windows windows86,cp README.md $(PLUGIN_DIR)/$(var);)
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_linux_amd64.zip" $(PLUGIN_DIR)/linux/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_linux_386.zip" $(PLUGIN_DIR)/linux86/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_darwin_amd64.zip" $(PLUGIN_DIR)/darwin/* || exit 1
+	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_darwin_arm64.zip" $(PLUGIN_DIR)/darwin_arm/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_windows_amd64.zip" $(PLUGIN_DIR)/windows/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_windows_386.zip" $(PLUGIN_DIR)/windows86/* || exit 1
 

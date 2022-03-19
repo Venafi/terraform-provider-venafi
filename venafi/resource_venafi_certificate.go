@@ -557,8 +557,8 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 		return nil, fmt.Errorf("missing private key PEM")
 	}
 	var privDER []byte
-	if x509.IsEncryptedPEMBlock(p) {
-		privDER, err = x509.DecryptPEMBlock(p, []byte(keyPassword))
+	if util.X509IsEncryptedPEMBlock(p) {
+		privDER, err = util.X509DecryptPEMBlock(p, []byte(keyPassword))
 		if err != nil {
 			return nil, fmt.Errorf("private key PEM decryption error: %s", err)
 		}
