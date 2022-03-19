@@ -1,7 +1,6 @@
 package venafi
 
 import (
-	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"github.com/Venafi/vcert/v4"
@@ -103,8 +102,8 @@ func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
 	}
 
 	var err error
-	if x509.IsEncryptedPEMBlock(pemBlock) {
-		keyBytes, err = x509.DecryptPEMBlock(pemBlock, []byte(passphrase))
+	if util.X509IsEncryptedPEMBlock(pemBlock) {
+		keyBytes, err = util.X509DecryptPEMBlock(pemBlock, []byte(passphrase))
 		if err != nil {
 			return nil, errors.Wrap(err, "private key is encrypted, but could not decrypt it")
 		}
