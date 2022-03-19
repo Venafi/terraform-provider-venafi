@@ -1,3 +1,7 @@
+## 0.16.0 (March 18, 2022)
+
+Added support for arm64 processors with Darwin OS.
+
 ## 0.15.0 (March 14, 2022)
 
 Added support for Certificate importing.
