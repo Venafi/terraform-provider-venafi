@@ -437,7 +437,7 @@ func TestVaasSignedCert(t *testing.T) {
 
 func TestVaasSignedCertUpdateRenew(t *testing.T) {
 	/*
-		This tests focuses on the renewal feature. We need to set the expiration window to be the same as the certificate
+		This test focuses on the renewal feature. We need to set the expiration window to be the same as the certificate
 		duration in order for the renew to take action. ExpectNonEmptyPlan is set true since we will always be able to
 		update the certificate on terraform plan re-apply. This is applicable for test purposes only, in a real scenario
 		the expiration window should not be too long, thus the terraform plan should be empty after a re-apply (once a
@@ -642,7 +642,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 
 func TestTokenSignedCertUpdateRenew(t *testing.T) {
 	/*
-		This tests focuses on the renewal feature. We need to set the expiration window to be the same as the certificate
+		This test focuses on the renewal feature. We need to set the expiration window to be the same as the certificate
 		duration in order for the renew to take action. ExpectNonEmptyPlan is set true since we will always be able to
 		update the certificate on terraform plan re-apply. This is applicable for test purposes only, in a real scenario
 		the expiration window should not be too long, thus the terraform plan should be empty after a re-apply (once a
