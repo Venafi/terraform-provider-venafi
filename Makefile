@@ -138,7 +138,7 @@ fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 # Integration tests using real terraform binary
-test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_cloud test_e2e_tpp_token
+test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_vaas test_e2e_tpp_token
 
 # This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
 e2e_init: build_dev_dynamic
@@ -155,12 +155,12 @@ test_e2e_tpp:
 	cat /tmp/cert_certificate_tpp.pem
 	cat /tmp/cert_certificate_tpp.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
-test_e2e_cloud:
-	echo yes|terraform apply -target=venafi_certificate.cloud_certificate -auto-approve
-	terraform state show venafi_certificate.cloud_certificate
-	terraform output cert_certificate_cloud > /tmp/cert_certificate_cloud.pem
-	cat /tmp/cert_certificate_cloud.pem
-	cat /tmp/cert_certificate_cloud.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
+test_e2e_vaas:
+	echo yes|terraform apply -target=venafi_certificate.vaas_certificate -auto-approve
+	terraform state show venafi_certificate.vaas_certificate
+	terraform output cert_certificate_vaas > /tmp/cert_certificate_vaas.pem
+	cat /tmp/cert_certificate_vaas.pem
+	cat /tmp/cert_certificate_vaas.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_tpp_token:
 	echo yes|terraform apply -target=venafi_certificate.token_certificate -auto-approve

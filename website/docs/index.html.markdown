@@ -73,13 +73,13 @@ resource "venafi_certificate" "webserver" {
 The following arguments are supported:
 
 * `zone` - (Required, string) Application Name and Issuing 
-Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi Cloud or policy folder for Venafi Platform.
+Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi as a Service or policy folder for Venafi Platform.
 
 * `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example").
 
 * `access_token` - (Optional, string) authentication token for the 'hashicorp-terraform-by-venafi' API Application (applies only to Venafi Platform).
 
-* `api_key` - (Optional, string) REST API key for authentication (applies only to Venafi Cloud).
+* `api_key` - (Optional, string) REST API key for authentication (applies only to Venafi as a Service).
 
 * `tpp_username` [DEPRECATED] - (Optional, string) WebSDK account username for authentication (applies only to Venafi Platform).
 
@@ -87,7 +87,7 @@ Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi Cloud or poli
 
 * `trust_bundle` - (Optional, string) PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ).
 
-* `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to Venafi Platform or Venafi Cloud.
+* `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to Venafi Platform or Venafi as a Service.
 
 ## Environment Variables
 

@@ -100,9 +100,9 @@ provider "venafi" {
 	api_key = "${var.CLOUD_APIKEY}"
 	zone = "${var.CLOUD_ZONE}"
 }`
-	cloudProvider = environmentVariables + `
+	vaasProvider = environmentVariables + `
 provider "venafi" {
-	alias = "cloud"
+	alias = "vaas"
 	url = "${var.CLOUD_URL}"
 	api_key = "${var.CLOUD_APIKEY}"
 	zone = "${var.CLOUD_ZONE}"
@@ -142,20 +142,20 @@ output "private_key" {
 	value = "${venafi_certificate.dev_certificate.private_key_pem}"
 }`
 
-	cloudConfig = `
+	vaasConfig = `
 %s
-resource "venafi_certificate" "cloud_certificate" {
-	provider = "venafi.cloud"
+resource "venafi_certificate" "vaas_certificate" {
+	provider = "venafi.vaas"
 	common_name = "%s"
 	%s
 	key_password = "%s"
 	expiration_window = %d
 }
 output "certificate" {
-	value = "${venafi_certificate.cloud_certificate.certificate}"
+	value = "${venafi_certificate.vaas_certificate.certificate}"
 }
 output "private_key" {
-	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
+	value = "${venafi_certificate.vaas_certificate.private_key_pem}"
 }`
 	tppConfig = `
 %s
@@ -305,31 +305,16 @@ output "custom_fields" {
 resource "venafi_certificate" "token_tpp_certificate_import" {
 	provider = "venafi"
 }`
-	cloudCsrServiceConfigImport = `
+	vaasCsrServiceConfigImport = `
 %s
-resource "venafi_certificate" "token_cloud_certificate_import" {
+resource "venafi_certificate" "token_vaas_certificate_import" {
 	provider = "venafi"
 }`
 
-	cloudCsrServiceConfig = `
+	vaasCsrServiceConfig = `
 %s
-resource "venafi_certificate" "cloud_certificate" {
-	provider = "venafi.cloud"
-	common_name = "%s"
-	%s
-	key_password = "%s"
-	expiration_window = %d
-	csr_origin = "service"
-}
-output "certificate" {
-	value = "${venafi_certificate.cloud_certificate.certificate}"
-}
-output "private_key" {
-	value = "${venafi_certificate.cloud_certificate.private_key_pem}"
-}`
-	vaasCsrServiceConfigImportCreate = `
-%s
-resource "venafi_certificate" "cloud_certificate" {
+resource "venafi_certificate" "vaas_certificate" {
+	provider = "venafi.vaas"
 	common_name = "%s"
 	%s
 	key_password = "%s"
@@ -403,8 +388,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 	})
 }
 
-func TestCloudSignedCert(t *testing.T) {
-	t.Skip("waiting fix for cloud team") //todo: remove after TRS-6826
+func TestVaasSignedCert(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -412,8 +396,8 @@ func TestCloudSignedCert(t *testing.T) {
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
 	data.expiration_window = 48
-	config := fmt.Sprintf(cloudConfig, cloudProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Vaas certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -431,7 +415,7 @@ func TestCloudSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing Cloud certificate second run")
+					t.Log("Testing VaaS certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
@@ -451,18 +435,29 @@ func TestCloudSignedCert(t *testing.T) {
 	})
 }
 
-func TestCloudSignedCertUpdate(t *testing.T) {
-	t.Skip("waiting fix for cloud team") //todo: remove after TRS-6826
+func TestVaasSignedCertUpdateRenew(t *testing.T) {
+	/*
+		This test focuses on the renewal feature. We need to set the expiration window to be the same as the certificate
+		duration in order for the renew to take action. ExpectNonEmptyPlan is set true since we will always be able to
+		update the certificate on terraform plan re-apply. This is applicable for test purposes only, in a real scenario
+		the expiration window should not be too long, thus the terraform plan should be empty after a re-apply (once a
+		renew re-apply is done after our plugin detected it should be renewed).
+
+		We have two checks: not_after - not_before >= expiration window [should raise error and exit] and
+		now + expiration windows < not_after [should update cert]
+		TPP zone creates certificates with duration of 8 years. so we make expiration_window the same size.
+		it passes first step because it's equal and still passes second beacuse we still have configured the expiration_window
+		to be the same as the certificate duration.
+	*/
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
-	// tpp signs certificates on 80 hours. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
-	data.expiration_window = 80
-	config := fmt.Sprintf(cloudConfig, cloudProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 168
+	//
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -645,7 +640,20 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	})
 }
 
-func TestTokenSignedCertUpdate(t *testing.T) {
+func TestTokenSignedCertUpdateRenew(t *testing.T) {
+	/*
+		This test focuses on the renewal feature. We need to set the expiration window to be the same as the certificate
+		duration in order for the renew to take action. ExpectNonEmptyPlan is set true since we will always be able to
+		update the certificate on terraform plan re-apply. This is applicable for test purposes only, in a real scenario
+		the expiration window should not be too long, thus the terraform plan should be empty after a re-apply (once a
+		renew re-apply is done after our plugin detected it should be renewed).
+
+		We have two checks: not_after - not_before >= expiration window [should raise error and exit] and
+		now + expiration windows < not_after [should update cert]
+		TPP zone creates certificates with duration of 8 years. so we make expiration_window the same size.
+		it passes first step because it's equal and still passes second beacuse we still have configured the expiration_window
+		to be the same as the certificate duration.
+	*/
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -655,8 +663,6 @@ func TestTokenSignedCertUpdate(t *testing.T) {
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
-	// tpp signs certificates on 8 years. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
 	data.expiration_window = 70080
 	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP Token certificate with RSA key with config:\n %s", config)
@@ -1106,7 +1112,7 @@ func TestTppCsrService(t *testing.T) {
 	})
 }
 
-func TestCloudCsrService(t *testing.T) {
+func TestVaasCsrService(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -1115,8 +1121,8 @@ func TestCloudCsrService(t *testing.T) {
 	data.expiration_window = 48
 	data.key_algo = rsa2048
 
-	config := fmt.Sprintf(cloudCsrServiceConfig, cloudProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Cloud certificate with CSR service and config:\n %s", config)
+	config := fmt.Sprintf(vaasCsrServiceConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing VaaS certificate with CSR service and config:\n %s", config)
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		Steps: []r.TestStep{
@@ -1299,7 +1305,7 @@ func TestImportCertificateVaas(t *testing.T) {
 	//TODO: Currently pointing to a very long-lived certificate to avoid check for renewal with our default expiration_window
 	// within the import operation. This test needs to be adjusted to be dynamic.
 	pickupId := os.Getenv("VAAS_CERTIFICATE_ID")
-	config := fmt.Sprintf(cloudCsrServiceConfigImport, vaasProviderImport)
+	config := fmt.Sprintf(vaasCsrServiceConfigImport, vaasProviderImport)
 	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
 	t.Logf("Testing importing VaaS cert:\n %s", config)
 	r.Test(t, r.TestCase{
@@ -1307,7 +1313,7 @@ func TestImportCertificateVaas(t *testing.T) {
 		Steps: []r.TestStep{
 			r.TestStep{
 				Config:        config,
-				ResourceName:  "venafi_certificate.token_cloud_certificate_import",
+				ResourceName:  "venafi_certificate.token_vaas_certificate_import",
 				ImportStateId: importId,
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
@@ -1362,6 +1368,212 @@ func TestValidateWrongImportEntries(t *testing.T) {
 				ImportStateId: fmt.Sprintf("%s,%s", data.cn, data.private_key_password),
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importZoneFailEmpty),
+			},
+		},
+	})
+}
+
+func TestManyCertsTpp(t *testing.T) {
+	// test for removing workaround of VEN-46960
+	t.Log("Testing stressing TPP with many certs with same certificate object (same common name)")
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.many.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	config := fmt.Sprintf(tppConfig, tppProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandardCertPKCS8(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate second run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate third run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after third run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from third run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate fourth run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after fourth run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from fourth run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate fifth run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after fifth run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from fifth run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestManyCertsTppCsrService(t *testing.T) {
+	// test for removing workaround of VEN-46960
+	t.Log("Testing stressing TPP with many certificates with CSR Service Generated and same certificate object (same common name)")
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.many.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.private_key_password = "newPassword!"
+
+	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
+	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					return checkStandardCertPKCS8(t, &data, s)
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate second run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after second run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from second run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate third run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after third run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from third run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate fourth run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after fourth run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from fourth run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate fifth run")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare certificate serial %s with serial after fifth run %s", gotSerial, data.serial)
+						if gotSerial != data.serial {
+							return fmt.Errorf("serial number from fifth run %s is different as in original number %s."+
+								" Which means that certificate was updated without reason", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
 			},
 		},
 	})
