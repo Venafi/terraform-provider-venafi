@@ -332,11 +332,16 @@ output "private_key" {
 type KeyFormat int
 
 const (
+	regexValidateWindow            = `certificate validity duration.*is less than configured expiration window.*`
 	issuer_hint                    = "MICROSOFT"
 	valid_days                     = 30
 	expectedPrivKeyPKCS1 KeyFormat = iota
 	expectedPrivKeyPKCS8
 )
+
+//TODO: make test with invalid key
+//TODO: make test on invalid options for RSA, ECSA keys
+//TODO: make test with too big expiration window
 
 func TestDevSignedCert(t *testing.T) {
 	t.Log("Testing Dev RSA certificate")
@@ -885,139 +890,6 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 	})
 }
 
-func getCustomFields(variableName string) string {
-	formattedData := ""
-
-	data := os.Getenv(variableName)
-	entries := strings.Split(data, ",")
-	for _, value := range entries {
-		formattedData = formattedData + value + ",\n"
-	}
-	return formattedData
-}
-
-//TODO: make test with invalid key
-//TODO: make test on invalid options fo RSA, ECSA keys
-//TODO: make test with too big expiration window
-
-func checkStandardCertPKCS1(t *testing.T, data *testData, s *terraform.State) error {
-	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS1)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkStandardCertPKCS8(t *testing.T, data *testData, s *terraform.State) error {
-	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS8)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkStandardCertOutputs(t *testing.T, data *testData, s *terraform.State, kf KeyFormat) error {
-	t.Log("Testing certificate with cn", data.cn)
-	certUntyped := s.RootModule().Outputs["certificate"].Value
-	certificate, ok := certUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"certificate\" is not a string")
-	}
-
-	t.Logf("Testing certificate PEM:\n %s", certificate)
-	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
-		return fmt.Errorf("key is missing cert PEM preamble")
-	}
-	keyUntyped := s.RootModule().Outputs["private_key"].Value
-	privateKey, ok := keyUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"private_key\" is not a string")
-	}
-
-	err := checkStandardCertInfo(t, data, certificate, privateKey, kf)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkStandardCertInfo(t *testing.T, data *testData, certificate string, privateKey string, kf KeyFormat) error {
-	block, _ := pem.Decode([]byte(certificate))
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return fmt.Errorf("error parsing cert: %s", err)
-	}
-	if expected, got := data.cn, cert.Subject.CommonName; got != expected {
-		return fmt.Errorf("incorrect subject common name: expected %v, certificate %v", expected, got)
-	}
-	if len(data.dns_ns) > 0 {
-		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
-			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
-		}
-	} else {
-		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
-			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
-		}
-	}
-
-	data.serial = cert.SerialNumber.String()
-	data.timeCheck = time.Now().String()
-
-	t.Logf("Testing private key PEM:\n %s", privateKey)
-	privKeyPEMbytes := make([]byte, 0)
-	if kf == expectedPrivKeyPKCS1 {
-		privKeyPEMbytes, err = getPrivateKey([]byte(privateKey), data.private_key_password)
-		if err != nil {
-			return fmt.Errorf("error trying to decrypt key: %s", err)
-		}
-	} else if kf == expectedPrivKeyPKCS8 {
-		privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
-		if err != nil {
-			return fmt.Errorf("error trying to decrypt key: %s", err)
-		}
-		privKeyPEMbytes = []byte(privateKeyString)
-	}
-
-	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEMbytes)
-	if err != nil {
-		return fmt.Errorf("error comparing certificate and key: %s", err)
-	}
-	return nil
-}
-
-func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Testing certificate with cn", data.cn)
-	certUntyped := s.RootModule().Outputs["certificate"].Value
-	certificate, ok := certUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"certificate\" is not a string")
-	}
-
-	t.Logf("Testing certificate PEM:\n %s", certificate)
-	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
-		return fmt.Errorf("key is missing cert PEM preamble")
-	}
-	block, _ := pem.Decode([]byte(certificate))
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return fmt.Errorf("error parsing cert: %s", err)
-	}
-
-	certValidUntil := cert.NotAfter.Format("2006-01-02")
-
-	//need to convert local date on utc, since the certificate' NotAfter value we got on previous step, is on utc
-	//so for comparing them we need to have both dates on utc.
-	loc, _ := time.LoadLocation("UTC")
-	utcNow := time.Now().In(loc)
-	expectedValidDate := utcNow.AddDate(0, 0, valid_days).Format("2006-01-02")
-
-	if expectedValidDate != certValidUntil {
-		return fmt.Errorf("Expiration date is different than expected, expected: %s, but got %s: ", expectedValidDate, certValidUntil)
-	}
-
-	return nil
-}
-
 func TestCheckForRenew(t *testing.T) {
 	checkingCert := `
 -----BEGIN CERTIFICATE-----
@@ -1076,10 +948,8 @@ xA==
 `
 	block, _ := pem.Decode([]byte(cert2))
 	cert, _ := x509.ParseCertificate(block.Bytes)
-	renew, err := checkForRenew(*cert, 24)
-	if err != nil {
-		t.Log("error is", err.Error())
-	} else if renew {
+	renew := checkForRenew(*cert, 24)
+	if renew {
 		t.Log("Certificate should be renewed in", renew)
 	} else {
 		t.Log("It's enough time until renew:", renew)
@@ -1140,35 +1010,6 @@ func TestVaasCsrService(t *testing.T) {
 	})
 }
 
-func getCertTppImportConfig(name string) *testData {
-	data := testData{}
-	domain := "venafi.example.com"
-	data.cn = name + "." + domain
-	data.dns_ns = "alt-" + data.cn
-	data.private_key_password = "newPassword!"
-	return &data
-}
-
-func getCertTppImportConfigWithCustomFields() *testData {
-	data := testData{}
-	domain := "venafi.example.com"
-	data.cn = "import.custom_fields" + "." + domain
-	data.dns_ns = "alt-" + data.cn
-	data.private_key_password = "newPassword!"
-	cfEnvVarName := "TPP_CUSTOM_FIELDS"
-	data.custom_fields = getCustomFields(cfEnvVarName)
-	return &data
-}
-
-func getCertVaasImportConfig() *testData {
-	data := testData{}
-	domain := "venafi.example.com"
-	data.cn = "new.import.vaas" + "." + domain
-	data.key_algo = rsa2048
-	data.private_key_password = "123xxx"
-	return &data
-}
-
 func TestImportCertificateTpp(t *testing.T) {
 	name := "import"
 	data := getCertTppImportConfig(name)
@@ -1214,67 +1055,6 @@ func TestImportCertificateTppWithCustomFields(t *testing.T) {
 			},
 		},
 	})
-}
-
-func checkStandardImportCert(t *testing.T, data *testData, states []*terraform.InstanceState) error {
-	st := states[0]
-	attributes := st.Attributes
-	err := checkImportCert(t, data, attributes)
-	if err != nil {
-		return err
-	}
-	return nil
-
-}
-
-func checkImportTppCertWithCustomFields(t *testing.T, data *testData, states []*terraform.InstanceState) error {
-	st := states[0]
-	attributes := st.Attributes
-	err := checkImportCert(t, data, attributes)
-	if err != nil {
-		return err
-	}
-	err = checkImportedCustomFields(t, data.custom_fields, attributes)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkImportCert(t *testing.T, data *testData, attr map[string]string) error {
-	certificate := attr["certificate"]
-	privateKey := attr["private_key_pem"]
-	err := checkStandardCertInfo(t, data, certificate, privateKey, expectedPrivKeyPKCS8)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]string) error {
-	t.Logf("Comparing imported custom fields with the ones in the test file")
-
-	// creating map from string
-	var customFieldsMap map[string]string
-	// cleaning data string from special characters
-	if strings.HasSuffix(dataCf, ",\n") {
-		dataCf = strings.TrimSuffix(dataCf, ",\n")
-	}
-	dataCf = strings.ReplaceAll(dataCf, "\n", "")
-	dataCf = strings.ReplaceAll(dataCf, "\"", "")
-	customFieldsRow := strings.Split(dataCf, ",")
-	customFieldsMap = make(map[string]string)
-	for _, pair := range customFieldsRow {
-		z := strings.Split(pair, "=")
-		customFieldsMap[z[0]] = z[1]
-	}
-	for key, value := range customFieldsMap {
-		keyAttr := fmt.Sprintf("custom_fields.%s", key)
-		if attr[keyAttr] != value {
-			return fmt.Errorf("\"%s\" custom field is different, expected: %s, got: %s", key, value, attr[keyAttr])
-		}
-	}
-	return nil
 }
 
 func TestImportCertificateECDSA(t *testing.T) {
@@ -1578,3 +1358,463 @@ func TestManyCertsTppCsrService(t *testing.T) {
 		},
 	})
 }
+
+func TestNegativeValidateExpirationWindowValidDays(t *testing.T) {
+	// Testing when we compare valid days against the expiration_window
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 170
+	data.valid_days = 7
+	// 7 days < 170 hours -> should trigger error
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of Vaas certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:      config,
+				ExpectError: regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+func TestNegativeValidateExpirationWindowFromZoneTpp(t *testing.T) {
+	// Testing when we compare zone from the policy valid days against the expiration_window
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 70100
+	// expiration_window > 8 years
+	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of TPP Token certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:      config,
+				ExpectError: regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+func TestNegativeValidateExpirationWindowFromZoneTppRenew(t *testing.T) {
+	// Testing when we compare zone from the policy valid days against the expiration_window.
+	// We expect no empty plan on first step since the expiration_window matches the duration of the certificate
+	// allowed in the certificate template and should be renewed
+	// but should fail since plan is being provided a bad input for expiration_window
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 70080
+	// expiration_window > 8 years
+	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 70100
+	configWrongExpWindowUpdate := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of TPP Token certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:       config,
+				ResourceName: "venafi_certificate.token_certificate",
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+				ExpectNonEmptyPlan: true,
+			},
+			r.TestStep{
+				Config:       configWrongExpWindowUpdate,
+				ResourceName: "venafi_certificate.token_certificate",
+				ExpectError:  regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+func TestNegativeValidateExpirationWindowFromZoneTppUpdate(t *testing.T) {
+	// Testing when we compare zone from the policy valid days against the expiration_window.
+	// We create a certificate with valid expiration_window input that is below the certificate duration
+	// but should fail on next step since plan is being provided a bad input for expiration_window during update
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	// expiration_window > 8 years
+	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 70100
+	configWrongExpWindowUpdate := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of TPP Token certificate with RSA key with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:       config,
+				ResourceName: "venafi_certificate.token_certificate",
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+			},
+			r.TestStep{
+				Config:       configWrongExpWindowUpdate,
+				ResourceName: "venafi_certificate.token_certificate",
+				ExpectError:  regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+func TestNegativeValidateExpirationWindowFromZoneVaas(t *testing.T) {
+	// Testing when we compare zone from the issuing template valid days against the expiration_window
+	// we assume a zone which valid_days is equal to seven (1 week).
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 170
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of Vaas certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:      config,
+				ExpectError: regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+func TestNegativeValidateExpirationWindowFromZoneVaasRenew(t *testing.T) {
+	// Testing when we compare zone from the issuing template valid days against the expiration_window.
+	// We expect no empty plan on first step since the expiration_window matches the duration of the certificate
+	// allowed in the certificate template and should be renewed
+	// but should fail since plan is being provided a bad input for expiration_window
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 170
+	configWrongExpWindowUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of Vaas certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+				ExpectNonEmptyPlan: true,
+			},
+			r.TestStep{
+				Config:      configWrongExpWindowUpdate,
+				ExpectError: regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+func TestNegativeValidateExpirationWindowFromZoneVaasUpdate(t *testing.T) {
+	// Testing when we compare zone from the issuing template valid days against the expiration_window.
+	// We create a certificate with valid expiration_window input that is below the certificate duration
+	// but should fail on next step since plan is being provided a bad input for expiration_window during update
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 70
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 170
+	configWrongExpWindowUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Negative test of Vaas certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+			},
+			r.TestStep{
+				Config:      configWrongExpWindowUpdate,
+				ExpectError: regexp.MustCompile(regexValidateWindow),
+			},
+		},
+	})
+}
+
+//--------------------------------------------- Common test functions ------------------------------------------------//
+
+func getCustomFields(variableName string) string {
+	formattedData := ""
+
+	data := os.Getenv(variableName)
+	entries := strings.Split(data, ",")
+	for _, value := range entries {
+		formattedData = formattedData + value + ",\n"
+	}
+	return formattedData
+}
+
+func getCertTppImportConfig(name string) *testData {
+	data := testData{}
+	domain := "venafi.example.com"
+	data.cn = name + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.private_key_password = "newPassword!"
+	return &data
+}
+
+func getCertTppImportConfigWithCustomFields() *testData {
+	data := testData{}
+	domain := "venafi.example.com"
+	data.cn = "import.custom_fields" + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.private_key_password = "newPassword!"
+	cfEnvVarName := "TPP_CUSTOM_FIELDS"
+	data.custom_fields = getCustomFields(cfEnvVarName)
+	return &data
+}
+
+func getCertVaasImportConfig() *testData {
+	data := testData{}
+	domain := "venafi.example.com"
+	data.cn = "new.import.vaas" + "." + domain
+	data.key_algo = rsa2048
+	data.private_key_password = "123xxx"
+	return &data
+}
+
+func checkStandardCertPKCS1(t *testing.T, data *testData, s *terraform.State) error {
+	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkStandardCertPKCS8(t *testing.T, data *testData, s *terraform.State) error {
+	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS8)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkStandardCertOutputs(t *testing.T, data *testData, s *terraform.State, kf KeyFormat) error {
+	t.Log("Testing certificate with cn", data.cn)
+	certUntyped := s.RootModule().Outputs["certificate"].Value
+	certificate, ok := certUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"certificate\" is not a string")
+	}
+
+	t.Logf("Testing certificate PEM:\n %s", certificate)
+	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+		return fmt.Errorf("key is missing cert PEM preamble")
+	}
+	keyUntyped := s.RootModule().Outputs["private_key"].Value
+	privateKey, ok := keyUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"private_key\" is not a string")
+	}
+
+	err := checkStandardCertInfo(t, data, certificate, privateKey, kf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkStandardCertInfo(t *testing.T, data *testData, certificate string, privateKey string, kf KeyFormat) error {
+	block, _ := pem.Decode([]byte(certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+	if expected, got := data.cn, cert.Subject.CommonName; got != expected {
+		return fmt.Errorf("incorrect subject common name: expected %v, certificate %v", expected, got)
+	}
+	if len(data.dns_ns) > 0 {
+		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
+			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
+		}
+	} else {
+		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
+			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
+		}
+	}
+
+	data.serial = cert.SerialNumber.String()
+	data.timeCheck = time.Now().String()
+
+	t.Logf("Testing private key PEM:\n %s", privateKey)
+	privKeyPEMbytes := make([]byte, 0)
+	if kf == expectedPrivKeyPKCS1 {
+		privKeyPEMbytes, err = getPrivateKey([]byte(privateKey), data.private_key_password)
+		if err != nil {
+			return fmt.Errorf("error trying to decrypt key: %s", err)
+		}
+	} else if kf == expectedPrivKeyPKCS8 {
+		privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
+		if err != nil {
+			return fmt.Errorf("error trying to decrypt key: %s", err)
+		}
+		privKeyPEMbytes = []byte(privateKeyString)
+	}
+
+	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEMbytes)
+	if err != nil {
+		return fmt.Errorf("error comparing certificate and key: %s", err)
+	}
+	return nil
+}
+
+func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error {
+	t.Log("Testing certificate with cn", data.cn)
+	certUntyped := s.RootModule().Outputs["certificate"].Value
+	certificate, ok := certUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"certificate\" is not a string")
+	}
+
+	t.Logf("Testing certificate PEM:\n %s", certificate)
+	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+		return fmt.Errorf("key is missing cert PEM preamble")
+	}
+	block, _ := pem.Decode([]byte(certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+
+	certValidUntil := cert.NotAfter.Format("2006-01-02")
+
+	//need to convert local date on utc, since the certificate' NotAfter value we got on previous step, is on utc
+	//so for comparing them we need to have both dates on utc.
+	loc, _ := time.LoadLocation("UTC")
+	utcNow := time.Now().In(loc)
+	expectedValidDate := utcNow.AddDate(0, 0, valid_days).Format("2006-01-02")
+
+	if expectedValidDate != certValidUntil {
+		return fmt.Errorf("Expiration date is different than expected, expected: %s, but got %s: ", expectedValidDate, certValidUntil)
+	}
+
+	return nil
+}
+
+func checkStandardImportCert(t *testing.T, data *testData, states []*terraform.InstanceState) error {
+	st := states[0]
+	attributes := st.Attributes
+	err := checkImportCert(t, data, attributes)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func checkImportTppCertWithCustomFields(t *testing.T, data *testData, states []*terraform.InstanceState) error {
+	st := states[0]
+	attributes := st.Attributes
+	err := checkImportCert(t, data, attributes)
+	if err != nil {
+		return err
+	}
+	err = checkImportedCustomFields(t, data.custom_fields, attributes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkImportCert(t *testing.T, data *testData, attr map[string]string) error {
+	certificate := attr["certificate"]
+	privateKey := attr["private_key_pem"]
+	err := checkStandardCertInfo(t, data, certificate, privateKey, expectedPrivKeyPKCS8)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]string) error {
+	t.Logf("Comparing imported custom fields with the ones in the test file")
+
+	// creating map from string
+	var customFieldsMap map[string]string
+	// cleaning data string from special characters
+	if strings.HasSuffix(dataCf, ",\n") {
+		dataCf = strings.TrimSuffix(dataCf, ",\n")
+	}
+	dataCf = strings.ReplaceAll(dataCf, "\n", "")
+	dataCf = strings.ReplaceAll(dataCf, "\"", "")
+	customFieldsRow := strings.Split(dataCf, ",")
+	customFieldsMap = make(map[string]string)
+	for _, pair := range customFieldsRow {
+		z := strings.Split(pair, "=")
+		customFieldsMap[z[0]] = z[1]
+	}
+	for key, value := range customFieldsMap {
+		keyAttr := fmt.Sprintf("custom_fields.%s", key)
+		if attr[keyAttr] != value {
+			return fmt.Errorf("\"%s\" custom field is different, expected: %s, got: %s", key, value, attr[keyAttr])
+		}
+	}
+	return nil
+}
+
+//------------------------------------------ Common test functions [end] ---------------------------------------------//

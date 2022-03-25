@@ -33,6 +33,7 @@ const (
 	importPickupIdFailEmpty    = "empty pickupID for VaaS or common_name for TPP during import method"
 	importKeyPasswordFailEmpty = "empty key_password for import method" //#nosec
 	importZoneFailEmpty        = "zone cannot be empty when importing certificate"
+	validationWindowError      = "certificate validity duration %s is less than configured expiration window %s"
 )
 
 func resourceVenafiCertificate() *schema.Resource {
@@ -196,8 +197,26 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 
 func resourceVenafiCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("expiration_window") {
-		expiration_window := d.Get("expiration_window").(int)
-		err := d.Set("expiration_window", expiration_window)
+		expirationWindowUntyped, ok := d.GetOk("expiration_window")
+		if !ok {
+			return fmt.Errorf("expiration_window is nil")
+		}
+		expirationWindow := expirationWindowUntyped.(int)
+		certUntyped, ok := d.GetOk("certificate")
+		if !ok {
+			return fmt.Errorf("cert is nil")
+		}
+		certPEM := certUntyped.(string)
+		block, _ := pem.Decode([]byte(certPEM))
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("error parsing cert: %s", err)
+		}
+		err = validateExpirationWindow(cert, expirationWindow, nil)
+		if err != nil {
+			return err
+		}
+		err = d.Set("expiration_window", expirationWindow)
 		if err != nil {
 			return err
 		}
@@ -246,11 +265,7 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 		return false, fmt.Errorf("error comparing certificate and key: %s", err)
 	}
 
-	//TODO: maybe this check should be up on CSR creation
-	renewRequired, err := checkForRenew(*cert, d.Get("expiration_window").(int))
-	if err != nil {
-		return false, err
-	}
+	renewRequired := checkForRenew(*cert, d.Get("expiration_window").(int))
 	if renewRequired {
 		//TODO: get request id from resource id
 		log.Printf("Certificate expires %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
@@ -260,14 +275,27 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	return true, nil
 }
 
-func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired bool, err error) {
+func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired bool) {
 	renewWindow := time.Duration(expirationWindow) * time.Hour
-	if cert.NotAfter.Sub(cert.NotBefore) < renewWindow {
-		err = fmt.Errorf("certificate validity duration %s is less than configured expiration window %s", cert.NotAfter.Sub(cert.NotBefore), renewWindow)
-		return
-	}
 	renewRequired = time.Now().Add(renewWindow).After(cert.NotAfter)
 	return
+}
+
+func validateExpirationWindow(cert *x509.Certificate, expirationWindow int, validHours *int) (err error) {
+	var duration time.Duration
+	if cert != nil && validHours == nil {
+		duration = cert.NotAfter.Sub(cert.NotBefore)
+	} else if validHours != nil && cert == nil {
+		duration = time.Duration(*validHours) * time.Hour
+	} else {
+		return fmt.Errorf("must provide either cert(x509.Certificate) or validDays(int) (not both)")
+	}
+	renewWindow := time.Duration(expirationWindow) * time.Hour
+	if duration < renewWindow {
+		err = fmt.Errorf(fmt.Sprintf(validationWindowError, duration, renewWindow))
+		return err
+	}
+	return nil
 }
 
 func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) error {
@@ -416,23 +444,19 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		}
 	}
 
+	expirationWindow := d.Get("expiration_window").(int)
 	if ttl, ok := d.GetOk("valid_days"); ok {
-
 		validity := ttl.(int)
 		validity = validity * 24
-		expiration_window := d.Get("expiration_window").(int)
-
-		if validity < expiration_window {
-			if err = d.Set("expiration_window", validity); err != nil {
-				return fmt.Errorf("error setting expiration_window: %s", err)
-			}
+		err = validateExpirationWindow(nil, expirationWindow, &validity)
+		if err != nil {
+			return err
 		}
-
 		req.ValidityHours = validity
-		issuer_hint := d.Get("issuer_hint").(string)
-		req.IssuerHint = getIssuerHint(issuer_hint)
-
 	}
+
+	issuerHint := d.Get("issuer_hint").(string)
+	req.IssuerHint = getIssuerHint(issuerHint)
 
 	log.Println("Making certificate request")
 	err = cl.GenerateRequest(nil, req)
@@ -460,6 +484,13 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	}
 
 	pcc, err := cl.RetrieveCertificate(pickupReq)
+	if err != nil {
+		return err
+	}
+
+	block, _ := pem.Decode([]byte(pcc.Certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	err = validateExpirationWindow(cert, expirationWindow, nil)
 	if err != nil {
 		return err
 	}
