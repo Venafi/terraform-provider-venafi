@@ -490,6 +490,9 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	block, _ := pem.Decode([]byte(pcc.Certificate))
 	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return err
+	}
 	err = validateExpirationWindow(cert, expirationWindow, nil)
 	if err != nil {
 		return err
