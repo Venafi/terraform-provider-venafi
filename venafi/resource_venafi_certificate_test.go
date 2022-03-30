@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -156,6 +157,9 @@ output "certificate" {
 }
 output "private_key" {
 	value = "${venafi_certificate.vaas_certificate.private_key_pem}"
+}
+output "expiration_window" {
+	value = "${venafi_certificate.vaas_certificate.expiration_window}"
 }`
 	tppConfig = `
 %s
@@ -204,6 +208,9 @@ output "certificate" {
 }
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}
+output "expiration_window" {
+	value = "${venafi_certificate.token_certificate.expiration_window}"
 }`
 	tokenConfigWithCustomFields = `
 %s
@@ -257,6 +264,9 @@ output "certificate" {
 }
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
+}
+output "expiration_window" {
+	value = "${venafi_certificate.token_certificate.expiration_window}"
 }`
 	tppCsrServiceConfig = `
 %s
@@ -445,9 +455,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 
 		We have two checks: not_after - not_before >= expiration window [should raise error and exit] and
 		now + expiration windows < not_after [should update cert]
-		TPP zone creates certificates with duration of 8 years. so we make expiration_window the same size.
-		it passes first step because it's equal and still passes second beacuse we still have configured the expiration_window
-		to be the same as the certificate duration.
+		VaaS zone creates certificates with duration of 1 week, so we make expiration_window the same size.
 	*/
 	data := testData{}
 	rand := randSeq(9)
@@ -469,6 +477,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 					if err != nil {
 						return err
 					}
+
 					return nil
 
 				},
@@ -498,6 +507,131 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 	})
 }
 
+func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *testing.T) {
+	/*
+		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
+		than the expiration_window: It should create a Terraform state with an expiration_window as same as the cert duration.
+		We expect a not empty plan due to the expiration_window being equal to cert duration
+	*/
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 170
+	currentExpirationWindow := data.expiration_window
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					err = checkCertExpirationWindow(t, &data, s)
+					if err != nil {
+						return err
+					}
+					if currentExpirationWindow == data.expiration_window {
+						return fmt.Errorf(fmt.Sprintf("expiration window should have changed during enroll. current: %s got from zone: %s", strconv.Itoa(currentExpirationWindow), strconv.Itoa(data.expiration_window)))
+					}
+					return nil
+
+				},
+				ExpectNonEmptyPlan: true,
+			},
+			r.TestStep{
+				Config:             config,
+				ExpectNonEmptyPlan: true,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate update")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					} else {
+						t.Logf("Compare updated original certificate serial %s with updated %s", gotSerial, data.serial)
+						if gotSerial == data.serial {
+							return fmt.Errorf("serial number from updated certificate %s is the same as "+
+								"in original number %s", data.serial, gotSerial)
+						} else {
+							return nil
+						}
+					}
+				},
+			},
+		},
+	})
+}
+
+func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
+	/*
+		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
+		than the expiration_window: It should create a Terraform state with an expiration_window  as same as the cert duration.
+		On update, we expect a not empty plan due to the expiration_window being equal to cert duration, and the serial
+		to be the same since creation of new resource was not applied.
+	*/
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 100
+	oldExpirationWindow := data.expiration_window
+	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 180
+	configUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+				},
+			},
+			r.TestStep{
+				Config:             configUpdate,
+				ExpectNonEmptyPlan: true,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate update")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					t.Logf("Compare updated original certificate serial %s with expiration_window updated serial %s", gotSerial, data.serial)
+					if gotSerial != data.serial {
+						return fmt.Errorf("serial number from updated resource %s is not the same as "+
+							"in original number %s", data.serial, gotSerial)
+					}
+					err = checkCertExpirationWindow(t, &data, s)
+					if err != nil {
+						return err
+					}
+					if oldExpirationWindow == data.expiration_window {
+						return fmt.Errorf(fmt.Sprintf("expiration window should have changed during enroll. current: %s got from zone: %s", strconv.Itoa(oldExpirationWindow), strconv.Itoa(data.expiration_window)))
+					}
+					return nil
+
+				},
+			},
+		},
+	})
+}
+
 func TestTPPSignedCertUpdate(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
@@ -509,7 +643,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
 	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
-	// tpp signs certificates on 8 years. so we make windows the same size. it pass first check because it`s equal and failed second because script need some time for it works and update cert
+	// tpp signs certificates on 8 years. so we make windows the same size.
 	data.expiration_window = 70080
 	config := fmt.Sprintf(tppConfig, tppProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
@@ -651,8 +785,6 @@ func TestTokenSignedCertUpdateRenew(t *testing.T) {
 		We have two checks: not_after - not_before >= expiration window [should raise error and exit] and
 		now + expiration windows < not_after [should update cert]
 		TPP zone creates certificates with duration of 8 years. so we make expiration_window the same size.
-		it passes first step because it's equal and still passes second beacuse we still have configured the expiration_window
-		to be the same as the certificate duration.
 	*/
 	data := testData{}
 	rand := randSeq(9)
@@ -870,15 +1002,126 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-
 					t.Log("Testing TPP certificate second run")
-
 					err := checkCertValidDays(t, &data, s)
 					if err != nil {
 						return err
 					}
 
 					return nil
+				},
+			},
+		},
+	})
+}
+
+func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
+	/*
+		We create a certificate with valid_days less than the expiration_window, in result the expiration_window should be
+		equal to the valid_days in hours, due to our validation.
+		We expect a not empty plan due to the expiration_window being equal to cert duration
+	*/
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 730
+	data.issuer_hint = issuer_hint
+	data.valid_days = valid_days
+	currentExpirationWindow := data.expiration_window
+
+	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
+	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config:             config,
+				ExpectNonEmptyPlan: true,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					err = checkCertExpirationWindow(t, &data, s)
+					if err != nil {
+						return err
+					}
+					if currentExpirationWindow == data.expiration_window {
+						return fmt.Errorf(fmt.Sprintf("expiration window should have changed. current: %s got from zone: %s", strconv.Itoa(currentExpirationWindow), strconv.Itoa(data.expiration_window)))
+					}
+					return err
+				},
+			},
+		},
+	})
+}
+
+func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
+	/*
+		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
+		than the expiration_window: It should create a Terraform state with an expiration_window as same as the cert duration.
+		On update, we expect a not empty plan due to the expiration_window being equal to zone validity duration, and the serial
+		to be the same since creation of new resource was not applied.
+	*/
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.expiration_window = 100
+	oldExpirationWindow := data.expiration_window
+	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	data.expiration_window = 70080
+	configUpdate := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing TPP Token certificate with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+				},
+			},
+			r.TestStep{
+				Config:             configUpdate,
+				ExpectNonEmptyPlan: true,
+				Check: func(s *terraform.State) error {
+					t.Log("Testing TPP certificate update")
+					gotSerial := data.serial
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					t.Logf("Compare updated original certificate serial %s with expiration_window updated serial %s", gotSerial, data.serial)
+					if gotSerial != data.serial {
+						return fmt.Errorf("serial number from updated resource %s is not the same as "+
+							"in original number %s", data.serial, gotSerial)
+					}
+					err = checkCertExpirationWindow(t, &data, s)
+					if err != nil {
+						return err
+					}
+					if oldExpirationWindow == data.expiration_window {
+						return fmt.Errorf(fmt.Sprintf("expiration window should have changed during enroll. current: %s got from zone: %s", strconv.Itoa(oldExpirationWindow), strconv.Itoa(data.expiration_window)))
+					}
+					return nil
+
 				},
 			},
 		},
@@ -1018,6 +1261,17 @@ func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error 
 	return nil
 }
 
+func checkCertExpirationWindow(t *testing.T, data *testData, s *terraform.State) error {
+	t.Log("Getting expiration_window from terraform state", data.cn)
+	expirationWindowUntyped := s.RootModule().Outputs["expiration_window"].Value
+	expirationWindow, ok := expirationWindowUntyped.(int)
+	if !ok {
+		return fmt.Errorf("output for \"expiration_window\" is not an integer")
+	}
+	data.expiration_window = expirationWindow
+	return nil
+}
+
 func TestCheckForRenew(t *testing.T) {
 	checkingCert := `
 -----BEGIN CERTIFICATE-----
@@ -1076,10 +1330,8 @@ xA==
 `
 	block, _ := pem.Decode([]byte(cert2))
 	cert, _ := x509.ParseCertificate(block.Bytes)
-	renew, err := checkForRenew(*cert, 24)
-	if err != nil {
-		t.Log("error is", err.Error())
-	} else if renew {
+	renew := checkForRenew(*cert, 24)
+	if renew {
 		t.Log("Certificate should be renewed in", renew)
 	} else {
 		t.Log("It's enough time until renew:", renew)
