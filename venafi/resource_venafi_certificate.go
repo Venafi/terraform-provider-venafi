@@ -196,19 +196,19 @@ func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) e
 
 func resourceVenafiCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("expiration_window") {
+		// Getting expiration_window from state
 		expiration_window := d.Get("expiration_window").(int)
+		// Getting certificate
 		certUntyped, ok := d.GetOk("certificate")
 		if !ok {
 			return fmt.Errorf("cert is nil")
 		}
 		certPEM := certUntyped.(string)
-		block, _ := pem.Decode([]byte(certPEM))
-		cert, err := x509.ParseCertificate(block.Bytes)
+		// validating expiration_window
+		_, _, err := validExpirationWindowCert(certPEM, expiration_window)
 		if err != nil {
-			return fmt.Errorf("error parsing cert: %s", err)
+			return err
 		}
-		expirationWindowDuration := time.Duration(expiration_window) * time.Hour
-		expirationWindowAboveValidityPeriod(cert, expirationWindowDuration)
 		err = d.Set("expiration_window", expiration_window)
 		if err != nil {
 			return err
@@ -262,29 +262,47 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	renewRequired := checkForRenew(*cert, d.Get("expiration_window").(int))
 	if renewRequired {
 		//TODO: get request id from resource id
-		log.Printf("Certificate expires %s and should be renewed becouse it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
+		log.Printf("Certificate expires %s and should be renewed because it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
 		return false, nil
 	}
 
 	return true, nil
 }
 
-// expirationWindowAboveValidityPeriod as the name says is the expiration_window is greater than the  validity_period
-// return a bool and the current duration of the certificate
-// expects x509.Certificate and the expiration_window in time.Duration converted to hours
-func expirationWindowAboveValidityPeriod(cert *x509.Certificate, renewWindowHours time.Duration) (boolean bool, duration *int64) {
-	currentDuration := cert.NotAfter.Sub(cert.NotBefore)
-	if currentDuration < renewWindowHours {
-		log.Printf("certificate validity duration %s is less than configured expiration window %s", cert.NotAfter.Sub(cert.NotBefore), renewWindowHours)
-		durationHoursInt := int64(currentDuration / time.Hour)
-		return true, &durationHoursInt
+// validExpirationWindowCert checks if the expiration_window the expiration_window is greater than the validity_period
+// receives the certificate in PEM format as a string type and expiration window in time.Duration type (converted to hours)
+// returns a boolean value of true if expiration_window is greater and logs it in a message, else returns false and doesn't log a message, and any error encountered
+func validExpirationWindowCert(certPem string, expirationWindow int) (boolean bool, duration *time.Duration, err error) {
+	cert, err := parseCertificate(certPem)
+	if err != nil {
+		return false, nil, err
 	}
-	return false, nil
+	certDuration := getCertDuration(cert)
+	expirationWindowDuration := time.Duration(expirationWindow) * time.Hour
+	ok := validExpirationWindow(certDuration, expirationWindowDuration)
+	return ok, &certDuration, nil
+}
+
+func getCertDuration(cert *x509.Certificate) (duration time.Duration) {
+	currentDuration := cert.NotAfter.Sub(cert.NotBefore)
+	return currentDuration
+}
+
+// validExpirationWindow checks if the expiration_window is greater than the validity_period
+// receives the certificate duration in time.Duration type (converted to hours) type and expiration window in time.Duration type (converted to hours)
+// returns a boolean value of true if expiration_window is greater and logs it in a message, else returns false and doesn't log a message
+func validExpirationWindow(certDuration time.Duration, expirationWindowHours time.Duration) (boolean bool) {
+	if certDuration < expirationWindowHours {
+		log.Printf("certificate validity duration %s is less than configured expiration window %s", certDuration, expirationWindowHours)
+		return true
+	}
+	return false
 }
 
 func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired bool) {
 	renewWindow := time.Duration(expirationWindow) * time.Hour
-	expirationWindowAboveValidityPeriod(&cert, renewWindow)
+	certDuration := getCertDuration(&cert)
+	validExpirationWindow(certDuration, renewWindow)
 	renewRequired = time.Now().Add(renewWindow).After(cert.NotAfter)
 	return renewRequired
 }
@@ -482,20 +500,16 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	}
 
 	// validate expiration_window against cert validity period
-	block, _ := pem.Decode([]byte(pcc.Certificate))
-	cert, err := x509.ParseCertificate(block.Bytes)
+	ok, duration, err := validExpirationWindowCert(pcc.Certificate, expirationWindow)
+	durationHoursInt := int64(*duration / time.Hour)
 	if err != nil {
 		return err
 	}
-	expirationWindowDuration := time.Duration(expirationWindow) * time.Hour
-	if ok, duration := expirationWindowAboveValidityPeriod(cert, expirationWindowDuration); ok {
-		err = d.Set("expiration_window", *duration)
+	if ok {
+		err = d.Set("expiration_window", durationHoursInt)
 		if err != nil {
 			return err
 		}
-	}
-	if err != nil {
-		return err
 	}
 
 	if origin != csrService {
@@ -875,4 +889,14 @@ func IPArrayToStringArray(ipArray []net.IP) []string {
 		s = append(s, ip.String())
 	}
 	return s
+}
+
+func parseCertificate(certPem string) (cert *x509.Certificate, err error) {
+	block, _ := pem.Decode([]byte(certPem))
+	var parsedCert *x509.Certificate
+	parsedCert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return parsedCert, nil
 }
