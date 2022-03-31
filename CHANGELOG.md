@@ -2,7 +2,7 @@
 
 Fixed a bug in expiration_window behavior
 
-## 0.15.2 (March 18, 2022)
+## 0.15.2 (March 21, 2022)
 
 Support for arm64 processors with Darwin OS - Publishment on Terraform Registry
 
