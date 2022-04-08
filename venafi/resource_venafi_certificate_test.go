@@ -286,7 +286,7 @@ output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
 }`
 
-	tppCsrServiceConfigWithCustomFields = `
+	tppCsrServiceConfigWithSans = `
 %s
 resource "venafi_certificate" "token_certificate" {
     provider = "venafi.token_tpp"
@@ -294,10 +294,13 @@ resource "venafi_certificate" "token_certificate" {
 	san_dns = [
 		"%s"
 	]
+	san_ip = [
+		"%s"
+	]
+	san_uri = [
+		"%s"
+	]
 	key_password = "%s"
-	custom_fields = {
-		%s
-	}
 	csr_origin = "service"
 }
 output "certificate" {
@@ -306,8 +309,11 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.token_certificate.private_key_pem}"
 }
-output "custom_fields" {
-	value = "${venafi_certificate.token_certificate.custom_fields}"
+output "san_ip" {
+	value = "${venafi_certificate.token_certificate.san_ip}"
+}
+output "san_uri" {
+	value = "${venafi_certificate.token_certificate.san_uri}"
 }`
 
 	tppCsrServiceConfigImport = `
@@ -387,7 +393,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS1(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -748,7 +754,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS1(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -756,7 +762,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS1(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -899,7 +905,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS1(t, &data, s)
+					return checkStandardCertPKCS8(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -907,7 +913,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS1(t, &data, s)
+					err := checkStandardCertPKCS8(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1272,6 +1278,22 @@ func checkCertExpirationWindow(t *testing.T, data *testData, s *terraform.State)
 	return nil
 }
 
+func checkCertSans(t *testing.T, data *testData, s *terraform.State) error {
+	t.Log("Getting expiration_window from terraform state", data.cn)
+	sanUriUntyped := s.RootModule().Outputs["san_uri"].Value
+	err := validateStringListFromSchemaAttribute(sanUriUntyped, "san_uri")
+	if err != nil {
+		return err
+	}
+
+	sanIpUntyped := s.RootModule().Outputs["san_ip"].Value
+	err = validateStringListFromSchemaAttribute(sanIpUntyped, "san_ip")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func TestCheckForRenew(t *testing.T) {
 	checkingCert := `
 -----BEGIN CERTIFICATE-----
@@ -1346,7 +1368,7 @@ func TestTppCsrService(t *testing.T) {
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
 	data.dns_ns = "alt-" + data.cn
-	data.private_key_password = "newPassword!"
+	data.private_key_password = "FooB4rNew4$x"
 
 	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
 	t.Logf("Testing TPP Token certificate with Service CSR generated and config:\n %s", config)
@@ -1397,7 +1419,7 @@ func getCertTppImportConfig(name string) *testData {
 	domain := "venafi.example.com"
 	data.cn = name + "." + domain
 	data.dns_ns = "alt-" + data.cn
-	data.private_key_password = "newPassword!"
+	data.private_key_password = "FooB4rNew4$x"
 	return &data
 }
 
@@ -1406,7 +1428,7 @@ func getCertTppImportConfigWithCustomFields() *testData {
 	domain := "venafi.example.com"
 	data.cn = "import.custom_fields" + "." + domain
 	data.dns_ns = "alt-" + data.cn
-	data.private_key_password = "newPassword!"
+	data.private_key_password = "FooB4rNew4$x"
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
 	data.custom_fields = getCustomFields(cfEnvVarName)
 	return &data
@@ -1737,7 +1759,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 	domain := "venafi.many.example.com"
 	data.cn = rand + "." + domain
 	data.dns_ns = "alt-" + data.cn
-	data.private_key_password = "newPassword!"
+	data.private_key_password = "FooB4rNew4$x"
 
 	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
@@ -1825,6 +1847,42 @@ func TestManyCertsTppCsrService(t *testing.T) {
 							return nil
 						}
 					}
+				},
+			},
+		},
+	})
+}
+
+func TestTppSansCsrService(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.san_uri = "https://www.abc.venafi.com"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "FooB4rNew4$x"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	config := fmt.Sprintf(tppCsrServiceConfigWithSans, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.san_uri, data.private_key_password)
+	t.Logf("Testing TPP Token certificate with Custom Fields with config:\n %s", config)
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					t.Log("Issuing TPP certificate with CN", data.cn)
+					err := checkStandardCertPKCS8(t, &data, s)
+					if err != nil {
+						return err
+					}
+					err = checkCertSans(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
 				},
 			},
 		},

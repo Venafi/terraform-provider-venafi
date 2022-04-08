@@ -13,6 +13,7 @@ import (
 	"github.com/youmark/pkcs8"
 	"math"
 	"net"
+	"net/url"
 	"software.sslmate.com/src/go-pkcs12"
 	"strconv"
 	"time"
@@ -71,7 +72,6 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Default:     2048,
 			},
-
 			"ecdsa_curve": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -79,7 +79,6 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Default:     "P521",
 			},
-
 			"san_dns": &schema.Schema{
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -99,6 +98,13 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of IP addresses to use as subjects of the certificate",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			"san_uri": &schema.Schema{
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of Uniform Resource Identifiers (URIs) to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"key_password": &schema.Schema{
@@ -235,21 +241,11 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 	//Checking Private Key
 	var pk []byte
 	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-		origin := d.Get("csr_origin")
-		keyType := d.Get("algorithm")
-		if origin != csrService && keyType == "ECDSA" {
-			pk, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
-			if err != nil {
-				return false, fmt.Errorf("error getting key: %s", err)
-			}
-		} else {
-			keyStr, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
-			if err != nil {
-				return false, err
-			}
-			pk = []byte(keyStr)
+		keyStr, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
+		if err != nil {
+			return false, err
 		}
-
+		pk = []byte(keyStr)
 	} else {
 		return false, fmt.Errorf("error getting key")
 	}
@@ -411,6 +407,22 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 			req.IPAddresses = append(req.IPAddresses, ip)
 		}
 	}
+	sanUriLen := d.Get("san_uri.#").(int)
+	if sanUriLen > 0 {
+		uriList := make([]string, 0, sanUriLen)
+		for i := 0; i < sanUriLen; i++ {
+			key := fmt.Sprintf("san_uri.%d", i)
+			val := d.Get(key).(string)
+			uriList = append(uriList, val)
+		}
+		for i := 0; i < len(uriList); i += 1 {
+			uri, err := url.Parse(uriList[i])
+			if err != nil {
+				return fmt.Errorf("invalid URI: " + err.Error())
+			}
+			req.URIs = append(req.URIs, uri)
+		}
+	}
 
 	//Appending common name to the DNS names if it is not there
 	if !sliceContains(req.DNSNames, commonName) {
@@ -537,13 +549,9 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	KeyPassword := d.Get("key_password").(string)
 
-	privKey := pcc.PrivateKey
-	// for locally generated ECDSA private keys we get PKCS1 format, in other cases we get PKCS8
-	if !(origin != csrService && keyType == "ECDSA") {
-		privKey, err = util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
-		if err != nil {
-			return err
-		}
+	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
+	if err != nil {
+		return err
 	}
 
 	certPkcs12, err := AsPKCS12(pcc.Certificate, privKey, pcc.Chain, KeyPassword)
@@ -808,12 +816,19 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 		return fmt.Errorf("failed to determine private key type")
 	}
 
+	ipAddresses := IPArrayToStringArray(cert.IPAddresses)
+	err = d.Set("san_ip", ipAddresses)
+	if err != nil {
+		return err
+	}
+
+	URIs := UriArrayToStringArray(cert.URIs)
+	err = d.Set("san_uri", URIs)
+	if err != nil {
+		return err
+	}
+
 	if c == endpoint.ConnectorTypeTPP {
-		ipAddresses := IPArrayToStringArray(cert.IPAddresses)
-		err = d.Set("san_ip", ipAddresses)
-		if err != nil {
-			return err
-		}
 		customFields := certMetadata.CustomFields
 		newCustomFields := make(map[string]interface{})
 		for _, customField := range customFields {
@@ -887,6 +902,14 @@ func IPArrayToStringArray(ipArray []net.IP) []string {
 	s := make([]string, 0)
 	for _, ip := range ipArray {
 		s = append(s, ip.String())
+	}
+	return s
+}
+
+func UriArrayToStringArray(uriArray []*url.URL) []string {
+	s := make([]string, 0)
+	for _, uri := range uriArray {
+		s = append(s, uri.String())
 	}
 	return s
 }

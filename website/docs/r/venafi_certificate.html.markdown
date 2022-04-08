@@ -56,6 +56,9 @@ The following arguments are supported:
 * `san_ip` - (Optional, set of strings) List of IP addresses to use as alternative
   subjects of the certificate.
 
+* `san_uri` - (Optional, set of strings) List of Uniform Resource Identifiers (URIs) to use as alternative
+  subjects of the certificate.
+
 * `key_password` - (Optional, string) The password used to encrypt the private key.
 
 * `custom_fields` - (Optional, map) Collection of Custom Field name-value pairs to
