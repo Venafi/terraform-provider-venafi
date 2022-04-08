@@ -76,7 +76,7 @@ type testData struct {
 	dns_ns               string
 	dns_ip               string
 	dns_email            string
-	san_uri string
+	san_uri              string
 	provider             string
 	serial               string
 	timeCheck            string
@@ -240,7 +240,7 @@ func validateSshCertValues(d *schema.ResourceData) error {
 	return nil
 }
 
-func validateStringListFromSchemaAttribute (array interface{}, attr string) error {
+func validateStringListFromSchemaAttribute(array interface{}, attr string) error {
 	values, ok := array.([]interface{})
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("\"%s\" is not a list", attr))

@@ -418,7 +418,7 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		for i := 0; i < len(uriList); i += 1 {
 			uri, err := url.Parse(uriList[i])
 			if err != nil {
-				return fmt.Errorf("invalid URI: "+ err.Error())
+				return fmt.Errorf("invalid URI: " + err.Error())
 			}
 			req.URIs = append(req.URIs, uri)
 		}
@@ -555,7 +555,6 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	if err != nil {
 		return err
 	}
-
 
 	certPkcs12, err := AsPKCS12(pcc.Certificate, privKey, pcc.Chain, KeyPassword)
 
