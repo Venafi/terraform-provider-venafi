@@ -1,3 +1,7 @@
+## 0.15.4 (April 8, 2022)
+
+Added support for SANs attributes
+
 ## 0.15.3 (March 31, 2022)
 
 Fixed a bug in expiration_window behavior
