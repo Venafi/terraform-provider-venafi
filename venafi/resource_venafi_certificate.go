@@ -549,9 +549,7 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	KeyPassword := d.Get("key_password").(string)
 
-	privKey := pcc.PrivateKey
-	// for locally generated ECDSA private keys we get PKCS1 format, in other cases we get PKCS8
-	privKey, err = util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
+	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
 	if err != nil {
 		return err
 	}
