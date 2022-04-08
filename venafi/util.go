@@ -76,6 +76,7 @@ type testData struct {
 	dns_ns               string
 	dns_ip               string
 	dns_email            string
+	san_uri string
 	provider             string
 	serial               string
 	timeCheck            string
@@ -236,5 +237,27 @@ func validateSshCertValues(d *schema.ResourceData) error {
 		}
 	}
 
+	return nil
+}
+
+func validateStringListFromSchemaAttribute (array interface{}, attr string) error {
+	values, ok := array.([]interface{})
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("\"%s\" is not a list", attr))
+	}
+
+	if len(values) <= 0 {
+		return fmt.Errorf(fmt.Sprintf("\"%s\" is empty", attr))
+	}
+
+	for _, value := range values {
+		valueString, ok := value.(string)
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("value inside list of attribute \"%s\" is not a string", attr))
+		}
+		if valueString == "" {
+			return fmt.Errorf(fmt.Sprintf("value inside list of attribute \"%s\" an empty string", attr))
+		}
+	}
 	return nil
 }

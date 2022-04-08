@@ -96,23 +96,9 @@ func checkSshCaPubKey(t *testing.T, data *testData, s *terraform.State) error {
 func checkSshPrincipals(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Checking for principals", data.template)
 	principalUntyped := s.RootModule().Outputs["principals"].Value
-	principals, ok := principalUntyped.([]interface{})
-	if !ok {
-		return fmt.Errorf("output for \"principals\" is not a list of strings")
-	}
-
-	if len(principals) <= 0 {
-		return fmt.Errorf("The principals attribute \"principal\" is empty")
-	}
-
-	for _, principal := range principals {
-		principalString, ok := principal.(string)
-		if !ok {
-			return fmt.Errorf("Principal is not a string")
-		}
-		if principalString == "" {
-			return fmt.Errorf("Principal is empty")
-		}
+	err := validateStringListFromSchemaAttribute(principalUntyped, "principals")
+	if err != nil {
+		return err
 	}
 	return nil
 }

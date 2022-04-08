@@ -81,23 +81,9 @@ func resourceVenafiSshConfigExists(d *schema.ResourceData, meta interface{}) (bo
 		return false, nil
 	}
 
-	principals, ok := principalsUntyped.([]interface{})
-	if !ok {
+	err := validateStringListFromSchemaAttribute(principalsUntyped, "principals")
+	if err != nil {
 		return false, nil
-	}
-
-	if len(principals) <= 0 {
-		return false, nil
-	}
-
-	for _, principal := range principals {
-		principalString, ok := principal.(string)
-		if !ok {
-			return false, nil
-		}
-		if principalString == "" {
-			return false, nil
-		}
 	}
 
 	return true, nil
