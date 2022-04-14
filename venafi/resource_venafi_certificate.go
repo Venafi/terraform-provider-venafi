@@ -239,19 +239,26 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 		return false, fmt.Errorf("error parsing cert: %s", err)
 	}
 	//Checking Private Key
-	var pk []byte
+	var pk8PEMBytes []byte
+	var pk1PEMBytes []byte
 	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-		keyStr, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
+		pk8PEM, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
 		if err != nil {
-			return false, err
+			pk1PEMBytes, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
+			if err != nil {
+				return false, err
+			}
 		}
-		pk = []byte(keyStr)
+		pk8PEMBytes = []byte(pk8PEM)
 	} else {
 		return false, fmt.Errorf("error getting key")
 	}
-	_, err = tls.X509KeyPair([]byte(certPEM), pk)
+	_, err = tls.X509KeyPair([]byte(certPEM), pk8PEMBytes)
 	if err != nil {
-		return false, fmt.Errorf("error comparing certificate and key: %s", err)
+		_, err = tls.X509KeyPair([]byte(certPEM), pk1PEMBytes)
+		if err != nil {
+			return false, fmt.Errorf("error comparing certificate and key: %s", err)
+		}
 	}
 
 	//TODO: maybe this check should be up on CSR creation

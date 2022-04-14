@@ -1,3 +1,7 @@
+## 0.15.5 (April 14, 2022)
+
+Fixed a bug in backward compatibility with PKCS#1 Keys
+
 ## 0.15.4 (April 8, 2022)
 
 Added support for SANs attributes
