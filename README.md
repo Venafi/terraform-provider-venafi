@@ -128,6 +128,11 @@ specify any desired version constraints for the provider in the `provider` block
 using the
 [older way to manage provider versions](https://www.terraform.io/docs/configuration/providers.html#version-an-older-way-to-manage-provider-versions).
 
+> :warning: **We dropped support for RSA PKCS#1 formatted keys in version 15.0 and
+also for EC Keys in version 0.15.4 (you can find out more about this transition 
+in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0))**. For backward 
+compatibility during Terraform state refresh please update to version 0.15.5 or above
+
 1. Declare that the Venafi Provider is required:
 
    ```text
@@ -135,7 +140,7 @@ using the
      required_providers {
        venafi = {
          source = "venafi/venafi"
-         version = "~> 0.13.0"
+         version = "~> 0.15.5"
        }
      }
      required_version = ">= 0.13"

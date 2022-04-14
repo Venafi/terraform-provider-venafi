@@ -3,10 +3,14 @@ layout: "venafi"
 page_title: "Provider: Venafi"
 sidebar_current: "docs-venafi-index"
 description: |-
-  Venafi is the enterprise platform for Machine Identity Protection. The Venafi provider streamlines the process of acquiring SSL/TLS keys and certificates from Venafi services giving assurance of compliance with Information Security policies.  It provides resources that allow private keys and certficates to be created as part of a Terraform deployment.
+Venafi is the enterprise platform for Machine Identity Protection. The Venafi provider streamlines the process of acquiring SSL/TLS keys and certificates from Venafi services giving assurance of compliance with Information Security policies.  It provides resources that allow private keys and certficates to be created as part of a Terraform deployment.
 ---
 
 # Venafi Provider
+
+!> We dropped support for RSA PKCS#1 formatted keys in version 15.0 and also for EC Keys in version 0.15.4
+(you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
+For backward compatibility during Terraform state refresh please update to version 0.15.5 or above
 
 [Venafi](https://www.venafi.com) is the enterprise platform for Machine Identity
 Protection. The Venafi provider streamlines the process of acquiring SSL/TLS
@@ -19,10 +23,10 @@ Use the navigation to the left to read about the available resources.
 ## Example Usage for Venafi as a Service
 
 You can sign up for a Venafi as a Service account by visiting https://vaas.venafi.com/.
-Once registered, find your API key by clicking your name in the top right of the web interface.  You 
-will also need to specify the `zone` to use when requesting certificates. Zones define the machine 
-identity policy that will be applied to certificate requests and the certificate authority that will 
-issue certificates. The zone is formed by combining the Application Name and Issuing Template API Alias 
+Once registered, find your API key by clicking your name in the top right of the web interface.  You
+will also need to specify the `zone` to use when requesting certificates. Zones define the machine
+identity policy that will be applied to certificate requests and the certificate authority that will
+issue certificates. The zone is formed by combining the Application Name and Issuing Template API Alias
 (e.g. "Business App\Enterprise CIT").
 
 ```hcl
@@ -47,7 +51,7 @@ to certificate requests and the certificate authority that will issue certificat
 to ask them for a root CA certificate for your `trust_bundle` if the Venafi Platform URL is secured by
 a certificate your Terraform computer does not already trust.
 
-Obtain the required `access_token` for Trust Protection Platform using the 
+Obtain the required `access_token` for Trust Protection Platform using the
 [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token)
 (`getcred action` with `--client-id "hashicorp-terraform-by-venafi"` and `--scope "certificate:manage"`) or
 the Platform's Authorize REST API method.  The *configuration:manage* scope is required to set certificate
@@ -72,8 +76,8 @@ resource "venafi_certificate" "webserver" {
 
 The following arguments are supported:
 
-* `zone` - (Required, string) Application Name and Issuing 
-Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi as a Service or policy folder for Venafi Platform.
+* `zone` - (Required, string) Application Name and Issuing
+  Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi as a Service or policy folder for Venafi Platform.
 
 * `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example").
 
@@ -91,7 +95,7 @@ Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi as a Service 
 
 ## Environment Variables
 
-The following environment variables can also be used to specify provider 
+The following environment variables can also be used to specify provider
 argument values:
 
 * VENAFI_ZONE

@@ -348,10 +348,8 @@ output "private_key" {
 type KeyFormat int
 
 const (
-	issuer_hint                    = "MICROSOFT"
-	valid_days                     = 30
-	expectedPrivKeyPKCS1 KeyFormat = iota
-	expectedPrivKeyPKCS8
+	issuer_hint = "MICROSOFT"
+	valid_days  = 30
 )
 
 func TestDevSignedCert(t *testing.T) {
@@ -368,7 +366,7 @@ func TestDevSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -393,7 +391,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -420,7 +418,7 @@ func TestVaasSignedCert(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -433,7 +431,7 @@ func TestVaasSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing VaaS certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -479,7 +477,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -494,7 +492,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -536,7 +534,7 @@ func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *tes
 				Config: config,
 				Check: func(s *terraform.State) error {
 
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -558,7 +556,7 @@ func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *tes
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -601,7 +599,7 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -614,7 +612,7 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -660,7 +658,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
 			},
@@ -669,7 +667,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -708,7 +706,7 @@ func TestTPPSignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -716,7 +714,7 @@ func TestTPPSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -754,7 +752,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -762,7 +760,7 @@ func TestTPPECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -811,7 +809,7 @@ func TestTokenSignedCertUpdateRenew(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
 			},
@@ -820,7 +818,7 @@ func TestTokenSignedCertUpdateRenew(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP Token certificate update")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -859,7 +857,7 @@ func TestTokenSignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -867,7 +865,7 @@ func TestTokenSignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -905,7 +903,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -913,7 +911,7 @@ func TestTokenECDSASignedCert(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -953,7 +951,7 @@ func TestSignedCertCustomFields(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -961,7 +959,7 @@ func TestSignedCertCustomFields(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1051,7 +1049,7 @@ func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
 				ExpectNonEmptyPlan: true,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -1097,7 +1095,7 @@ func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -1110,7 +1108,7 @@ func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -1149,23 +1147,7 @@ func getCustomFields(variableName string) string {
 //TODO: make test on invalid options fo RSA, ECSA keys
 //TODO: make test with too big expiration window
 
-func checkStandardCertPKCS1(t *testing.T, data *testData, s *terraform.State) error {
-	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS1)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkStandardCertPKCS8(t *testing.T, data *testData, s *terraform.State) error {
-	err := checkStandardCertOutputs(t, data, s, expectedPrivKeyPKCS8)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkStandardCertOutputs(t *testing.T, data *testData, s *terraform.State, kf KeyFormat) error {
+func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Testing certificate with cn", data.cn)
 	certUntyped := s.RootModule().Outputs["certificate"].Value
 	certificate, ok := certUntyped.(string)
@@ -1183,14 +1165,14 @@ func checkStandardCertOutputs(t *testing.T, data *testData, s *terraform.State, 
 		return fmt.Errorf("output for \"private_key\" is not a string")
 	}
 
-	err := checkStandardCertInfo(t, data, certificate, privateKey, kf)
+	err := checkStandardCertInfo(t, data, certificate, privateKey)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func checkStandardCertInfo(t *testing.T, data *testData, certificate string, privateKey string, kf KeyFormat) error {
+func checkStandardCertInfo(t *testing.T, data *testData, certificate string, privateKey string) error {
 	block, _ := pem.Decode([]byte(certificate))
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
@@ -1214,18 +1196,11 @@ func checkStandardCertInfo(t *testing.T, data *testData, certificate string, pri
 
 	t.Logf("Testing private key PEM:\n %s", privateKey)
 	privKeyPEMbytes := make([]byte, 0)
-	if kf == expectedPrivKeyPKCS1 {
-		privKeyPEMbytes, err = getPrivateKey([]byte(privateKey), data.private_key_password)
-		if err != nil {
-			return fmt.Errorf("error trying to decrypt key: %s", err)
-		}
-	} else if kf == expectedPrivKeyPKCS8 {
-		privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
-		if err != nil {
-			return fmt.Errorf("error trying to decrypt key: %s", err)
-		}
-		privKeyPEMbytes = []byte(privateKeyString)
+	privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
+	if err != nil {
+		return fmt.Errorf("error trying to decrypt key: %s", err)
 	}
+	privKeyPEMbytes = []byte(privateKeyString)
 
 	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEMbytes)
 	if err != nil {
@@ -1379,7 +1354,7 @@ func TestTppCsrService(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 		},
@@ -1403,7 +1378,7 @@ func TestVaasCsrService(t *testing.T) {
 			r.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
@@ -1518,7 +1493,7 @@ func checkImportTppCertWithCustomFields(t *testing.T, data *testData, states []*
 func checkImportCert(t *testing.T, data *testData, attr map[string]string) error {
 	certificate := attr["certificate"]
 	privateKey := attr["private_key_pem"]
-	err := checkStandardCertInfo(t, data, certificate, privateKey, expectedPrivKeyPKCS8)
+	err := checkStandardCertInfo(t, data, certificate, privateKey)
 	if err != nil {
 		return err
 	}
@@ -1668,7 +1643,7 @@ func TestManyCertsTpp(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -1676,7 +1651,7 @@ func TestManyCertsTpp(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1695,7 +1670,7 @@ func TestManyCertsTpp(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate third run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1714,7 +1689,7 @@ func TestManyCertsTpp(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fourth run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1733,7 +1708,7 @@ func TestManyCertsTpp(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fifth run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1770,7 +1745,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					return checkStandardCertPKCS8(t, &data, s)
+					return checkStandardCert(t, &data, s)
 				},
 			},
 			r.TestStep{
@@ -1778,7 +1753,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1797,7 +1772,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate third run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1816,7 +1791,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fourth run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1835,7 +1810,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fifth run")
 					gotSerial := data.serial
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					} else {
@@ -1874,7 +1849,7 @@ func TestTppSansCsrService(t *testing.T) {
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
-					err := checkStandardCertPKCS8(t, &data, s)
+					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err
 					}
