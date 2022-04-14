@@ -8,9 +8,9 @@ Venafi is the enterprise platform for Machine Identity Protection. The Venafi pr
 
 # Venafi Provider
 
-!> We dropped support for RSA PKCS#1 formatted keys in version 15.0 and also for EC Keys in version 0.15.4
-(you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
-For backward compatibility during Terraform state refresh please update to version 0.15.5 or above
+!> We dropped support for RSA PKCS#1 formatted keys for TLS certificates in version 15.0 and also for EC Keys in version 
+0.15.4 (you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
+For backward compatibility during Terraform state refresh please update to version 0.15.5 or above.
 
 [Venafi](https://www.venafi.com) is the enterprise platform for Machine Identity
 Protection. The Venafi provider streamlines the process of acquiring SSL/TLS
