@@ -13,6 +13,7 @@ import (
 	"testing"
 )
 
+//#nosec
 var (
 	envVariables = fmt.Sprintf(`
 variable "TPP_USER" {default = "%s"}
@@ -37,7 +38,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 		os.Getenv("CLOUD_ZONE"),
 		os.Getenv("TPP_ACCESS_TOKEN"))
 
-	tokenProv = environmentVariables + `
+	tokenProv = envVariables + `
 provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
@@ -45,7 +46,7 @@ provider "venafi" {
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
 
-	vaasProv = environmentVariables + `
+	vaasProv = envVariables + `
 provider "venafi" {
 	url = "${var.CLOUD_URL}"
 	api_key = "${var.CLOUD_APIKEY}"

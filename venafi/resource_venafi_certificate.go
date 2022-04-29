@@ -662,7 +662,9 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		return fmt.Errorf("error setting pkcs12: %s", err)
 	}
 
-	d.Set("private_key_pem", pcc.PrivateKey)
+	if err = d.Set("private_key_pem", pcc.PrivateKey); err != nil {
+		return fmt.Errorf("error setting private key: %s", err)
+	}
 
 	return nil
 }

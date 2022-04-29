@@ -24,16 +24,10 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 		os.Getenv("TRUST_BUNDLE"),
 		os.Getenv("TPP_ACCESS_TOKEN"))
 
-	tokenSshConfigProv = environmentVariables + `
+	tokenSshConfigProv = envSshConfigVariables + `
 provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
-	trust_bundle = "${file(var.TRUST_BUNDLE)}"
-}`
-
-	tokenSshConfigProvWihoutAccessToken = environmentVariables + `
-provider "venafi" {
-	url = "${var.TPP_URL}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
 

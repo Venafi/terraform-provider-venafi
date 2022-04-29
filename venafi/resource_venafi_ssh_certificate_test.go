@@ -26,7 +26,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 		os.Getenv("TRUST_BUNDLE"),
 		os.Getenv("TPP_ACCESS_TOKEN"))
 
-	tokenSshCertProv = environmentVariables + `
+	tokenSshCertProv = envSshCertVariables + `
 provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
@@ -47,19 +47,6 @@ resource "venafi_ssh_certificate" "test" {
 	source_address=[
 		"%s"
 	]
-}
-
-output "certificate"{
-	value = venafi_ssh_certificate.test.certificate
-}
-output "public_key"{
-	value = venafi_ssh_certificate.test.public_key
-}
-output "private_key"{
-	value = venafi_ssh_certificate.test.private_key
-}
-output "principals"{
-	value = venafi_ssh_certificate.test.principal
 }`
 	tppSshCertResourceTestNewAttrPrincipals = `
 %s
@@ -75,19 +62,6 @@ resource "venafi_ssh_certificate" "test-new-principals" {
 	source_address=[
 		"%s"
 	]
-}
-
-output "certificate"{
-	value = venafi_ssh_certificate.test-new-principals.certificate
-}
-output "public_key"{
-	value = venafi_ssh_certificate.test-new-principals.public_key
-}
-output "private_key"{
-	value = venafi_ssh_certificate.test-new-principals.private_key
-}
-output "principals"{
-	value = venafi_ssh_certificate.test-new-principals.principals
 }`
 )
 
@@ -204,18 +178,28 @@ func checkSshCertificate(resourceName string, t *testing.T, data *testData) reso
 		}
 
 		principalsLengthString := rs.Primary.Attributes["principals.#"]
-		principalsLength, err := strconv.Atoi(principalsLengthString)
-		if err != nil {
-			fmt.Errorf("error getting length: %s", err)
-		}
-		if principalsLength <= 0 {
-			principalLengthString := rs.Primary.Attributes["principal.#"]
-			principalLength, err := strconv.Atoi(principalLengthString)
+		var principalsLength int
+		var err error
+		principalsLength = 0
+		if principalsLengthString != "" {
+			principalsLength, err = strconv.Atoi(principalsLengthString)
 			if err != nil {
-				fmt.Errorf("error getting length: %s", err)
+				return fmt.Errorf("error getting length: %s", err)
 			}
-			if principalLength <= 0 && data.principals != "" {
-				fmt.Errorf("principal list is empty")
+		}
+		if principalsLength == 0 {
+			var principalLength int
+			var err error
+			principalLength = 0
+			principalLengthString := rs.Primary.Attributes["principal.#"]
+			if principalLengthString != "" {
+				principalLength, err = strconv.Atoi(principalLengthString)
+				if err != nil {
+					return fmt.Errorf("error getting length: %s", err)
+				}
+			}
+			if principalLength == 0 && data.principals != "" {
+				return fmt.Errorf("principal list is empty")
 			}
 		}
 		return nil

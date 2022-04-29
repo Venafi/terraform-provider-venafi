@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"os"
 	"regexp"
-	"strconv"
 	"testing"
 )
 
@@ -505,7 +504,6 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 }
 
 func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *testing.T) {
-	//t.Skip("revising test driver")
 	/*
 		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
 		than the expiration_window: It should create a Terraform state with an expiration_window as same as the cert duration.
@@ -527,7 +525,7 @@ func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *tes
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
-					checkCertExpirationWindowNew("venafi_certificate.vaas_certificate", t, &data),
+					checkCertExpirationWindowChange("venafi_certificate.vaas_certificate", t, &data),
 				),
 				ExpectNonEmptyPlan: true,
 			},
@@ -556,7 +554,6 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
 	data.expiration_window = 100
-	oldExpirationWindow := data.expiration_window
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	data.expiration_window = 180
 	configUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
@@ -566,39 +563,18 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkStandardCert(t, &data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
+				Check: resource.ComposeTestCheckFunc(
+					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
+					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "100"),
+				),
 			},
 			resource.TestStep{
-				Config:             configUpdate,
+				Config: configUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
+					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "180"),
+				),
 				ExpectNonEmptyPlan: true,
-				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate update")
-					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
-					if err != nil {
-						return err
-					}
-					t.Logf("Compare updated original certificate serial %s with expiration_window updated serial %s", gotSerial, data.serial)
-					if gotSerial != data.serial {
-						return fmt.Errorf("serial number from updated resource %s is not the same as "+
-							"in original number %s", data.serial, gotSerial)
-					}
-					err = checkCertExpirationWindow(t, &data, s)
-					if err != nil {
-						return err
-					}
-					if oldExpirationWindow == data.expiration_window {
-						return fmt.Errorf(fmt.Sprintf("expiration window should have changed during enroll. current: %s got from zone: %s", strconv.Itoa(oldExpirationWindow), strconv.Itoa(data.expiration_window)))
-					}
-					return nil
-
-				},
 			},
 		},
 	})
@@ -987,57 +963,7 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 	})
 }
 
-//func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
-//	//t.Skip("revising test driver")
-//	/*
-//		We create a certificate with valid_days less than the expiration_window, in result the expiration_window should be
-//		equal to the valid_days in hours, due to our validation.
-//		We expect a not empty plan due to the expiration_window being equal to cert duration
-//	*/
-//	data := testData{}
-//	rand := randSeq(9)
-//	domain := "venafi.example.com"
-//	data.cn = rand + "." + domain
-//	data.dns_ns = "alt-" + data.cn
-//	data.dns_ip = "192.168.1.1"
-//	data.dns_email = "venafi@example.com"
-//	data.private_key_password = "FooB4rNew4$x"
-//	data.key_algo = rsa2048
-//	data.expiration_window = 730
-//	data.issuer_hint = issuerHint
-//	data.valid_days = validDays
-//	currentExpirationWindow := data.expiration_window
-//
-//	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
-//	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
-//	resource.Test(t, resource.TestCase{
-//		ProviderFactories: testAccProviderFactories,
-//		Steps: []resource.TestStep{
-//			resource.TestStep{
-//				Config:             config,
-//				ExpectNonEmptyPlan: true,
-//				Check: func(s *terraform.State) error {
-//					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
-//					err := checkStandardCert(t, &data, s)
-//					if err != nil {
-//						return err
-//					}
-//					err = checkCertExpirationWindow(t, &data, s)
-//					if err != nil {
-//						return err
-//					}
-//					if currentExpirationWindow == data.expiration_window {
-//						return fmt.Errorf(fmt.Sprintf("expiration window should have changed. current: %s got from zone: %s", strconv.Itoa(currentExpirationWindow), strconv.Itoa(data.expiration_window)))
-//					}
-//					return err
-//				},
-//			},
-//		},
-//	})
-//}
-
 func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
-	//t.Skip("revising test driver")
 	/*
 		We create a certificate with valid_days less than the expiration_window, in result the expiration_window should be
 		equal to the valid_days in hours, due to our validation.
@@ -1055,31 +981,18 @@ func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
 	data.expiration_window = 730
 	data.issuer_hint = issuerHint
 	data.valid_days = validDays
-	currentExpirationWindow := data.expiration_window
-
 	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
 	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			resource.TestStep{
-				Config:             config,
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
+					checkCertExpirationWindowChange("venafi_certificate.token_certificate", t, &data),
+				),
 				ExpectNonEmptyPlan: true,
-				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
-					err := checkStandardCert(t, &data, s)
-					if err != nil {
-						return err
-					}
-					err = checkCertExpirationWindow(t, &data, s)
-					if err != nil {
-						return err
-					}
-					if currentExpirationWindow == data.expiration_window {
-						return fmt.Errorf(fmt.Sprintf("expiration window should have changed. current: %s got from zone: %s", strconv.Itoa(currentExpirationWindow), strconv.Itoa(data.expiration_window)))
-					}
-					return err
-				},
 			},
 		},
 	})
@@ -1102,7 +1015,6 @@ func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	data.dns_ip = "192.168.1.1"
 	data.dns_email = "venafi@example.com"
 	data.expiration_window = 100
-	oldExpirationWindow := data.expiration_window
 	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	data.expiration_window = 70080
 	configUpdate := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
@@ -1112,39 +1024,18 @@ func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkStandardCert(t, &data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
+				Check: resource.ComposeTestCheckFunc(
+					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
+					resource.TestCheckResourceAttr("venafi_certificate.token_certificate", "expiration_window", "100"),
+				),
 			},
 			resource.TestStep{
-				Config:             configUpdate,
+				Config: configUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
+					resource.TestCheckResourceAttr("venafi_certificate.token_certificate", "expiration_window", "70080"),
+				),
 				ExpectNonEmptyPlan: true,
-				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate update")
-					gotSerial := data.serial
-					err := checkStandardCert(t, &data, s)
-					if err != nil {
-						return err
-					}
-					t.Logf("Compare updated original certificate serial %s with expiration_window updated serial %s", gotSerial, data.serial)
-					if gotSerial != data.serial {
-						return fmt.Errorf("serial number from updated resource %s is not the same as "+
-							"in original number %s", data.serial, gotSerial)
-					}
-					err = checkCertExpirationWindow(t, &data, s)
-					if err != nil {
-						return err
-					}
-					if oldExpirationWindow == data.expiration_window {
-						return fmt.Errorf(fmt.Sprintf("expiration window should have changed during enroll. current: %s got from zone: %s", strconv.Itoa(oldExpirationWindow), strconv.Itoa(data.expiration_window)))
-					}
-					return nil
-
-				},
 			},
 		},
 	})
@@ -1384,7 +1275,7 @@ func TestValidateWrongImportEntries(t *testing.T) {
 			resource.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
-				ImportStateId: fmt.Sprintf("%s", data.cn),
+				ImportStateId: data.cn,
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importIdFailMissingValues),
 			},

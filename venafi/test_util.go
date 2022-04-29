@@ -131,10 +131,7 @@ func checkStandardCertNew(resourceName string, t *testing.T, data *testData) res
 		if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
 			return fmt.Errorf("key is missing cert PEM preamble")
 		}
-		privateKey := rs.Primary.Attributes["private_key"]
-		if !strings.HasPrefix(certificate, "-----BEGIN PRIVATE KEY----") {
-			return fmt.Errorf("key is missing private key PEM preamble")
-		}
+		privateKey := rs.Primary.Attributes["private_key_pem"]
 		err := checkStandardCertInfo(t, data, certificate, privateKey)
 		if err != nil {
 			return err
@@ -166,12 +163,11 @@ func checkStandardCertInfo(t *testing.T, data *testData, certificate string, pri
 	data.timeCheck = time.Now().String()
 
 	t.Logf("Testing private key PEM:\n %s", privateKey)
-	privKeyPEMbytes := make([]byte, 0)
 	privateKeyString, err := util.DecryptPkcs8PrivateKey(privateKey, data.private_key_password)
 	if err != nil {
 		return fmt.Errorf("error trying to decrypt key: %s", err)
 	}
-	privKeyPEMbytes = []byte(privateKeyString)
+	privKeyPEMbytes := []byte(privateKeyString)
 
 	_, err = tls.X509KeyPair([]byte(certificate), privKeyPEMbytes)
 	if err != nil {
@@ -213,7 +209,7 @@ func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error 
 	return nil
 }
 
-func checkCertExpirationWindowNew(resourceName string, t *testing.T, data *testData) resource.TestCheckFunc {
+func checkCertExpirationWindowChange(resourceName string, t *testing.T, data *testData) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		t.Log("Getting expiration_window from terraform state", data.cn)
 		//gotExpirationWindow := s.RootModule().Outputs["expiration_window"].Value.(string)
@@ -228,17 +224,6 @@ func checkCertExpirationWindowNew(resourceName string, t *testing.T, data *testD
 		}
 		return nil
 	}
-}
-
-func checkCertExpirationWindow(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Getting expiration_window from terraform state", data.cn)
-	expirationWindowUntyped := s.RootModule().Outputs["expiration_window"].Value
-	expirationWindow, ok := expirationWindowUntyped.(int)
-	if !ok {
-		return fmt.Errorf("output for \"expiration_window\" is not an integer")
-	}
-	data.expiration_window = expirationWindow
-	return nil
 }
 
 func checkCertSans(t *testing.T, data *testData, s *terraform.State) error {
@@ -338,9 +323,8 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 	// creating map from string
 	var customFieldsMap map[string]string
 	// cleaning data string from special characters
-	if strings.HasSuffix(dataCf, ",\n") {
-		dataCf = strings.TrimSuffix(dataCf, ",\n")
-	}
+
+	dataCf = strings.TrimSuffix(dataCf, ",\n")
 	dataCf = strings.ReplaceAll(dataCf, "\n", "")
 	dataCf = strings.ReplaceAll(dataCf, "\"", "")
 	customFieldsRow := strings.Split(dataCf, ",")

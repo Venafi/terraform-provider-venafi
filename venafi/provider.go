@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"log"
 	"strings"
 )
 
@@ -108,7 +109,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	var cfg vcert.Config
 
-	zone = normalizeZone(ctx, zone)
+	zone = normalizeZone(zone)
 
 	if devMode {
 		tflog.Info(ctx, messageUseDevMode)
@@ -197,7 +198,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	return &cfg, diags
 }
 
-func normalizeZone(ctx context.Context, zone string) string {
+func normalizeZone(zone string) string {
 	if zone == "" {
 		return zone
 	}
@@ -218,6 +219,6 @@ func normalizeZone(ctx context.Context, zone string) string {
 		newZone = "\\" + newZone
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("Normalized zone : %s", newZone))
+	log.Printf("[INFO] Normalized zone : %s", newZone)
 	return newZone
 }
