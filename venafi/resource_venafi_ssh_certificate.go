@@ -1,21 +1,22 @@
 package venafi
 
 import (
+	"context"
 	"fmt"
 	"github.com/Venafi/vcert/v4/pkg/certificate"
 	"github.com/Venafi/vcert/v4/pkg/util"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"time"
 )
 
 func resourceVenafiSshCertificate() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceVenafiSshCertCreate,
-		Read:   resourceVenafiSshCertRead,
-		Delete: resourceVenafiSshCertDelete,
-		Exists: resourceVenafiSshCertExists,
+		CreateContext: resourceVenafiSshCertCreate,
+		ReadContext:   resourceVenafiSshCertRead,
+		DeleteContext: resourceVenafiSshCertDelete,
 
 		Schema: map[string]*schema.Schema{
 			"key_id": &schema.Schema{
@@ -168,24 +169,24 @@ func resourceVenafiSshCertificate() *schema.Resource {
 	}
 }
 
-func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceVenafiSshCertCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	err := validateSshCertValues(d)
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	log.Printf("Creating policy\n")
+	tflog.Info(ctx, "Creating SSH certificate\n")
 
 	id := d.Get("key_id").(string)
 	method := d.Get("public_key_method").(string)
 	keyPassphrase := d.Get("key_passphrase").(string)
 
-	cl, err := getConnection(meta)
+	cl, err := getConnection(ctx, meta)
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	req := buildSshCertRequest(d)
@@ -202,7 +203,7 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 		privateKey, publicKey, err = util.GenerateSshKeyPair(keySize, keyPassphrase, id)
 
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		sPubKey = string(publicKey)
@@ -213,7 +214,7 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 
 		if pubKeyS == "" {
 
-			return fmt.Errorf("public key is empty")
+			return buildStantardDiagError("public key is empty")
 
 		}
 
@@ -221,9 +222,8 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	reqData, err := cl.RequestSSHCertificate(&req)
-
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(reqData.DN)
@@ -240,7 +240,7 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 	retReq.Timeout = time.Duration(10) * time.Second
 	data, err := cl.RetrieveSSHCertificate(&retReq)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve certificate: %s", err)
+		return diag.FromErr(fmt.Errorf("failed to retrieve certificate: %s", err))
 	}
 
 	//this case is when the keypair is local generated
@@ -255,7 +255,7 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 
 		err = d.Set("public_key", data.PublicKeyData)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		if data.PrivateKeyData != "" {
@@ -269,70 +269,67 @@ func resourceVenafiSshCertCreate(d *schema.ResourceData, meta interface{}) error
 
 			err = d.Set("private_key", privKeyS)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 
 	err = d.Set("certificate", data.CertificateData)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("certificate_type", data.CertificateDetails.CertificateType)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	pubKey := fmt.Sprintf("%s:%s", "SHA256", data.CertificateDetails.PublicKeyFingerprintSHA256)
 	err = d.Set("public_key_fingerprint", pubKey)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	signingCa := fmt.Sprintf("%s:%s", "SHA256", data.CertificateDetails.CAFingerprintSHA256)
 	err = d.Set("signing_ca", signingCa)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("serial", data.CertificateDetails.SerialNumber)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("valid_from", util.ConvertSecondsToTime(data.CertificateDetails.ValidFrom).String())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("valid_to", util.ConvertSecondsToTime(data.CertificateDetails.ValidTo).String())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceVenafiSshCertExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceVenafiSshCertRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	certUntyped, ok := d.GetOk("certificate")
 	if !ok {
-		return false, nil
+		d.SetId("")
+		return nil
 	}
 
-	certstr := certUntyped.(string)
-	if certstr == "" {
-		return false, nil
+	certStr := certUntyped.(string)
+	if certStr == "" {
+		d.SetId("")
+		return nil
 	}
-
-	return true, nil
-}
-
-func resourceVenafiSshCertRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceVenafiSshCertDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceVenafiSshCertDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }

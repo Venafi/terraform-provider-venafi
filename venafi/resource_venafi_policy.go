@@ -1,21 +1,22 @@
 package venafi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Venafi/vcert/v4/pkg/policy"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"io/ioutil"
-	"log"
 	"regexp"
 )
 
 func resourceVenafiPolicy() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceVenafiPolicyCreate,
-		Read:   resourceVenafiPolicyRead,
-		Delete: resourceVenafiPolicyDelete,
-		Exists: resourceVenafiPolicyExists,
+		CreateContext: resourceVenafiPolicyCreate,
+		ReadContext:   resourceVenafiPolicyRead,
+		DeleteContext: resourceVenafiPolicyDelete,
 
 		Schema: map[string]*schema.Schema{
 			"zone": &schema.Schema{
@@ -32,28 +33,28 @@ func resourceVenafiPolicy() *schema.Resource {
 			},
 		},
 		Importer: &schema.ResourceImporter{
-			State: resourceVenafiPolicyImport,
+			StateContext: resourceVenafiPolicyImport,
 		},
 	}
 }
 
-func resourceVenafiPolicyCreate(d *schema.ResourceData, meta interface{}) error {
-	log.Printf("Creating policy\n")
+func resourceVenafiPolicyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Creating policy\n")
 
-	cl, err := getConnection(meta)
+	cl, err := getConnection(ctx, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	zoneName := d.Get("zone").(string)
 
 	if zoneName == "" {
-		return fmt.Errorf("zone is empty")
+		return buildStantardDiagError("zone is empty")
 	}
 
 	ps := d.Get("policy_specification").(string)
 	if ps == "" {
-		return fmt.Errorf("policy specification file is empty")
+		return buildStantardDiagError("policy specification file is empty")
 	}
 
 	bytes := []byte(ps)
@@ -61,12 +62,12 @@ func resourceVenafiPolicyCreate(d *schema.ResourceData, meta interface{}) error 
 	var policySpecification policy.PolicySpecification
 	err = json.Unmarshal(bytes, &policySpecification)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	_, err = cl.SetPolicy(zoneName, &policySpecification)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(zoneName)
@@ -76,21 +77,24 @@ func resourceVenafiPolicyCreate(d *schema.ResourceData, meta interface{}) error 
 	err = d.Set("policy_specification", stringPS)
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceVenafiPolicyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceVenafiPolicyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// verify if since policy have been update, if we need to update it in the state our delete it
 	ps, ok := d.GetOk("policy_specification")
 
 	if !ok {
-		return false, nil
+		d.SetId("")
+		return nil
 	}
 
 	if ps == nil {
-		return false, nil
+		d.SetId("")
+		return nil
 	}
 
 	data := []byte(ps.(string))
@@ -98,33 +102,28 @@ func resourceVenafiPolicyExists(d *schema.ResourceData, meta interface{}) (bool,
 	var policySpecification policy.PolicySpecification
 	err := json.Unmarshal(data, &policySpecification)
 	if err != nil {
-		return false, err
+		return diag.FromErr(err)
 	}
 
-	return true, nil
-
-}
-
-func resourceVenafiPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceVenafiPolicyDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceVenafiPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }
 
-func resourceVenafiPolicyImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceVenafiPolicyImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 
 	id := d.Id()
 
-	cl, err := getConnection(meta)
+	cl, err := getConnection(ctx, meta)
 
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Getting policy\n")
+	tflog.Info(ctx, "Getting policy\n")
 
 	ps, err := cl.GetPolicy(id)
 

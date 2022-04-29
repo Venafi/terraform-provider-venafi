@@ -1,30 +1,32 @@
 package venafi
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/certificate"
 	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/Venafi/vcert/v4/pkg/policy"
 	"github.com/Venafi/vcert/v4/pkg/util"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/youmark/pkcs8"
+	"log"
 	"math"
 	"net"
 	"net/url"
 	"software.sslmate.com/src/go-pkcs12"
 	"strconv"
-	"time"
-
-	"crypto/x509"
-	"encoding/pem"
-	"github.com/Venafi/vcert/v4"
-	"github.com/Venafi/vcert/v4/pkg/certificate"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
 	"strings"
+	"time"
 )
 
 const (
@@ -34,15 +36,15 @@ const (
 	importPickupIdFailEmpty    = "empty pickupID for VaaS or common_name for TPP during import method"
 	importKeyPasswordFailEmpty = "empty key_password for import method" //#nosec
 	importZoneFailEmpty        = "zone cannot be empty when importing certificate"
+	terraformStateTainted      = "terraform state was modified by another party"
 )
 
 func resourceVenafiCertificate() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceVenafiCertificateCreate,
-		Read:   resourceVenafiCertificateRead,
-		Delete: resourceVenafiCertificateDelete,
-		Exists: resourceVenafiCertificateExists,
-		Update: resourceVenafiCertificateUpdate,
+		CreateContext: resourceVenafiCertificateCreate,
+		ReadContext:   resourceVenafiCertificateRead,
+		DeleteContext: resourceVenafiCertificateDelete,
+		UpdateContext: resourceVenafiCertificateUpdate,
 
 		Schema: map[string]*schema.Schema{
 			"csr_origin": &schema.Schema{
@@ -173,70 +175,131 @@ func resourceVenafiCertificate() *schema.Resource {
 			},
 		},
 		Importer: &schema.ResourceImporter{
-			State: resourceVenafiCertificateImport,
+			StateContext: resourceVenafiCertificateImport,
 		},
 	}
 }
 
-func resourceVenafiCertificateCreate(d *schema.ResourceData, meta interface{}) error {
-	log.Printf("Creating certificate\n")
+func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Creating certificate\n")
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+
+	cl, err := getConnection(ctx, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	tflog.Info(ctx, messageVenafiPingSuccessful)
+
+	err = enrollVenafiCertificate(ctx, d, cl)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	//resourceVenafiCertificateRead(ctx, d, meta)
+	return diags
+}
+
+func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+
 	cfg := meta.(*vcert.Config)
 	cl, err := vcert.NewClient(cfg)
 	if err != nil {
-		log.Printf(messageVenafiClientInitFailed + err.Error())
-		return err
+		tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
+		return diag.FromErr(err)
 	}
 	err = cl.Ping()
 	if err != nil {
-		log.Printf(messageVenafiPingFailed + err.Error())
-		return err
+		tflog.Error(ctx, messageVenafiPingFailed+err.Error())
+		return diag.FromErr(err)
 	}
-	log.Println(messageVenafiPingSuccessful)
+	tflog.Info(ctx, messageVenafiPingSuccessful)
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
 
-	err = enrollVenafiCertificate(d, cl)
-	if err != nil {
-		return err
+	certID := d.Id()
+	parameters := strings.Split(certID, ",")
+
+	var keyPassword string
+	var keyPasswordFromImport string
+	var pickupID string
+
+	// When retrieving the certID we have to watch for to cases: when certificate is imported and when is not
+	// For both cases we get the pickupID from the first parameter and the key password from state
+	pickupID = parameters[0]
+
+	keyPasswordUntyped, ok := d.GetOk("key_password")
+	if ok {
+		keyPassword = keyPasswordUntyped.(string)
 	}
-	return nil
-}
 
-func resourceVenafiCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
-	if d.HasChange("expiration_window") {
-		// Getting expiration_window from state
-		expiration_window := d.Get("expiration_window").(int)
-		// Getting certificate
-		certUntyped, ok := d.GetOk("certificate")
+	// But we need to make extra verifications if state was tainted by a third party.
+	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
+	if len(parameters) < 1 {
+		return buildStantardDiagError(fmt.Sprintf("%s: certID was not found from terraform state", terraformStateTainted))
+	} else if len(parameters) == 2 {
+		// since the key password is also within the certID, we want to verify if it differs from the one defined at state
+		keyPasswordFromImport = parameters[1]
+		if keyPassword != "" {
+			if keyPassword != keyPasswordFromImport {
+				return buildStantardDiagError(fmt.Sprintf("%s: key passwords mismatch! the key_password defined in the id,, differs from the attribute key_password defined at terraform state", terraformStateTainted))
+			}
+		}
+	} else if len(parameters) > 2 {
+		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
+	}
+
+	zone := cfg.Zone
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		zone = buildAbsoluteZoneTPP(zone)
+		ok := strings.Contains(pickupID, zone)
 		if !ok {
-			return fmt.Errorf("cert is nil")
+			pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
 		}
-		certPEM := certUntyped.(string)
-		// validating expiration_window
-		_, _, err := validExpirationWindowCert(certPEM, expiration_window)
-		if err != nil {
-			return err
-		}
-		err = d.Set("expiration_window", expiration_window)
-		if err != nil {
-			return err
-		}
+
 	}
-	return nil
-}
 
-func resourceVenafiCertificateRead(d *schema.ResourceData, meta interface{}) error {
-	return nil
-}
+	origin := d.Get("csr_origin").(string)
+	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), origin)
 
-func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	certUntyped, ok := d.GetOk("certificate")
+	data, err := cl.RetrieveCertificate(pickupReq)
+	if err != nil {
+		// if certificate does not exist, we get the following error message:
+		var notFoundMsg string
+		// For VaaS
+		if cl.GetType() == endpoint.ConnectorTypeCloud {
+			notFoundMsg = "Not Found"
+		} else {
+			// For TPP
+			// "Certificate \\VED\\Policy\\test\\cert_id does not exist."
+			notFoundMsg = "does not exist"
+		}
+		strErr := (err).Error()
+
+		ok := strings.Contains(strErr, notFoundMsg)
+		if ok {
+			tflog.Warn(ctx, fmt.Sprintf("certificate (%s) not found, removing from state", d.Id()))
+			d.SetId("")
+			return nil
+		}
+		return diag.FromErr(err)
+	}
+
+	stateCertUntyped, ok := d.GetOk("certificate")
 	if !ok {
-		return false, nil
+		return diag.FromErr(fmt.Errorf("certificate is not defined at state"))
 	}
-	certPEM := certUntyped.(string)
+
+	stateCertPEM := stateCertUntyped.(string)
+	certPEM := data.Certificate
+	if certPEM != stateCertPEM {
+		diag.FromErr(fmt.Errorf("certificate (%s) from remote differs from the one defined at state", d.Id()))
+	}
 	block, _ := pem.Decode([]byte(certPEM))
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return false, fmt.Errorf("error parsing cert: %s", err)
+		return diag.FromErr(fmt.Errorf("error parsing cert: %s", err))
 	}
 	//Checking Private Key
 	var pk8PEMBytes []byte
@@ -246,30 +309,63 @@ func resourceVenafiCertificateExists(d *schema.ResourceData, meta interface{}) (
 		if err != nil {
 			pk1PEMBytes, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
 			if err != nil {
-				return false, err
+				return diag.FromErr(err)
 			}
 		}
 		pk8PEMBytes = []byte(pk8PEM)
 	} else {
-		return false, fmt.Errorf("error getting key")
+		return diag.FromErr(fmt.Errorf("error getting key"))
 	}
 	_, err = tls.X509KeyPair([]byte(certPEM), pk8PEMBytes)
 	if err != nil {
 		_, err = tls.X509KeyPair([]byte(certPEM), pk1PEMBytes)
 		if err != nil {
-			return false, fmt.Errorf("error comparing certificate and key: %s", err)
+			return diag.FromErr(fmt.Errorf("error comparing certificate and key: %s", err))
 		}
 	}
 
-	//TODO: maybe this check should be up on CSR creation
 	renewRequired := checkForRenew(*cert, d.Get("expiration_window").(int))
 	if renewRequired {
-		//TODO: get request id from resource id
-		log.Printf("Certificate expires %s and should be renewed because it`s less than %d hours at this date. Requesting", cert.NotAfter, d.Get("expiration_window").(int))
-		return false, nil
+		detailMsg := fmt.Sprintf("Certificate %s expires %s and should be renewed because it`s less than %d hours at this date", d.Id(), cert.NotAfter, d.Get("expiration_window").(int))
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Certificate About to Expire",
+			Detail:   detailMsg,
+		})
+		d.SetId("")
+		return diags
 	}
+	return nil
+}
 
-	return true, nil
+func resourceVenafiCertificateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+
+	if d.HasChange("expiration_window") {
+		// Getting expiration_window from state
+		expirationWindow := d.Get("expiration_window").(int)
+		// Getting certificate
+		certUntyped, ok := d.GetOk("certificate")
+		if !ok {
+			return diag.FromErr(fmt.Errorf("cert is nil"))
+		}
+		certPEM := certUntyped.(string)
+		// validating expiration_window
+		_, _, err := validExpirationWindowCert(certPEM, expirationWindow)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = d.Set("expiration_window", expirationWindow)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	return nil
+}
+
+func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// We don't support deletion for created certificates from TPP, so we just remove it from state
+	d.SetId("")
+	return nil
 }
 
 // validExpirationWindowCert checks if the expiration_window the expiration_window is greater than the validity_period
@@ -296,7 +392,7 @@ func getCertDuration(cert *x509.Certificate) (duration time.Duration) {
 // returns a boolean value of true if expiration_window is greater and logs it in a message, else returns false and doesn't log a message
 func validExpirationWindow(certDuration time.Duration, expirationWindowHours time.Duration) (boolean bool) {
 	if certDuration < expirationWindowHours {
-		log.Printf("certificate validity duration %s is less than configured expiration window %s", certDuration, expirationWindowHours)
+		log.Printf("[INFO] certificate validity duration %s is less than configured expiration window %s", certDuration, expirationWindowHours)
 		return true
 	}
 	return false
@@ -310,12 +406,7 @@ func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired b
 	return renewRequired
 }
 
-func resourceVenafiCertificateDelete(d *schema.ResourceData, meta interface{}) error {
-	d.SetId("")
-	return nil
-}
-
-func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) error {
+func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl endpoint.Connector) error {
 
 	req := &certificate.Request{
 		CsrOrigin:    certificate.LocalGeneratedCSR,
@@ -365,12 +456,12 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	//Setting up Subject
 	commonName := d.Get("common_name").(string)
 	//Adding alt names if exists
-	dnsnum := d.Get("san_dns.#").(int)
-	if dnsnum > 0 {
-		for i := 0; i < dnsnum; i++ {
+	dnsNum := d.Get("san_dns.#").(int)
+	if dnsNum > 0 {
+		for i := 0; i < dnsNum; i++ {
 			key := fmt.Sprintf("san_dns.%d", i)
 			val := d.Get(key).(string)
-			log.Printf("Adding SAN %s.", val)
+			tflog.Info(ctx, fmt.Sprintf("Adding SAN %s.", val))
 			req.DNSNames = append(req.DNSNames, val)
 		}
 	}
@@ -382,26 +473,26 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		commonName = req.DNSNames[0]
 	}
 	if !sliceContains(req.DNSNames, commonName) {
-		log.Printf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames)
+		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames))
 		req.DNSNames = append(req.DNSNames, commonName)
 	}
 
 	//Obtain a certificate from the Venafi server
-	log.Printf("Using CN %s and SAN %s", commonName, req.DNSNames)
+	tflog.Info(ctx, fmt.Sprintf("Using CN %s and SAN %s", commonName, req.DNSNames))
 	req.Subject.CommonName = commonName
 
-	emailnum := d.Get("san_email.#").(int)
-	if emailnum > 0 {
-		for i := 0; i < emailnum; i++ {
+	emailNum := d.Get("san_email.#").(int)
+	if emailNum > 0 {
+		for i := 0; i < emailNum; i++ {
 			key := fmt.Sprintf("san_email.%d", i)
 			val := d.Get(key).(string)
 			req.EmailAddresses = append(req.EmailAddresses, val)
 		}
 	}
-	ipnum := d.Get("san_ip.#").(int)
-	if ipnum > 0 {
-		ipList := make([]string, 0, ipnum)
-		for i := 0; i < ipnum; i++ {
+	ipNum := d.Get("san_ip.#").(int)
+	if ipNum > 0 {
+		ipList := make([]string, 0, ipNum)
+		for i := 0; i < ipNum; i++ {
 			key := fmt.Sprintf("san_ip.%d", i)
 			val := d.Get(key).(string)
 			ipList = append(ipList, val)
@@ -433,11 +524,11 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	//Appending common name to the DNS names if it is not there
 	if !sliceContains(req.DNSNames, commonName) {
-		log.Printf("Adding CN %s to SAN because it wasn't included.", commonName)
+		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN because it wasn't included.", commonName))
 		req.DNSNames = append(req.DNSNames, commonName)
 	}
 
-	log.Printf("Requested SAN: %s", req.DNSNames)
+	tflog.Info(ctx, fmt.Sprintf("Requested SAN: %s", req.DNSNames))
 
 	if origin != csrService {
 		switch req.KeyType {
@@ -446,9 +537,8 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		case certificate.KeyTypeRSA:
 			req.PrivateKey, err = certificate.GenerateRSAPrivateKey(req.KeyLength)
 		default:
-			return fmt.Errorf("Unable to generate certificate request, key type %s is not supported", req.KeyType.String())
+			return fmt.Errorf("unable to generate certificate request, key type %s is not supported", req.KeyType.String())
 		}
-
 		if err != nil {
 			return fmt.Errorf("error generating key: %s", err)
 		}
@@ -484,11 +574,11 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 			}
 		}
 		req.ValidityHours = validity
-		issuer_hint := d.Get("issuer_hint").(string)
-		req.IssuerHint = getIssuerHint(issuer_hint)
+		issuerHint := d.Get("issuer_hint").(string)
+		req.IssuerHint = getIssuerHint(issuerHint)
 	}
 
-	log.Println("Making certificate request")
+	tflog.Info(ctx, "Making certificate request")
 	err = cl.GenerateRequest(nil, req)
 	if err != nil {
 		return err
@@ -520,7 +610,7 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 
 	// validate expiration_window against cert validity period
 	ok, duration, err := validExpirationWindowCert(pcc.Certificate, expirationWindow)
-	durationHoursInt := int64(*duration / time.Hour)
+	durationHoursInt := int(*duration / time.Hour)
 	if err != nil {
 		return err
 	}
@@ -544,15 +634,15 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 	if err = d.Set("certificate", pcc.Certificate); err != nil {
 		return fmt.Errorf("Error setting certificate: %s", err)
 	}
-	log.Println("Certificate set to ", pcc.Certificate)
+	tflog.Info(ctx, fmt.Sprintf("Certificate set to %s", pcc.Certificate))
 
-	if err = d.Set("chain", strings.Join((pcc.Chain), "")); err != nil {
+	if err = d.Set("chain", strings.Join(pcc.Chain, "")); err != nil {
 		return fmt.Errorf("error setting chain: %s", err)
 	}
-	log.Println("Certificate chain set to", pcc.Chain)
+	tflog.Info(ctx, fmt.Sprintf("Certificate chain set to %s", pcc.Chain))
 
 	d.SetId(req.PickupID)
-	log.Println("Setting up private key")
+	tflog.Info(ctx, "Setting up private key")
 
 	KeyPassword := d.Get("key_password").(string)
 
@@ -572,7 +662,9 @@ func enrollVenafiCertificate(d *schema.ResourceData, cl endpoint.Connector) erro
 		return fmt.Errorf("error setting pkcs12: %s", err)
 	}
 
-	return d.Set("private_key_pem", pcc.PrivateKey)
+	d.Set("private_key_pem", pcc.PrivateKey)
+
+	return nil
 }
 
 func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword string) ([]byte, error) {
@@ -590,14 +682,14 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 	}
 
 	// chain?
-	var chain_list = []*x509.Certificate{}
-	for _, chain_cert := range chain {
-		crt, _ := pem.Decode([]byte(chain_cert))
+	var chainList = []*x509.Certificate{}
+	for _, chainCert := range chain {
+		crt, _ := pem.Decode([]byte(chainCert))
 		cert, err := x509.ParseCertificate(crt.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("chain certificate parse error")
 		}
-		chain_list = append(chain_list, cert)
+		chainList = append(chainList, cert)
 	}
 
 	// key?
@@ -633,7 +725,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 		return nil, fmt.Errorf("private key error(3): %s", err)
 	}
 
-	bytes, err := pkcs12.Encode(rand.Reader, privKey, cert, chain_list, keyPassword)
+	bytes, err := pkcs12.Encode(rand.Reader, privKey, cert, chainList, keyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("encode error: %s", err)
 	}
@@ -641,7 +733,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 	return bytes, nil
 }
 
-func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	id := d.Id()
 
 	if id == "" {
@@ -670,7 +762,7 @@ func resourceVenafiCertificateImport(d *schema.ResourceData, meta interface{}) (
 		return nil, fmt.Errorf(importZoneFailEmpty)
 	}
 
-	cl, err := getConnection(meta)
+	cl, err := getConnection(ctx, meta)
 	if err != nil {
 		return nil, err
 	}

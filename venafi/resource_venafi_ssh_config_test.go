@@ -2,8 +2,8 @@ package venafi
 
 import (
 	"fmt"
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"os"
 	"testing"
 )
@@ -39,15 +39,15 @@ provider "venafi" {
 
 	tppSshConfigResourceTest = `
 %s
-resource "venafi_ssh_config" "test1" {
+resource "venafi_ssh_config" "test" {
 	provider = "venafi"
 	template="%s"
 }
 output "ca_public_key"{
-	value = venafi_ssh_config.test1.ca_public_key
+	value = venafi_ssh_config.test.ca_public_key
 }
 output "principals"{
-	value = venafi_ssh_config.test1.principals
+	value = venafi_ssh_config.test.principals
 }`
 )
 
@@ -58,10 +58,10 @@ func TestSshConfig(t *testing.T) {
 
 	config := fmt.Sprintf(tppSshConfigResourceTest, tokenSshConfigProv, data.template)
 	t.Logf("Testing SSH config with config:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkSshCaPubKey(t, &data, s)
@@ -74,7 +74,6 @@ func TestSshConfig(t *testing.T) {
 					}
 					return nil
 				},
-				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
