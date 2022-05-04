@@ -557,7 +557,7 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	data.expiration_window = 180
 	configUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Cloud certificate with config:\n %s", config)
+	t.Logf("Testing VaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{

@@ -23,8 +23,8 @@ github.com/OpenPeeDeeP/depguard v1.0.1/go.mod h1:xsIw86fROiiwelg+jB2uM9PiKihMMmU
 github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 h1:YoJbenK9C67SkzkDfmQuVln04ygHj3vjZfd9FL+GmQQ=
 github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7/go.mod h1:z4/9nQmJSSwwds7ejkxaJwO37dru3geImFUdJlaLzQo=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/Venafi/vcert/v4 v4.18.2 h1:pOX2AEDp5ozErcDC7dh9f32J3UJPBrQIJQaEnqijbHc=
-github.com/Venafi/vcert/v4 v4.18.2/go.mod h1:VcojF47VAzBnYHSRrb0SwOCmMpWJczajTuPiZNDJJSo=
+github.com/Venafi/vcert/v4 v4.19.0 h1:/zIl9+s6uIjtI/LazPplrcSgThbwJkUx1XbyET3u8Iw=
+github.com/Venafi/vcert/v4 v4.19.0/go.mod h1:VcojF47VAzBnYHSRrb0SwOCmMpWJczajTuPiZNDJJSo=
 github.com/acomagu/bufpipe v1.0.3 h1:fxAGrHZTgQ9w5QqVItgzwj235/uYZYgbXitB+dLupOk=
 github.com/acomagu/bufpipe v1.0.3/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agext/levenshtein v1.2.1/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
