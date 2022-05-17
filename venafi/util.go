@@ -1,15 +1,17 @@
 package venafi
 
 import (
+	"context"
 	"encoding/pem"
 	"fmt"
 	"github.com/Venafi/vcert/v4"
 	"github.com/Venafi/vcert/v4/pkg/certificate"
 	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/Venafi/vcert/v4/pkg/util"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
-	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -139,20 +141,19 @@ func getIssuerHint(is string) string {
 
 }
 
-func getConnection(meta interface{}) (endpoint.Connector, error) {
+func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {
 	cfg := meta.(*vcert.Config)
 	cl, err := vcert.NewClient(cfg)
 	if err != nil {
-		log.Printf(messageVenafiClientInitFailed + err.Error())
+		tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
 		return nil, err
 	}
 	err = cl.Ping()
 	if err != nil {
-		log.Printf(messageVenafiPingFailed + err.Error())
+		tflog.Error(ctx, messageVenafiPingFailed+err.Error())
 		return nil, err
 	}
-	log.Println(messageVenafiPingSuccessful)
-
+	tflog.Info(ctx, messageVenafiPingSuccessful)
 	return cl, nil
 }
 
@@ -231,8 +232,8 @@ func validateSshCertValues(d *schema.ResourceData) error {
 	kpMethod := d.Get("public_key_method").(string)
 
 	if kpMethod == "file" {
-		public_key := d.Get("public_key").(string)
-		if public_key == "" {
+		publicKey := d.Get("public_key").(string)
+		if publicKey == "" {
 			return fmt.Errorf("file public key method is specified but public_key is empty")
 		}
 	}
@@ -260,4 +261,8 @@ func validateStringListFromSchemaAttribute(array interface{}, attr string) error
 		}
 	}
 	return nil
+}
+
+func buildStantardDiagError(msg string) diag.Diagnostics {
+	return diag.FromErr(fmt.Errorf(msg))
 }

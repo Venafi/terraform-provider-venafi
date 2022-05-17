@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Venafi/vcert/v4/pkg/policy"
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -13,6 +13,7 @@ import (
 	"testing"
 )
 
+//#nosec
 var (
 	envVariables = fmt.Sprintf(`
 variable "TPP_USER" {default = "%s"}
@@ -37,7 +38,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 		os.Getenv("CLOUD_ZONE"),
 		os.Getenv("TPP_ACCESS_TOKEN"))
 
-	tokenProv = environmentVariables + `
+	tokenProv = envVariables + `
 provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
@@ -45,7 +46,7 @@ provider "venafi" {
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
 
-	vaasProv = environmentVariables + `
+	vaasProv = envVariables + `
 provider "venafi" {
 	url = "${var.CLOUD_URL}"
 	api_key = "${var.CLOUD_APIKEY}"
@@ -93,10 +94,10 @@ func TestCreateVaasEmptyPolicy(t *testing.T) {
 
 	config := fmt.Sprintf(vaasPolicyResourceTest, vaasProv, data.zone, data.filePath)
 	t.Logf("Testing Creating empty Zone:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS empty zone: ", data.zone)
@@ -115,10 +116,10 @@ func TestCreateVaasPolicy(t *testing.T) {
 
 	config := fmt.Sprintf(vaasPolicyResourceTest, vaasProv, data.zone, data.filePath)
 	t.Logf("Testing creating VaaS Zone:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS zone: ", data.zone)
@@ -201,10 +202,10 @@ func checkCreateVaasPolicy(t *testing.T, data *testData, s *terraform.State, val
 func TestImportVaasPolicy(t *testing.T) {
 	config := getImportVaasConfig()
 	t.Logf("Testing importing VaaS Zone:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
 				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE"),
@@ -301,10 +302,10 @@ func TestCreateTppEmptyPolicy(t *testing.T) {
 
 	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
 	t.Logf("Testing creating TPP empty Zone:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating empty zone: ", data.zone)
@@ -325,10 +326,10 @@ func TestCreateTppPolicy(t *testing.T) {
 
 	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
 	t.Logf("Testing creating TPP Zone:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating TPP zone: ", data.zone)
@@ -342,10 +343,10 @@ func TestCreateTppPolicy(t *testing.T) {
 func TestImportTppPolicy(t *testing.T) {
 	config := getPolicyImportTppConfig()
 	t.Logf("Testing importing TPP Zone:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
 				ImportStateId: os.Getenv("TPP_PM_ROOT"),

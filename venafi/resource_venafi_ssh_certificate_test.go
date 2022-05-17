@@ -2,9 +2,10 @@ package venafi
 
 import (
 	"fmt"
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -25,7 +26,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 		os.Getenv("TRUST_BUNDLE"),
 		os.Getenv("TPP_ACCESS_TOKEN"))
 
-	tokenSshCertProv = environmentVariables + `
+	tokenSshCertProv = envSshCertVariables + `
 provider "venafi" {
 	url = "${var.TPP_URL}"
 	access_token = "${var.TPP_ACCESS_TOKEN}"
@@ -34,7 +35,7 @@ provider "venafi" {
 
 	tppSshCertResourceTest = `
 %s
-resource "venafi_ssh_certificate" "test1" {
+resource "venafi_ssh_certificate" "test" {
 	provider = "venafi"
 	key_id="%s"
 	template="%s"
@@ -46,23 +47,10 @@ resource "venafi_ssh_certificate" "test1" {
 	source_address=[
 		"%s"
 	]
-}
-
-output "certificate"{
-	value = venafi_ssh_certificate.test1.certificate
-}
-output "public_key"{
-	value = venafi_ssh_certificate.test1.public_key
-}
-output "private_key"{
-	value = venafi_ssh_certificate.test1.private_key
-}
-output "principals"{
-	value = venafi_ssh_certificate.test1.principal
 }`
 	tppSshCertResourceTestNewAttrPrincipals = `
 %s
-resource "venafi_ssh_certificate" "test2" {
+resource "venafi_ssh_certificate" "test-new-principals" {
 	provider = "venafi"
 	key_id="%s"
 	template="%s"
@@ -74,23 +62,11 @@ resource "venafi_ssh_certificate" "test2" {
 	source_address=[
 		"%s"
 	]
-}
-
-output "certificate"{
-	value = venafi_ssh_certificate.test2.certificate
-}
-output "public_key"{
-	value = venafi_ssh_certificate.test2.public_key
-}
-output "private_key"{
-	value = venafi_ssh_certificate.test2.private_key
-}
-output "principals"{
-	value = venafi_ssh_certificate.test2.principals
 }`
 )
 
 func TestSshCert(t *testing.T) {
+
 	t.Log("Testing creating ssh certificate")
 
 	data := getTestData()
@@ -99,18 +75,14 @@ func TestSshCert(t *testing.T) {
 	// data.principals only holds the values for principals, actually we are testing "principal" attribute defined at the resource.
 	config := fmt.Sprintf(tppSshCertResourceTest, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkSshCertificate(t, &data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
+				Check: resource.ComposeTestCheckFunc(
+					checkSshCertificate("venafi_ssh_certificate.test", t, &data),
+				),
 				ExpectNonEmptyPlan: true,
 			},
 		},
@@ -125,18 +97,14 @@ func TestSshCertNewAttrPrincipals(t *testing.T) {
 
 	config := fmt.Sprintf(tppSshCertResourceTestNewAttrPrincipals, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkSshCertificate(t, &data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
+				Check: resource.ComposeTestCheckFunc(
+					checkSshCertificate("venafi_ssh_certificate.test-new-principals", t, &data),
+				),
 				ExpectNonEmptyPlan: true,
 			},
 		},
@@ -152,18 +120,14 @@ func TestSshCertLocalPublicKey(t *testing.T) {
 	// data.principals only holds the values for principals, actually we are testing "principal" attribute defined at the resource.
 	config := fmt.Sprintf(tppSshCertResourceTest, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkSshCertificate(t, &data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
+				Check: resource.ComposeTestCheckFunc(
+					checkSshCertificate("venafi_ssh_certificate.test", t, &data),
+				),
 				ExpectNonEmptyPlan: true,
 			},
 		},
@@ -178,71 +142,68 @@ func TestSshCertLocalPublicKeyNewAttrPrincipals(t *testing.T) {
 
 	config := fmt.Sprintf(tppSshCertResourceTestNewAttrPrincipals, tokenSshCertProv, data.keyId, data.template, data.publicKeyMethod, data.validityPeriod, data.principals, data.sourceAddress)
 	t.Logf("Testing SSH certificate with config:\n %s", config)
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		Steps: []r.TestStep{
-			r.TestStep{
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
 				Config: config,
-				Check: func(s *terraform.State) error {
-					err := checkSshCertificate(t, &data, s)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
+				Check: resource.ComposeTestCheckFunc(
+					checkSshCertificate("venafi_ssh_certificate.test-new-principals", t, &data),
+				),
 				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
 }
 
-func checkSshCertificate(t *testing.T, data *testData, s *terraform.State) error {
-	t.Log("Testing SSH certificate with key-id", data.keyId)
-	certUntyped := s.RootModule().Outputs["certificate"].Value
-	certificate, ok := certUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"certificate\" is not a string")
-	}
-	if certificate == "" {
-		return fmt.Errorf("certificate is empty")
-	}
-
-	privKeyUntyped := s.RootModule().Outputs["private_key"].Value
-	privateKey, ok := privKeyUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"private key\" is not a string")
-	}
-	if privateKey == "" {
-		return fmt.Errorf("private key is empty")
-	}
-
-	pubKeyUntyped := s.RootModule().Outputs["public_key"].Value
-	publicKey, ok := pubKeyUntyped.(string)
-	if !ok {
-		return fmt.Errorf("output for \"certificate\" is not a string")
-	}
-	if publicKey == "" {
-		return fmt.Errorf("certificate is empty")
-	}
-
-	principalsUntyped := s.RootModule().Outputs["principals"].Value
-	principals, ok := principalsUntyped.([]interface{})
-	if !ok {
-		if len(principals) <= 0 {
-			fmt.Errorf("\"principals\" list is empty")
+func checkSshCertificate(resourceName string, t *testing.T, data *testData) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		t.Log("Testing SSH certificate with key-id", data.keyId)
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
 		}
-		for _, principal := range principals {
-			principalString, ok := principal.(string)
-			if !ok {
-				fmt.Errorf("value inside \"principals\" returned not string value")
-			}
-			if principalString == "" {
-				fmt.Errorf("value inside principals\" is empty string")
+		certificate := rs.Primary.Attributes["certificate"]
+		if certificate == "" {
+			return fmt.Errorf("certificate is empty")
+		}
+		privateKey := rs.Primary.Attributes["private_key"]
+		if privateKey == "" {
+			return fmt.Errorf("private key is empty")
+		}
+
+		publicKey := rs.Primary.Attributes["public_key"]
+		if publicKey == "" {
+			return fmt.Errorf("certificate is empty")
+		}
+
+		principalsLengthString := rs.Primary.Attributes["principals.#"]
+		var principalsLength int
+		var err error
+		principalsLength = 0
+		if principalsLengthString != "" {
+			principalsLength, err = strconv.Atoi(principalsLengthString)
+			if err != nil {
+				return fmt.Errorf("error getting length: %s", err)
 			}
 		}
+		if principalsLength == 0 {
+			var principalLength int
+			var err error
+			principalLength = 0
+			principalLengthString := rs.Primary.Attributes["principal.#"]
+			if principalLengthString != "" {
+				principalLength, err = strconv.Atoi(principalLengthString)
+				if err != nil {
+					return fmt.Errorf("error getting length: %s", err)
+				}
+			}
+			if principalLength == 0 && data.principals != "" {
+				return fmt.Errorf("principal list is empty")
+			}
+		}
+		return nil
 	}
-
-	return nil
 }
 
 func getTestData() testData {

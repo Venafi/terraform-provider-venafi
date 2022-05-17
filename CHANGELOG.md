@@ -1,3 +1,6 @@
+## 0.16.0 (May 16, 2022)
+Upgraded plugin to SDKv2
+
 ## 0.15.5 (April 14, 2022)
 
 Fixed a bug in backward compatibility with PKCS#1 Keys

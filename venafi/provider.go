@@ -1,11 +1,13 @@
 package venafi
 
 import (
+	"context"
 	"fmt"
 	"github.com/Venafi/vcert/v4"
 	"github.com/Venafi/vcert/v4/pkg/endpoint"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"strings"
 )
@@ -13,7 +15,7 @@ import (
 const (
 	messageVenafiPingFailed       = "Failed to ping Venafi endpoint: "
 	messageVenafiPingSuccessful   = "Venafi ping successful"
-	messageVenafiClientInitFailed = "Failed to initialize Venafi client: "
+	messageVenafiClientInitFailed = "Failed to initialize Venafi client"
 	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer: "
 	messageUseDevMode             = "Using dev mode to issue certificate"
 	messageUseVaas                = "Using VaaS to issue certificate"
@@ -22,7 +24,7 @@ const (
 )
 
 // Provider returns a terraform.ResourceProvider.
-func Provider() terraform.ResourceProvider {
+func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"url": &schema.Schema{
@@ -31,7 +33,6 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_URL", nil),
 				Description: `The Venafi Web Service URL.. Example: https://tpp.venafi.example/vedsdk`,
 			},
-
 			"zone": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -40,7 +41,6 @@ func Provider() terraform.ResourceProvider {
 Example for Platform: testpolicy\\vault
 Example for Venafi as a Service: Default`,
 			},
-
 			"tpp_username": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -81,43 +81,44 @@ Example:
 				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi as a Service or Trust Protection Platform. Useful for development and testing.`,
 			},
 		},
-
 		ResourcesMap: map[string]*schema.Resource{
 			"venafi_certificate":     resourceVenafiCertificate(),
 			"venafi_policy":          resourceVenafiPolicy(),
 			"venafi_ssh_certificate": resourceVenafiSshCertificate(),
 			"venafi_ssh_config":      resourceVenafiSshConfig(),
 		},
-
-		ConfigureFunc: providerConfigure,
+		ConfigureContextFunc: providerConfigure,
 	}
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
-	log.Printf("Configuring provider\n")
+	tflog.Info(ctx, "Configuring provider\n")
 	apiKey := d.Get("api_key").(string)
 	url := d.Get("url").(string)
 	tppUser := d.Get("tpp_username").(string)
 	tppPassword := d.Get("tpp_password").(string)
 	accessToken := d.Get("access_token").(string)
 	zone := d.Get("zone").(string)
-	log.Printf("====ZONE==== : %s", zone)
+	tflog.Info(ctx, fmt.Sprintf("====ZONE==== : %s", zone))
 	devMode := d.Get("dev_mode").(bool)
 	trustBundle := d.Get("trust_bundle").(string)
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
 
 	var cfg vcert.Config
 
 	zone = normalizeZone(zone)
 
 	if devMode {
-		log.Print(messageUseDevMode)
+		tflog.Info(ctx, messageUseDevMode)
 		cfg = vcert.Config{
 			ConnectorType: endpoint.ConnectorTypeFake,
 			LogVerbose:    true,
 		}
 	} else if tppUser != "" && tppPassword != "" && accessToken == "" {
-		log.Printf("Using Platform with url %s to issue certificate\n", url)
+		tflog.Info(ctx, fmt.Sprintf("Using Platform with url %s to issue certificate\n", url))
 		cfg = vcert.Config{
 			ConnectorType: endpoint.ConnectorTypeTPP,
 			BaseUrl:       url,
@@ -129,7 +130,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			LogVerbose: true,
 		}
 	} else if accessToken != "" {
-		log.Printf("Using Platform with url %s to issue certificate\n", url)
+		tflog.Info(ctx, fmt.Sprintf("Using Platform with url %s to issue certificate\n", url))
 		cfg = vcert.Config{
 			ConnectorType: endpoint.ConnectorTypeTPP,
 			BaseUrl:       url,
@@ -141,7 +142,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 	} else if apiKey != "" {
 		if url != "" {
-			log.Println(messageUseVaas)
+			tflog.Info(ctx, messageUseVaas)
 			cfg = vcert.Config{
 				ConnectorType: endpoint.ConnectorTypeCloud,
 				BaseUrl:       url,
@@ -152,7 +153,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 				LogVerbose: true,
 			}
 		} else {
-			log.Println(messageUseVaas)
+			tflog.Info(ctx, messageUseVaas)
 			cfg = vcert.Config{
 				ConnectorType: endpoint.ConnectorTypeCloud,
 				Credentials: &endpoint.Authentication{
@@ -163,25 +164,38 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			}
 		}
 	} else {
-		return nil, fmt.Errorf(messageVenafiConfigFailed)
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  messageVenafiClientInitFailed,
+			Detail:   messageVenafiConfigFailed,
+		})
+		return nil, diags
 	}
 
 	if trustBundle != "" {
-		log.Printf("Importing trusted certificate: \n %s", trustBundle)
+		tflog.Info(ctx, fmt.Sprintf("Importing trusted certificate: \n %s", trustBundle))
 		cfg.ConnectionTrust = trustBundle
 	}
 	cl, err := vcert.NewClient(&cfg)
 	if err != nil {
-		log.Printf(messageVenafiClientInitFailed + err.Error())
-		return nil, err
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  messageVenafiClientInitFailed,
+			Detail:   messageVenafiConfigFailed + ": " + err.Error(),
+		})
+		return nil, diags
 	}
 	err = cl.Ping()
 	if err != nil {
-		log.Printf(messageVenafiPingFailed + err.Error())
-		return nil, err
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  messageVenafiPingFailed,
+			Detail:   messageVenafiConfigFailed + ": " + err.Error(),
+		})
+		return nil, diags
 	}
 
-	return &cfg, nil
+	return &cfg, diags
 }
 
 func normalizeZone(zone string) string {
@@ -205,6 +219,6 @@ func normalizeZone(zone string) string {
 		newZone = "\\" + newZone
 	}
 
-	log.Printf("Normalized zone : %s", newZone)
+	log.Printf("[INFO] Normalized zone : %s", newZone)
 	return newZone
 }

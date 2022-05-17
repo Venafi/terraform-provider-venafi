@@ -1,16 +1,17 @@
 package venafi
 
 import (
+	"context"
 	"github.com/Venafi/vcert/v4/pkg/certificate"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceVenafiSshConfig() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceVenafiSshConfigCreate,
-		Read:   resourceVenafiSshConfigRead,
-		Delete: resourceVenafiSshConfigDelete,
-		Exists: resourceVenafiSshConfigExists,
+		CreateContext: resourceVenafiSshConfigCreate,
+		ReadContext:   resourceVenafiSshConfigRead,
+		DeleteContext: resourceVenafiSshConfigDelete,
 
 		Schema: map[string]*schema.Schema{
 			"template": &schema.Schema{
@@ -34,10 +35,10 @@ func resourceVenafiSshConfig() *schema.Resource {
 	}
 }
 
-func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) error {
-	cl, err := getConnection(meta)
+func resourceVenafiSshConfigCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	cl, err := getConnection(ctx, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	template := d.Get("template").(string)
 	req := &certificate.SshCaTemplateRequest{}
@@ -45,55 +46,59 @@ func resourceVenafiSshConfigCreate(d *schema.ResourceData, meta interface{}) err
 
 	conf, err := cl.RetrieveSshConfig(req)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(template)
 
 	err = d.Set("ca_public_key", conf.CaPublicKey)
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if conf.Principals != nil {
 		err = d.Set("principals", conf.Principals)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func resourceVenafiSshConfigExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	caPubKeyUntyped, ok := d.GetOk("public_key")
-	if !ok {
-		return false, nil
-	}
-
-	caPubKeyStr := caPubKeyUntyped.(string)
-	if caPubKeyStr == "" {
-		return false, nil
-	}
+func resourceVenafiSshConfigRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	principalsUntyped, ok := d.GetOk("principals")
 	if !ok {
-		return false, nil
+		d.SetId("")
+		return nil
+	}
+	principals, ok := principalsUntyped.([]interface{})
+	if !ok {
+		d.SetId("")
+		return nil
 	}
 
-	err := validateStringListFromSchemaAttribute(principalsUntyped, "principals")
-	if err != nil {
-		return false, nil
+	if len(principals) <= 0 {
+		d.SetId("")
+		return nil
 	}
 
-	return true, nil
-}
-
-func resourceVenafiSshConfigRead(d *schema.ResourceData, meta interface{}) error {
+	for _, principal := range principals {
+		principalString, ok := principal.(string)
+		if !ok {
+			d.SetId("")
+			return nil
+		}
+		if principalString == "" {
+			d.SetId("")
+			return nil
+		}
+	}
 	return nil
 }
 
-func resourceVenafiSshConfigDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceVenafiSshConfigDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }
