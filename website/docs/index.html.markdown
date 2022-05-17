@@ -12,8 +12,8 @@ Venafi is the enterprise platform for Machine Identity Protection. The Venafi pr
 0.15.4 (you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
 For backward compatibility during Terraform state refresh please update to version 0.15.5 or above.
 
-!> As a part for upgrading our provider to SDK version 2, we dropped for
-Terraform 0.11 and below.
+!> As a part for upgrading our provider to SDK version 2, we dropped support for
+Terraform version 0.11 and below.
 
 [Venafi](https://www.venafi.com) is the enterprise platform for Machine Identity
 Protection. The Venafi provider streamlines the process of acquiring SSL/TLS

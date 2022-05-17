@@ -134,8 +134,8 @@ this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0))
 For backward compatibility during Terraform state refresh please update to version
 0.15.5 or above.
 
-> :warning: As a part for upgrading our provider to SDK version 2, we dropped for
-Terraform 0.11 and below.
+> :warning: As a part for upgrading our provider to SDK version 2, we dropped support
+for Terraform version 0.11 and below.
 
 1. Declare that the Venafi Provider is required:
 
