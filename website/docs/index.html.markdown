@@ -8,9 +8,12 @@ Venafi is the enterprise platform for Machine Identity Protection. The Venafi pr
 
 # Venafi Provider
 
-!> We dropped support for RSA PKCS#1 formatted keys for TLS certificates in version 15.0 and also for EC Keys in version 
+!> We dropped support for RSA PKCS#1 formatted keys for TLS certificates in version 15.0 and also for EC Keys in version
 0.15.4 (you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
 For backward compatibility during Terraform state refresh please update to version 0.15.5 or above.
+
+!> As a part for upgrading our provider to SDK version 2, we dropped for
+Terraform 0.11 and below.
 
 [Venafi](https://www.venafi.com) is the enterprise platform for Machine Identity
 Protection. The Venafi provider streamlines the process of acquiring SSL/TLS
@@ -32,13 +35,13 @@ issue certificates. The zone is formed by combining the Application Name and Iss
 ```hcl
 # Configure the Venafi provider
 provider "venafi" {
-    api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    zone    = "Business App\\Enterprise CIT"
+  api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  zone    = "Business App\\Enterprise CIT"
 }
 
 # Generate a key pair and request a certificate
 resource "venafi_certificate" "webserver" {
-    # ...
+  # ...
 }
 ```
 
@@ -60,15 +63,15 @@ policy using the `venafi_policy` resource.
 ```hcl
 # Configure the Venafi provider
 provider "venafi" {
-    url          = "https://tpp.venafi.example"
-    trust_bundle = "${file("/opt/venafi/bundle.pem")}"
-    access_token = "p0WTt3sDPbzm2BDIkoJROQ=="
-    zone         = "DevOps\\Terraform"
+  url          = "https://tpp.venafi.example"
+  trust_bundle = "${file("/opt/venafi/bundle.pem")}"
+  access_token = "p0WTt3sDPbzm2BDIkoJROQ=="
+  zone         = "DevOps\\Terraform"
 }
 
 # Generate a key pair and request a certificate
 resource "venafi_certificate" "webserver" {
-    # ...
+  # ...
 }
 ```
 
