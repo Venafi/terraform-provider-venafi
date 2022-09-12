@@ -459,7 +459,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 168
+	data.expiration_window = 90 * 24 // 90 days
 	//
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing Cloud certificate with config:\n %s", config)
@@ -515,7 +515,7 @@ func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *tes
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 170
+	data.expiration_window = 90*24 + 2 // 90 days + 2 hours
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing VaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
@@ -553,9 +553,9 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	data.cn = rand + "." + domain
 	data.private_key_password = "123xxx"
 	data.key_algo = rsa2048
-	data.expiration_window = 100
+	data.expiration_window = 60 * 24 // 60 days
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	data.expiration_window = 180
+	data.expiration_window = 90*24 + 12 // 90 days + 12 hours
 	configUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing VaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
@@ -565,14 +565,14 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
-					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "100"),
+					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "1440"),
 				),
 			},
 			resource.TestStep{
 				Config: configUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
-					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "180"),
+					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "2172"),
 				),
 				ExpectNonEmptyPlan: true,
 			},
