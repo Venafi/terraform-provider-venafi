@@ -8,7 +8,7 @@ Provides access to TLS key and certificate data in Venafi. This can be used to d
 
 # venafi_certificate
 
-!> We dropped support for RSA PKCS#1 formatted keys for TLS certificates in version 15.0 and also for EC Keys in 
+!> We dropped support for RSA PKCS#1 formatted keys for TLS certificates in version 15.0 and also for EC Keys in
 version 0.15.4 (you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
 For backward compatibility during Terraform state refresh please update to version 0.15.5 or above.
 
@@ -41,6 +41,8 @@ The following arguments are supported:
 ~>**Note:** Updating `expiration_window` will not trigger another resource to be created by itself, thus won't enroll a new certificate. This won't apply if the `expiration_window` constraint allows it, this means, if time to expire of the certificate is within the expiration window.
 
 * `common_name` - (Required, string) The common name of the certificate.
+
+* `object_name` - (Optional, string) Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP.
 
 * `algorithm` - (Optional, string) Key encryption algorithm, either RSA or ECDSA.
   Defaults to "RSA".
@@ -117,7 +119,9 @@ The `id` for each platform is:
 
 **TPP:**
 
-The `common name` of the certificate, internally we built the `pickup_id` using the `zone` defined at the provider block.
+The `object_name` of the certificate, which usually should always be the `common_name` as it is good practice. Internally we built the `pickup_id` using the `zone` defined at the provider block.
+
+~>**Note:** The object name could differ conceptually of the common name, as there some use cases whenever you want to handle certificates with the same common names but different attributes (such as different SANs), you could manage many resources with the same common name using `for_each` and `count` meta arguments and object name attribute being different from the common name.
 
 **VaaS:**
 

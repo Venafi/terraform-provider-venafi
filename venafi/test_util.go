@@ -5,6 +5,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/certificate"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/Venafi/vcert/v4/pkg/util"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -307,6 +310,20 @@ func checkImportTppCertWithCustomFields(t *testing.T, data *testData, states []*
 	return nil
 }
 
+func checkImportWithObjectName(t *testing.T, data *testData, states []*terraform.InstanceState) error {
+	st := states[0]
+	attributes := st.Attributes
+	err := checkImportCert(t, data, attributes)
+	if err != nil {
+		return err
+	}
+	objectName := attributes["object_name"]
+	if objectName != data.object_name {
+		return fmt.Errorf("object name in imported resource differs from the input")
+	}
+	return nil
+}
+
 func checkImportCert(t *testing.T, data *testData, attr map[string]string) error {
 	certificate := attr["certificate"]
 	privateKey := attr["private_key_pem"]
@@ -340,4 +357,120 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 		}
 	}
 	return nil
+}
+
+func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceGenerated bool) {
+	t.Log("Creating certificate for testing")
+	cfg.Zone = data.zone
+
+	var auth = &endpoint.Authentication{}
+	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
+		cfg.BaseUrl = os.Getenv("TPP_URL")
+		cfg.Zone = os.Getenv("TPP_ZONE")
+		auth.AccessToken = os.Getenv("TPP_ACCESS_TOKEN")
+	} else if cfg.ConnectorType == endpoint.ConnectorTypeCloud {
+		cfg.BaseUrl = os.Getenv("CLOUD_URL")
+		cfg.Zone = os.Getenv("CLOUD_ZONE")
+		auth.APIKey = os.Getenv("CLOUD_APIKEY")
+	}
+	cfg.Credentials = auth
+	client, err := vcert.NewClient(cfg)
+	// here stops
+	zoneConfig, err := client.ReadZoneConfiguration()
+	if err != nil {
+		t.Fatalf("error reading zone configuration: %s", err)
+	}
+	req := &certificate.Request{}
+	if data.object_name != "" && cfg.ConnectorType == endpoint.ConnectorTypeTPP {
+		t.Log(fmt.Sprintf("Certificate: %s", data.object_name))
+	} else {
+		//at least cn mus be set for TPP
+		t.Log(fmt.Sprintf("Certificate: %s", data.cn))
+	}
+	if data.cn != "" {
+		req.Subject.CommonName = data.cn
+	}
+	if data.private_key_password != "" {
+		req.KeyPassword = data.private_key_password
+	}
+	req.Subject.Organization = []string{"Venafi, Inc."}
+	req.Subject.OrganizationalUnit = []string{"Automated Tests"}
+	if data.dns_ns != "" {
+		req.DNSNames = strings.Split(data.dns_ns, ",")
+	}
+	if data.dns_ip != "" {
+		req.IPAddresses = stringArrayToIParray(strings.Split(data.dns_ip, ","))
+	}
+	// this is the name that will show up on VaaS UI
+	if data.object_name != "" {
+		req.FriendlyName = data.object_name
+	}
+	if data.valid_days != 0 {
+		req.ValidityHours = data.valid_days * 24
+	}
+	req.IssuerHint = issuerHint
+	req.CsrOrigin = certificate.LocalGeneratedCSR
+	if serviceGenerated == true {
+		req.CsrOrigin = certificate.ServiceGeneratedCSR
+	}
+	err = client.GenerateRequest(zoneConfig, req)
+	if err != nil {
+		t.Fatalf("error generating request: %s", err)
+	}
+	t.Log("Requesting Certificate")
+	pickupID, err := client.RequestCertificate(req)
+	if err != nil {
+		t.Fatalf("error requesting certificate: %s", err)
+	}
+
+	req.PickupID = pickupID
+	req.ChainOption = certificate.ChainOptionRootLast
+
+	pcc, _ := certificate.NewPEMCollection(nil, nil, nil)
+	startTime := time.Now()
+	for {
+		if serviceGenerated == true {
+			req.Timeout = 180 * time.Second
+			req.KeyPassword = data.private_key_password
+			if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
+				req.FetchPrivateKey = true
+			}
+		}
+		t.Log("Retrieving certificate")
+		pcc, err = client.RetrieveCertificate(req)
+		if err != nil {
+			_, ok := err.(endpoint.ErrCertificatePending)
+			if ok {
+				if time.Now().After(startTime.Add(time.Duration(600) * time.Second)) {
+					err = endpoint.ErrRetrieveCertificateTimeout{CertificateID: pickupID}
+					break
+				}
+				time.Sleep(time.Duration(10) * time.Second)
+				continue
+			}
+			break
+		}
+		break
+	}
+	if err != nil {
+		t.Fatalf("error retrieving certificate: %s", err)
+	}
+	t.Log("Verifying certificate")
+	p, _ := pem.Decode([]byte(pcc.Certificate))
+	cert, err := x509.ParseCertificate(p.Bytes)
+	if err != nil {
+		t.Fatalf("error parsing certificate: %s", err)
+	}
+
+	if data.valid_days != 0 {
+		certValidUntil := cert.NotAfter.Format("2006-01-02")
+		loc, _ := time.LoadLocation("UTC")
+		utcNow := time.Now().In(loc)
+		expectedValidDate := utcNow.AddDate(0, 0, data.valid_days).Format("2006-01-02")
+		// ensure certificate is created with our provided time
+		if expectedValidDate != certValidUntil {
+			t.Fatalf("Expiration date is different than expected, expected: %s, but got %s: ", expectedValidDate, certValidUntil)
+		}
+	}
+	t.Log("Certificate creation successful")
 }

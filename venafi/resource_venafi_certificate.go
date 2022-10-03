@@ -965,8 +965,10 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 
 	if c == endpoint.ConnectorTypeTPP {
 		// only TPP handle the concept of object name so only then we set it
-		lastSlash := strings.LastIndex(id, "\\")
-		err = d.Set("object_name", lastSlash)
+		// we are expecting "id" have something like \\VED\\Policy\\MyPolicy\\my-object-name
+		certificateDNsplit := strings.Split(id, "\\")
+		objectName := certificateDNsplit[len(certificateDNsplit)-1]
+		err = d.Set("object_name", objectName)
 		if err != nil {
 			return err
 		}
