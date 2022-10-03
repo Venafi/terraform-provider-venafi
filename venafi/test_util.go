@@ -362,7 +362,6 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 
 func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceGenerated bool) {
 	t.Log("Creating certificate for testing")
-	cfg.Zone = data.zone
 
 	var auth = &endpoint.Authentication{}
 	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
