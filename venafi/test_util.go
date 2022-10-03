@@ -375,6 +375,9 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	}
 	cfg.Credentials = auth
 	client, err := vcert.NewClient(cfg)
+	if err != nil {
+		t.Fatalf("Error building VCert client %s", err.Error())
+	}
 	// here stops
 	zoneConfig, err := client.ReadZoneConfiguration()
 	if err != nil {
@@ -382,10 +385,10 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	}
 	req := &certificate.Request{}
 	if data.object_name != "" && cfg.ConnectorType == endpoint.ConnectorTypeTPP {
-		t.Log(fmt.Sprintf("Certificate: %s", data.object_name))
+		t.Logf("Certificate: %s", data.object_name)
 	} else {
 		//at least cn mus be set for TPP
-		t.Log(fmt.Sprintf("Certificate: %s", data.cn))
+		t.Logf("Certificate: %s", data.cn)
 	}
 	if data.cn != "" {
 		req.Subject.CommonName = data.cn
@@ -410,7 +413,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	}
 	req.IssuerHint = issuerHint
 	req.CsrOrigin = certificate.LocalGeneratedCSR
-	if serviceGenerated == true {
+	if serviceGenerated {
 		req.CsrOrigin = certificate.ServiceGeneratedCSR
 	}
 	err = client.GenerateRequest(zoneConfig, req)
@@ -426,10 +429,10 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	req.PickupID = pickupID
 	req.ChainOption = certificate.ChainOptionRootLast
 
-	pcc, _ := certificate.NewPEMCollection(nil, nil, nil)
+	var pcc *certificate.PEMCollection
 	startTime := time.Now()
 	for {
-		if serviceGenerated == true {
+		if serviceGenerated {
 			req.Timeout = 180 * time.Second
 			req.KeyPassword = data.private_key_password
 			if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
