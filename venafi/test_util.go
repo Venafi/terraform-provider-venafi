@@ -11,6 +11,7 @@ import (
 	"github.com/Venafi/vcert/v4/pkg/util"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -367,7 +368,12 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
 		cfg.BaseUrl = os.Getenv("TPP_URL")
 		cfg.Zone = os.Getenv("TPP_ZONE")
-		cfg.ConnectionTrust = os.Getenv("TRUST_BUNDLE")
+		trustBundlePath := os.Getenv("TRUST_BUNDLE")
+		trustBundleBytes, err := ioutil.ReadFile(trustBundlePath)
+		if err != nil {
+			t.Fatalf("Error opening trust bundle file: %s", err.Error())
+		}
+		cfg.ConnectionTrust = string(trustBundleBytes)
 		auth.AccessToken = os.Getenv("TPP_ACCESS_TOKEN")
 	} else if cfg.ConnectorType == endpoint.ConnectorTypeCloud {
 		cfg.BaseUrl = os.Getenv("CLOUD_URL")
