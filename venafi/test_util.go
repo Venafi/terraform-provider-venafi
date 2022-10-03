@@ -367,6 +367,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
 		cfg.BaseUrl = os.Getenv("TPP_URL")
 		cfg.Zone = os.Getenv("TPP_ZONE")
+		cfg.ConnectionTrust = os.Getenv("TRUST_BUNDLE")
 		auth.AccessToken = os.Getenv("TPP_ACCESS_TOKEN")
 	} else if cfg.ConnectorType == endpoint.ConnectorTypeCloud {
 		cfg.BaseUrl = os.Getenv("CLOUD_URL")
