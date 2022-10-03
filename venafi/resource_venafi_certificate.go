@@ -769,7 +769,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 }
 
 func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	time.Sleep(10 * time.Second)
+
 	id := d.Id()
 
 	if id == "" {
