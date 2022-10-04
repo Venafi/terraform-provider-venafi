@@ -180,12 +180,12 @@ output "private_key" {
 	value = "${venafi_certificate.tpp_certificate.private_key_pem}"
 	sensitive = true
 }`
-	tppConfigWithObjectName = `
+	tppConfigWithNickname = `
 %s
 resource "venafi_certificate" "tpp_certificate" {
 	provider = "venafi.tpp"
 	common_name = "%s"
-    ${venafiCertificateAttrNickname} = "%s"
+    nickname = "%s"
 	san_dns = [
 		"%s"
 	]
@@ -697,7 +697,7 @@ func TestTPPSignedCert(t *testing.T) {
 	})
 }
 
-func TestTPPSignedCertWithObjectName(t *testing.T) {
+func TestTPPSignedCertWithNickname(t *testing.T) {
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.example.com"
@@ -709,7 +709,7 @@ func TestTPPSignedCertWithObjectName(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	data.expiration_window = 168
-	config := fmt.Sprintf(tppConfigWithObjectName, tppProvider, data.cn, data.nickname, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	config := fmt.Sprintf(tppConfigWithNickname, tppProvider, data.cn, data.nickname, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -1233,7 +1233,7 @@ func TestImportCertificateTpp(t *testing.T) {
 	})
 }
 
-func TestImportCertificateTppWithObjectName(t *testing.T) {
+func TestImportCertificateTppWithNickname(t *testing.T) {
 	var cfg = &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeTPP,
 	}
