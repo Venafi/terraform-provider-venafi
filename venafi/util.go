@@ -71,7 +71,7 @@ func sameStringSlice(x, y []string) bool {
 //nolint
 type testData struct {
 	cert                 string
-	object_name          string
+	nickname             string
 	private_key          string
 	private_key_password string
 	wrong_cert           string
@@ -182,8 +182,8 @@ func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {
 			req.ValidityPeriod = strconv.Itoa(validHours) + "h"
 		}
 	}
-	if objectName, ok := d.Get("object_name").(string); ok {
-		req.ObjectName = objectName
+	if nickname, ok := d.Get(venafiCertificateAttrNickname).(string); ok {
+		req.ObjectName = nickname
 	}
 	if principals, ok := d.GetOk("principals"); ok {
 		req.Principals = getStringList(principals)

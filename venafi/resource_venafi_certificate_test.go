@@ -185,7 +185,7 @@ output "private_key" {
 resource "venafi_certificate" "tpp_certificate" {
 	provider = "venafi.tpp"
 	common_name = "%s"
-    object_name = "%s"
+    ${venafiCertificateAttrNickname} = "%s"
 	san_dns = [
 		"%s"
 	]
@@ -702,14 +702,14 @@ func TestTPPSignedCertWithObjectName(t *testing.T) {
 	rand := randSeq(9)
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
-	data.object_name = data.cn + " - 1"
+	data.nickname = data.cn + " - 1"
 	data.dns_ns = "alt-" + data.cn
 	data.dns_ip = "192.168.1.1"
 	data.dns_email = "venafi@example.com"
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	data.expiration_window = 168
-	config := fmt.Sprintf(tppConfigWithObjectName, tppProvider, data.cn, data.object_name, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	config := fmt.Sprintf(tppConfigWithObjectName, tppProvider, data.cn, data.nickname, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -718,7 +718,7 @@ func TestTPPSignedCertWithObjectName(t *testing.T) {
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.tpp_certificate", t, &data),
-					resource.TestCheckResourceAttr("venafi_certificate.tpp_certificate", "object_name", data.object_name),
+					resource.TestCheckResourceAttr("venafi_certificate.tpp_certificate", venafiCertificateAttrNickname, data.nickname),
 				),
 			},
 		},
@@ -1241,7 +1241,7 @@ func TestImportCertificateTppWithObjectName(t *testing.T) {
 	rand := randSeq(9)
 	domain := "venafi.example.com"
 	data.cn = rand + "." + domain
-	data.object_name = data.cn + " - 1"
+	data.nickname = data.cn + " - 1"
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	data.dns_ns = "alt-" + data.cn
@@ -1252,7 +1252,7 @@ func TestImportCertificateTppWithObjectName(t *testing.T) {
 	createCertificate(t, cfg, &data, serviceGeneratedCSR)
 
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
-	importId := fmt.Sprintf("%s,%s", data.object_name, data.private_key_password)
+	importId := fmt.Sprintf("%s,%s", data.nickname, data.private_key_password)
 	t.Logf("Testing importing TPP cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,

@@ -318,9 +318,9 @@ func checkImportWithObjectName(t *testing.T, data *testData, states []*terraform
 	if err != nil {
 		return err
 	}
-	objectName := attributes["object_name"]
-	if objectName != data.object_name {
-		return fmt.Errorf("object name in imported resource differs from the input")
+	nickname := attributes[venafiCertificateAttrNickname]
+	if nickname != data.nickname {
+		return fmt.Errorf("nickname in imported resource differs from the input")
 	}
 	return nil
 }
@@ -390,8 +390,8 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		t.Fatalf("error reading zone configuration: %s", err)
 	}
 	req := &certificate.Request{}
-	if data.object_name != "" && cfg.ConnectorType == endpoint.ConnectorTypeTPP {
-		t.Logf("Certificate: %s", data.object_name)
+	if data.nickname != "" && cfg.ConnectorType == endpoint.ConnectorTypeTPP {
+		t.Logf("Certificate: %s", data.nickname)
 	} else {
 		//at least cn mus be set for TPP
 		t.Logf("Certificate: %s", data.cn)
@@ -411,8 +411,8 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		req.IPAddresses = stringArrayToIParray(strings.Split(data.dns_ip, ","))
 	}
 	// this is the name that will show up on VaaS UI
-	if data.object_name != "" {
-		req.FriendlyName = data.object_name
+	if data.nickname != "" {
+		req.FriendlyName = data.nickname
 	}
 	if data.valid_days != 0 {
 		req.ValidityHours = data.valid_days * 24

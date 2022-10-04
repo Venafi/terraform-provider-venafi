@@ -39,6 +39,11 @@ const (
 	terraformStateTainted      = "terraform state was modified by another party"
 )
 
+// Started work to make resource attribute less error-prone
+const (
+	venafiCertificateAttrNickname = "nickname"
+)
+
 func resourceVenafiCertificate() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceVenafiCertificateCreate,
@@ -60,7 +65,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				Description: "Common name of certificate",
 				ForceNew:    true,
 			},
-			"object_name": &schema.Schema{
+			venafiCertificateAttrNickname: &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP",
@@ -498,7 +503,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		req.DNSNames = append(req.DNSNames, commonName)
 	}
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
-		friendlyName := d.Get("object_name").(string)
+		friendlyName := d.Get(venafiCertificateAttrNickname).(string)
 		if friendlyName != "" {
 			req.FriendlyName = friendlyName
 		}
@@ -967,8 +972,8 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 		// only TPP handle the concept of object name so only then we set it
 		// we are expecting "id" have something like \\VED\\Policy\\MyPolicy\\my-object-name
 		certificateDNsplit := strings.Split(id, "\\")
-		objectName := certificateDNsplit[len(certificateDNsplit)-1]
-		err = d.Set("object_name", objectName)
+		nickname := certificateDNsplit[len(certificateDNsplit)-1]
+		err = d.Set(venafiCertificateAttrNickname, nickname)
 		if err != nil {
 			return err
 		}

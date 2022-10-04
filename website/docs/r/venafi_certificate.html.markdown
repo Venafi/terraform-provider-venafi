@@ -42,7 +42,7 @@ The following arguments are supported:
 
 * `common_name` - (Required, string) The common name of the certificate.
 
-* `object_name` - (Optional, string) Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP.
+* `nickname` - (Optional, string) Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP.
 
 * `algorithm` - (Optional, string) Key encryption algorithm, either RSA or ECDSA.
   Defaults to "RSA".
@@ -119,7 +119,7 @@ The `id` for each platform is:
 
 **TPP:**
 
-The `object_name` of the certificate, which usually should always be the `common_name` as it is good practice. Internally we built the `pickup_id` using the `zone` defined at the provider block.
+The `nickname` of the certificate, which usually should always be the `common_name` as it is good practice. Internally we built the `pickup_id` using the `zone` defined at the provider block.
 
 ~>**Note:** The object name could differ conceptually of the common name, as there some use cases whenever you want to handle certificates with the same common names but different attributes (such as different SANs), you could manage many resources with the same common name using `for_each` and `count` meta arguments and object name attribute being different from the common name.
 
