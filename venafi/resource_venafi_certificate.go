@@ -39,6 +39,11 @@ const (
 	terraformStateTainted      = "terraform state was modified by another party"
 )
 
+// Started work to make resource attribute less error-prone
+const (
+	venafiCertificateAttrNickname = "nickname"
+)
+
 func resourceVenafiCertificate() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceVenafiCertificateCreate,
@@ -58,6 +63,12 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Common name of certificate",
+				ForceNew:    true,
+			},
+			venafiCertificateAttrNickname: &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP",
 				ForceNew:    true,
 			},
 			"algorithm": &schema.Schema{
@@ -302,26 +313,13 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(fmt.Errorf("error parsing cert: %s", err))
 	}
 	//Checking Private Key
-	var pk8PEMBytes []byte
-	var pk1PEMBytes []byte
-	if pkUntyped, ok := d.GetOk("private_key_pem"); ok {
-		pk8PEM, err := util.DecryptPkcs8PrivateKey(pkUntyped.(string), d.Get("key_password").(string))
-		if err != nil {
-			pk1PEMBytes, err = getPrivateKey([]byte(pkUntyped.(string)), d.Get("key_password").(string))
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-		pk8PEMBytes = []byte(pk8PEM)
-	} else {
-		return diag.FromErr(fmt.Errorf("error getting key"))
+	var privateKey string
+	if privateKeyUntyped, ok := d.GetOk("private_key_pem"); ok {
+		privateKey = privateKeyUntyped.(string)
 	}
-	_, err = tls.X509KeyPair([]byte(certPEM), pk8PEMBytes)
+	err = verifyCertKeyPair(certPEM, privateKey, keyPassword)
 	if err != nil {
-		_, err = tls.X509KeyPair([]byte(certPEM), pk1PEMBytes)
-		if err != nil {
-			return diag.FromErr(fmt.Errorf("error comparing certificate and key: %s", err))
-		}
+		diag.FromErr(err)
 	}
 
 	renewRequired := checkForRenew(*cert, d.Get("expiration_window").(int))
@@ -365,6 +363,34 @@ func resourceVenafiCertificateUpdate(ctx context.Context, d *schema.ResourceData
 func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	// We don't support deletion for created certificates from TPP, so we just remove it from state
 	d.SetId("")
+	return nil
+}
+
+func verifyCertKeyPair(certPEM string, privateKeyPEM string, keyPassword string) error {
+	var pk8PEMBytes []byte
+	var pk1PEMBytes []byte
+
+	pk8PEM, err := util.DecryptPkcs8PrivateKey(privateKeyPEM, keyPassword)
+	if err != nil {
+		pk1PEMBytes, err = getPrivateKey([]byte(privateKeyPEM), keyPassword)
+		if err != nil {
+			return err
+		}
+	}
+	pk8PEMBytes = []byte(pk8PEM)
+	if err != nil {
+		return fmt.Errorf("error getting key")
+	}
+	_, err = tls.X509KeyPair([]byte(certPEM), pk8PEMBytes)
+	if err != nil {
+		if len(pk1PEMBytes) != 0 {
+			_, err = tls.X509KeyPair([]byte(certPEM), pk1PEMBytes)
+			if err != nil {
+				return fmt.Errorf("error comparing certificate and key: %s", err)
+			}
+		}
+		return fmt.Errorf("error comparing certificate and key: %s", err)
+	}
 	return nil
 }
 
@@ -475,6 +501,12 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	if !sliceContains(req.DNSNames, commonName) {
 		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames))
 		req.DNSNames = append(req.DNSNames, commonName)
+	}
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		friendlyName := d.Get(venafiCertificateAttrNickname).(string)
+		if friendlyName != "" {
+			req.FriendlyName = friendlyName
+		}
 	}
 
 	//Obtain a certificate from the Venafi server
@@ -631,6 +663,14 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 			return err
 		}
 	}
+
+	KeyPassword := d.Get("key_password").(string)
+	tflog.Info(ctx, "Creating certificate resource: Verifying certificate key-pair")
+	err = verifyCertKeyPair(pcc.Certificate, pcc.PrivateKey, KeyPassword)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("Could not add certificate resource to state. Certificate and private key mismatch. Err: %s", err.Error()))
+	}
+
 	if err = d.Set("certificate", pcc.Certificate); err != nil {
 		return fmt.Errorf("Error setting certificate: %s", err)
 	}
@@ -643,8 +683,6 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 
 	d.SetId(req.PickupID)
 	tflog.Info(ctx, "Setting up private key")
-
-	KeyPassword := d.Get("key_password").(string)
 
 	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
 	if err != nil {
@@ -736,6 +774,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 }
 
 func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+
 	id := d.Id()
 
 	if id == "" {
@@ -930,6 +969,15 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 	}
 
 	if c == endpoint.ConnectorTypeTPP {
+		// only TPP handle the concept of object name so only then we set it
+		// we are expecting "id" have something like \\VED\\Policy\\MyPolicy\\my-object-name
+		certificateDNsplit := strings.Split(id, "\\")
+		nickname := certificateDNsplit[len(certificateDNsplit)-1]
+		err = d.Set(venafiCertificateAttrNickname, nickname)
+		if err != nil {
+			return err
+		}
+
 		customFields := certMetadata.CustomFields
 		newCustomFields := make(map[string]interface{})
 		for _, customField := range customFields {

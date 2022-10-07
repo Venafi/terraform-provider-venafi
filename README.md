@@ -192,7 +192,7 @@ for Terraform version 0.11 and below.
    Service since that variable is used by the provider to decide which Venafi product
    to use.
 
-3. Create a `venafi_certificate` resource that will generate a new key pair and
+ Create a `venafi_certificate` resource that will generate a new key pair and
    enroll the certificate needed by a "tls_server" application:
 
    ```text
@@ -214,8 +214,9 @@ for Terraform version 0.11 and below.
    >:pushpin: **NOTE**: Updating only `expiration_window` will not trigger another resource to be created by itself, thus won't enroll a new certificate. This won't apply if the expiration_window constraint allows it, this means, if time to expire of the certificate is within the expiration window.
 
    | Property            | Type          |  Description                                                                      | Default   |
-   | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
+   |---------------------| ------------------- |--------------------------------------------------------------------------------- | --------- |
    | `common_name`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Common name of certificate                                                        | `none` |
+   | `nickname`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP.|`none`|
    | `san_dns`           | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of DNS names to use as alternative subjects of the certificate               | `none` |
    | `san_email`         | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of email addresses to use as alternative subjects of the certificate         | `none` |
    | `san_ip`            | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of IP addresses to use as alternative subjects of the certificate            | `none` |
@@ -225,10 +226,10 @@ for Terraform version 0.11 and below.
    | `ecdsa_curve`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ECDSA curve to use when generating a key pair (i.e. P256, P384, P521). Applies when `algorithm`=ECDSA | P521   |
    | `key_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Private key password                                                              | `none` |
    | `custom_fields`     | [Map](https://www.terraform.io/docs/extend/schemas/schema-types.html#typemap) | Collection of key-value pairs where the key is the name of the Custom Field in Trust Protection Platform.  For list type Custom Fields, use the \| character to delimit mulitple values.<br/>Example: `custom_fields = { "Number List" = "2\|4\|6" }` | `none` |
-   | `valid_days` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Desired number of days for which the new certificate will be valid | `none` |
-   | `issuer_hint` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Used with `valid_days` to indicate the target issuer when using Trust Protection Platform and the CA is DigiCert, Entrust, or Microsoft.<br/>Example: `issuer_hint = "Microsoft"` | `none` |
+   | `valid_days`        | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Desired number of days for which the new certificate will be valid | `none` |
+   | `issuer_hint`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Used with `valid_days` to indicate the target issuer when using Trust Protection Platform and the CA is DigiCert, Entrust, or Microsoft.<br/>Example: `issuer_hint = "Microsoft"` | `none` |
    | `expiration_window` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of hours before certificate expiry to request a new certificate            | 168    |
-   | `csr_origin` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Option to decide whether key-pair generation will be `local` or `service` generated | `local` |
+   | `csr_origin`        | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Option to decide whether key-pair generation will be `local` or `service` generated | `local` |
 
    >:pushpin: **NOTE**: The `venafi_certificate` resource handles certificate
    renewals as long as a `terraform apply` is done within the `expiration_window`
@@ -245,7 +246,7 @@ for Terraform version 0.11 and below.
    | `certificate`     | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | End-entity certificate in PEM format |
    | `pkcs12`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Base64-encoded PKCS#12 keystore encrypted using `key_password`, if specified. Useful when working with resources like [azurerm_key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html). Base64 decode to obtain file bytes. |
 
-4. For verification purposes, output the certificate, private key, and
+5. For verification purposes, output the certificate, private key, and
    chain in PEM format and as a PKCS#12 keystore (base64-encoded):
 
    ```text
@@ -267,7 +268,7 @@ for Terraform version 0.11 and below.
    }
    ```
 
-5. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
+6. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
    `terraform show` from the directory containing the configuration file.
 
 ### Importing
@@ -285,7 +286,9 @@ The `id` for each platform is:
 
 **TPP:**
 
-The `common name` of the certificate, internally we built the `pickup_id` using the `zone` defined at the provider block.
+The `nickname` of the certificate, which represents the name of the certificate object in TPP. Internally we built the `pickup_id` using the `zone` defined at the provider block.
+
+>:pushpin: **NOTE**: The certificate object name at TPP, usually, should be the same as the `common_name` provided as it is considered good practice, but the `nickname` actually could differ from the common name, as there some use cases whenever you want to handle certificates with different nicknames. For example, you could have certificates with same common name and different SANs, then, you could manage many certificate resources that share the same common name using `for_each` and `count` meta arguments.
 
 **VaaS:**
 
@@ -380,24 +383,24 @@ terraform import "venafi_certificate.imported_certificate" "xxxxxxxx-xxxx-xxxx-x
 
    The `venafi_ssh_certificate` resource has the following options, which only `key_id` and `template` are required:
 
-   | Property            | Type          |  Description                                                                      | Default   |
+   | Property              | Type          |  Description                                                                      | Default   |
    | ------------------- | ------------- | --------------------------------------------------------------------------------- | --------- |
-   |`key_id`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The identifier of the requested certificate|`none`|
-   |`template`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The certificate issuing template|`none`|
-   |`key_passphrase`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|Passphrase for encrypting the private key|`none`|
-   |`folder`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The DN of the policy folder where the certificate object will be created. It will overwrite the default folder set at the template |`none`|
-   |`force_command`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The requested force command|`none`|
-   |`key_size`|[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|The key size bits, they will be used for creating keypair|`3072`|
-   |`windows`|[Bool](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)|Output certificate and key files in Windows format (i.e. with \r\n line endings) instead of Unix format (i.e. \n line endings).|`false`|
-   |`valid_hours`|[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|How much time the requester wants to have the certificate valid, the format is hours|`none`|
-   |`object_name`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The friendly name for the certificate object. If not specified, the value of the `key_id` is used.|`none`|
-   |`public_key`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The path of the public key that will be used to generate the certificate if `public_key_method` set to `file`|`none`|
-   |`public_key_method`|[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | If the public key will be: `local` or `service` generated or `file` provided|`local`|
-   |`principal` |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|**[DEPRECATED]** This will be removed in the future. Use `principals` instead. The requested principals|`none`|
-   |`principals`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested principals|`none`|
-   |`source_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested source addresses as list of IP/CIDR|`none`|
-   |`destination_address`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used for authentication. Applicable for client certificates and is used for reporting/auditing only.|`none`|
-   |`extension`|[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested certificate extensions|`none`|
+   | `key_id`              |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The identifier of the requested certificate|`none`|
+   | `template`            |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The certificate issuing template|`none`|
+   | `key_passphrase`      |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|Passphrase for encrypting the private key|`none`|
+   | `folder`              |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The DN of the policy folder where the certificate object will be created. It will overwrite the default folder set at the template |`none`|
+   | `force_command`       |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The requested force command|`none`|
+   | `key_size`            |[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|The key size bits, they will be used for creating keypair|`3072`|
+   | `windows`             |[Bool](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)|Output certificate and key files in Windows format (i.e. with \r\n line endings) instead of Unix format (i.e. \n line endings).|`false`|
+   | `valid_hours`         |[Int](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint)|How much time the requester wants to have the certificate valid, the format is hours|`none`|
+   | `object_name`         |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) |The friendly name for the certificate object. If not specified, the value of the `key_id` is used.|`none`|
+   | `public_key`          |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring)|The path of the public key that will be used to generate the certificate if `public_key_method` set to `file`|`none`|
+   | `public_key_method`   |[String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | If the public key will be: `local` or `service` generated or `file` provided|`local`|
+   | `principal`           |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|**[DEPRECATED]** This will be removed in the future. Use `principals` instead. The requested principals|`none`|
+   | `principals`          |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested principals|`none`|
+   | `source_address`      |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested source addresses as list of IP/CIDR|`none`|
+   | `destination_address` |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used for authentication. Applicable for client certificates and is used for reporting/auditing only.|`none`|
+   | `extension`           |[List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist)|The requested certificate extensions|`none`|
 
 3. Create a resource `venafi_ssh_config` that will hold configuration needed by a remote host:
 

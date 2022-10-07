@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
 	"math/rand"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,7 @@ func sameStringSlice(x, y []string) bool {
 //nolint
 type testData struct {
 	cert                 string
+	nickname             string
 	private_key          string
 	private_key_password string
 	wrong_cert           string
@@ -180,8 +182,8 @@ func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {
 			req.ValidityPeriod = strconv.Itoa(validHours) + "h"
 		}
 	}
-	if objectName, ok := d.Get("object_name").(string); ok {
-		req.ObjectName = objectName
+	if nickname, ok := d.Get(venafiCertificateAttrNickname).(string); ok {
+		req.ObjectName = nickname
 	}
 	if principals, ok := d.GetOk("principals"); ok {
 		req.Principals = getStringList(principals)
@@ -265,4 +267,12 @@ func validateStringListFromSchemaAttribute(array interface{}, attr string) error
 
 func buildStantardDiagError(msg string) diag.Diagnostics {
 	return diag.FromErr(fmt.Errorf(msg))
+}
+
+func stringArrayToIParray(arrayIPstring []string) []net.IP {
+	s := make([]net.IP, 0)
+	for _, ipString := range arrayIPstring {
+		s = append(s, net.ParseIP(ipString))
+	}
+	return s
 }

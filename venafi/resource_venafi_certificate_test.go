@@ -4,6 +4,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"os"
@@ -177,6 +179,25 @@ output "certificate" {
 output "private_key" {
 	value = "${venafi_certificate.tpp_certificate.private_key_pem}"
 	sensitive = true
+}`
+	tppConfigWithNickname = `
+%s
+resource "venafi_certificate" "tpp_certificate" {
+	provider = "venafi.tpp"
+	common_name = "%s"
+    nickname = "%s"
+	san_dns = [
+		"%s"
+	]
+	san_ip = [
+		"%s"
+	]
+	san_email = [
+		"%s"
+	]
+	%s
+	key_password = "%s"
+	expiration_window = %d
 }`
 	tokenConfig = `
 %s
@@ -671,6 +692,34 @@ func TestTPPSignedCert(t *testing.T) {
 						}
 					}
 				},
+			},
+		},
+	})
+}
+
+func TestTPPSignedCertWithNickname(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.nickname = data.cn + " - 1"
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.private_key_password = "FooB4rNew4$x"
+	data.key_algo = rsa2048
+	data.expiration_window = 168
+	config := fmt.Sprintf(tppConfigWithNickname, tppProvider, data.cn, data.nickname, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					checkStandardCertNew("venafi_certificate.tpp_certificate", t, &data),
+					resource.TestCheckResourceAttr("venafi_certificate.tpp_certificate", venafiCertificateAttrNickname, data.nickname),
+				),
 			},
 		},
 	})
@@ -1178,6 +1227,44 @@ func TestImportCertificateTpp(t *testing.T) {
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
 					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
 					return checkStandardImportCert(t, data, states)
+				},
+			},
+		},
+	})
+}
+
+func TestImportCertificateTppWithNickname(t *testing.T) {
+	var cfg = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+	}
+	data := testData{}
+	rand := randSeq(9)
+	domain := "venafi.example.com"
+	data.cn = rand + "." + domain
+	data.nickname = data.cn + " - 1"
+	data.private_key_password = "FooB4rNew4$x"
+	data.key_algo = rsa2048
+	data.dns_ns = "alt-" + data.cn
+	data.dns_ip = "192.168.1.1"
+	data.dns_email = "venafi@example.com"
+	data.expiration_window = 100
+	serviceGeneratedCSR := true
+	createCertificate(t, cfg, &data, serviceGeneratedCSR)
+
+	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
+	importId := fmt.Sprintf("%s,%s", data.nickname, data.private_key_password)
+	t.Logf("Testing importing TPP cert:\n %s", config)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config:        config,
+				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
+				ImportStateId: importId,
+				ImportState:   true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					return checkImportWithObjectName(t, &data, states)
 				},
 			},
 		},
