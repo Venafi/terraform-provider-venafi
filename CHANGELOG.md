@@ -1,4 +1,4 @@
-## 0.16.1 (Oct 7, 2022)
+## 0.16.1 (October 7, 2022)
 Added support for nickname attribute to override certificate object name at TPP.
 Fixed a bug that would let a not valid certificate key-pair to be stored in terraform state during resource creation
 
