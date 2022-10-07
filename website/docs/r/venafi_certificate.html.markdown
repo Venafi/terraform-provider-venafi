@@ -119,9 +119,9 @@ The `id` for each platform is:
 
 **TPP:**
 
-The `nickname` of the certificate, which usually should always be the `common_name` as it is good practice. Internally we built the `pickup_id` using the `zone` defined at the provider block.
+The `nickname` of the certificate, which represents the name of the certificate object in TPP. Internally we built the `pickup_id` using the `zone` defined at the provider block.
 
-~>**Note:** The object name could differ conceptually of the common name, as there some use cases whenever you want to handle certificates with the same common names but different attributes (such as different SANs), you could manage many resources with the same common name using `for_each` and `count` meta arguments and object name attribute being different from the common name.
+~>**Note:** The certificate object name at TPP, usually, should be the same as the `common_name` provided as it is considered good practice, but the `nickname` actually could differ from the common name, as there some use cases whenever you want to handle certificates with different nicknames. For example, you could have certificates with same common name and different SANs, then, you could manage many certificate resources that share the same common name using `for_each` and `count` meta arguments.
 
 **VaaS:**
 
