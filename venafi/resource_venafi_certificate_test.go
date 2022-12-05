@@ -1313,7 +1313,7 @@ func TestImportCertificateECDSA(t *testing.T) {
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportECDSA)
 	serviceGeneratedCSR := true
-	data.zone = fmt.Sprintf(`%s`, os.Getenv("TPP_ZONE_ECDSA"))
+	data.zone = os.Getenv("TPP_ZONE_ECDSA")
 	createCertificate(t, cfg, data, serviceGeneratedCSR)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert:\n %s", config)
