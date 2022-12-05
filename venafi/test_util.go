@@ -157,10 +157,6 @@ func checkStandardCertInfo(t *testing.T, data *testData, certificate string, pri
 		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
 			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
 		}
-	} else {
-		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
-			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
-		}
 	}
 
 	data.serial = cert.SerialNumber.String()
@@ -367,10 +363,9 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	var auth = &endpoint.Authentication{}
 	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
 		cfg.BaseUrl = os.Getenv("TPP_URL")
+		cfg.Zone = os.Getenv("TPP_ZONE")
 		if data.zone != "" {
 			cfg.Zone = data.zone
-		} else {
-			cfg.Zone = os.Getenv("TPP_ZONE")
 		}
 		trustBundlePath := os.Getenv("TRUST_BUNDLE")
 		trustBundleBytes, err := ioutil.ReadFile(trustBundlePath)
@@ -382,6 +377,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	} else if cfg.ConnectorType == endpoint.ConnectorTypeCloud {
 		cfg.BaseUrl = os.Getenv("CLOUD_URL")
 		cfg.Zone = os.Getenv("CLOUD_ZONE")
+		cfg.Zone = removingFirstDoubleBackslash(cfg.Zone)
 		auth.APIKey = os.Getenv("CLOUD_APIKEY")
 	}
 	cfg.Credentials = auth
@@ -509,6 +505,12 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	}
 	t.Log("Certificate creation successful")
 	return pickupID
+}
+
+func removingFirstDoubleBackslash(s string) string {
+	firstInd := strings.Index(s, "\\")
+	newString := s[0:firstInd] + s[firstInd+1:len(s)]
+	return newString
 }
 
 func parseCustomField(s string) (key, value string, err error) {
