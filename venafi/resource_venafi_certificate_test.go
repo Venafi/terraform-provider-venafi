@@ -1211,8 +1211,13 @@ func TestVaasCsrService(t *testing.T) {
 }
 
 func TestImportCertificateTpp(t *testing.T) {
+	var cfg = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+	}
 	name := "import"
 	data := getCertTppImportConfig(name)
+	serviceGeneratedCSR := true
+	createCertificate(t, cfg, data, serviceGeneratedCSR)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert:\n %s", config)
@@ -1272,9 +1277,14 @@ func TestImportCertificateTppWithNickname(t *testing.T) {
 }
 
 func TestImportCertificateTppWithCustomFields(t *testing.T) {
+	var cfg = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+	}
 	data := getCertTppImportConfigWithCustomFields()
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
 	data.custom_fields = getCustomFields(cfEnvVarName)
+	serviceGeneratedCSR := true
+	createCertificate(t, cfg, data, serviceGeneratedCSR)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert with custom fields:\n %s", config)
@@ -1296,9 +1306,15 @@ func TestImportCertificateTppWithCustomFields(t *testing.T) {
 }
 
 func TestImportCertificateECDSA(t *testing.T) {
+	var cfg = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+	}
 	name := "import.ecdsa"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportECDSA)
+	serviceGeneratedCSR := true
+	data.zone = fmt.Sprintf(`%s`, os.Getenv("TPP_ZONE_ECDSA"))
+	createCertificate(t, cfg, data, serviceGeneratedCSR)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
@@ -1319,10 +1335,12 @@ func TestImportCertificateECDSA(t *testing.T) {
 }
 
 func TestImportCertificateVaas(t *testing.T) {
+	var cfg = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeCloud,
+	}
 	data := getCertVaasImportConfig()
-	//TODO: Currently pointing to a very long-lived certificate to avoid check for renewal with our default expiration_window
-	// within the import operation. This test needs to be adjusted to be dynamic.
-	pickupId := os.Getenv("VAAS_CERTIFICATE_ID")
+	serviceGeneratedCSR := true
+	pickupId := createCertificate(t, cfg, data, serviceGeneratedCSR)
 	config := fmt.Sprintf(vaasCsrServiceConfigImport, vaasProviderImport)
 	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
 	t.Logf("Testing importing VaaS cert:\n %s", config)
