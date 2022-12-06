@@ -509,7 +509,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 
 func removingFirstDoubleBackslash(s string) string {
 	firstInd := strings.Index(s, "\\")
-	newString := s[0:firstInd] + s[firstInd+1:len(s)]
+	newString := s[0:firstInd] + s[firstInd+1:]
 	return newString
 }
 
