@@ -61,6 +61,12 @@ Example for Venafi as a Service: Default`,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_TOKEN", nil),
 				Description: `Access token for TPP, user should use this for authentication`,
 			},
+			"refresh_token": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VENAFI_REFRESH_TOKEN", nil),
+				Description: `Refresh token for TPP, user should use this for authentication`,
+			},
 			"api_key": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -99,6 +105,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	tppUser := d.Get("tpp_username").(string)
 	tppPassword := d.Get("tpp_password").(string)
 	accessToken := d.Get("access_token").(string)
+	refreshToken := d.Get("refresh_token").(string)
 	zone := d.Get("zone").(string)
 	tflog.Info(ctx, fmt.Sprintf("====ZONE==== : %s", zone))
 	devMode := d.Get("dev_mode").(bool)
@@ -140,6 +147,17 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			Zone:       zone,
 			LogVerbose: true,
 		}
+	} else if refreshToken != "" {
+		tflog.Info(ctx, fmt.Sprintf("Using Platform with url %s to issue certificate\n", url))
+		cfg = vcert.Config{
+			ConnectorType: endpoint.ConnectorTypeTPP,
+			BaseUrl:       url,
+			Credentials: &endpoint.Authentication{
+				RefreshToken: refreshToken,
+			},
+			Zone:       zone,
+			LogVerbose: true,
+		}	
 	} else if apiKey != "" {
 		if url != "" {
 			tflog.Info(ctx, messageUseVaas)
