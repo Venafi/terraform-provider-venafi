@@ -70,7 +70,7 @@ Example for Venafi as a Service: Default`,
 			"client_id": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VENAFI_CLIENT_ID", nil),
+				DefaultFunc: schema.EnvDefaultFunc("VENAFI_CLIENT_ID", "vcert-sdk"),
 				Description: `Client Id for Refresh token based authentication. Default value: "vcert-sdk"`,
 			},
 			"api_key": &schema.Schema{
