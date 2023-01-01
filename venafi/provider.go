@@ -67,6 +67,12 @@ Example for Venafi as a Service: Default`,
 				DefaultFunc: schema.EnvDefaultFunc("VENAFI_REFRESH_TOKEN", nil),
 				Description: `Refresh token for TPP, user should use this for authentication`,
 			},
+			"client_id": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VENAFI_CLIENT_ID", nil),
+				Description: `Client Id for Refresh token based authentication`,
+			},
 			"api_key": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -106,6 +112,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	tppPassword := d.Get("tpp_password").(string)
 	accessToken := d.Get("access_token").(string)
 	refreshToken := d.Get("refresh_token").(string)
+	clientId := d.Get("client_id").(string)
 	zone := d.Get("zone").(string)
 	tflog.Info(ctx, fmt.Sprintf("====ZONE==== : %s", zone))
 	devMode := d.Get("dev_mode").(bool)
@@ -154,6 +161,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			BaseUrl:       url,
 			Credentials: &endpoint.Authentication{
 				RefreshToken: refreshToken,
+				ClientId: clientId
 			},
 			Zone:       zone,
 			LogVerbose: true,
