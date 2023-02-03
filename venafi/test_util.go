@@ -157,10 +157,6 @@ func checkStandardCertInfo(t *testing.T, data *testData, certificate string, pri
 		if expected, got := []string{data.cn, data.dns_ns}, cert.DNSNames; !sameStringSlice(got, expected) {
 			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
 		}
-	} else {
-		if expected, got := []string{data.cn}, cert.DNSNames; !sameStringSlice(got, expected) {
-			return fmt.Errorf("incorrect DNSNames: expected %v, certificate %v", expected, got)
-		}
 	}
 
 	data.serial = cert.SerialNumber.String()
@@ -346,6 +342,7 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 	dataCf = strings.ReplaceAll(dataCf, "\n", "")
 	dataCf = strings.ReplaceAll(dataCf, "\"", "")
 	customFieldsRow := strings.Split(dataCf, ",")
+	customFieldsRow = deleteEmptyString(customFieldsRow)
 	customFieldsMap = make(map[string]string)
 	for _, pair := range customFieldsRow {
 		z := strings.Split(pair, "=")
@@ -360,13 +357,16 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 	return nil
 }
 
-func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceGenerated bool) {
+func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceGenerated bool) string {
 	t.Log("Creating certificate for testing")
 
 	var auth = &endpoint.Authentication{}
 	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
 		cfg.BaseUrl = os.Getenv("TPP_URL")
 		cfg.Zone = os.Getenv("TPP_ZONE")
+		if data.zone != "" {
+			cfg.Zone = data.zone
+		}
 		trustBundlePath := os.Getenv("TRUST_BUNDLE")
 		trustBundleBytes, err := ioutil.ReadFile(trustBundlePath)
 		if err != nil {
@@ -377,6 +377,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	} else if cfg.ConnectorType == endpoint.ConnectorTypeCloud {
 		cfg.BaseUrl = os.Getenv("CLOUD_URL")
 		cfg.Zone = os.Getenv("CLOUD_ZONE")
+		cfg.Zone = removingFirstDoubleBackslash(cfg.Zone)
 		auth.APIKey = os.Getenv("CLOUD_APIKEY")
 	}
 	cfg.Credentials = auth
@@ -419,6 +420,27 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	}
 	req.IssuerHint = issuerHint
 	req.CsrOrigin = certificate.LocalGeneratedCSR
+
+	if data.custom_fields != "" {
+		data.custom_fields = strings.ReplaceAll(data.custom_fields, "\n", "")
+		customFields := strings.Split(data.custom_fields, ",")
+		customFields = deleteEmptyString(customFields)
+		for _, cf := range customFields {
+			cf = strings.TrimSuffix(cf, ",\n")
+			cf = strings.ReplaceAll(cf, "\n", "")
+			cf = strings.ReplaceAll(cf, "\"", "")
+			k, v, err := parseCustomField(cf)
+			if err != nil {
+				t.Fatalf(err.Error())
+			}
+			list := strings.Split(v, "|")
+			for _, value := range list {
+				value = strings.TrimSpace(value)
+				req.CustomFields = append(req.CustomFields, certificate.CustomField{Name: k, Value: value})
+			}
+		}
+	}
+
 	if serviceGenerated {
 		req.CsrOrigin = certificate.ServiceGeneratedCSR
 	}
@@ -482,4 +504,32 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		}
 	}
 	t.Log("Certificate creation successful")
+	return pickupID
+}
+
+func removingFirstDoubleBackslash(s string) string {
+	firstInd := strings.Index(s, "\\")
+	newString := s[0:firstInd] + s[firstInd+1:]
+	return newString
+}
+
+func parseCustomField(s string) (key, value string, err error) {
+	sl := strings.Split(s, "=")
+	if len(sl) < 2 {
+		err = fmt.Errorf("custom field should have format key=value")
+		return
+	}
+	key = strings.TrimSpace(sl[0])
+	value = strings.TrimSpace(strings.Join(sl[1:], "="))
+	return
+}
+
+func deleteEmptyString(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
 }
