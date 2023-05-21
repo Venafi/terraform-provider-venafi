@@ -190,7 +190,9 @@ func resourceVenafiCertificate() *schema.Resource {
 			StateContext: resourceVenafiCertificateImport,
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Create: schema.DefaultTimeout(180 * time.Second),
+			Create:  schema.DefaultTimeout(180 * time.Second),
+			Read:    schema.DefaultTimeout(180 * time.Second),
+			Default: schema.DefaultTimeout(180 * time.Second),
 		},
 	}
 }
