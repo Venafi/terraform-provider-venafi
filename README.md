@@ -81,8 +81,8 @@ in PEM format (e.g. /opt/venafi/bundle.pem) and include it using the
 
 If you are using Venafi as a Service, verify the following:
 
-- The Venafi as a Service REST API at [https://api.venafi.cloud](https://api.venafi.cloud/swagger-ui.html)
-is accessible from the system where Terraform will run.
+- The Venafi as a Service REST API at [https://api.venafi.cloud](https://api.venafi.cloud/vaas) 
+or [https://api.venafi.eu](https://api.venafi.eu/vaas) (if you have an EU account) is accessible from the system where Terraform will run.
 - You have successfully registered for a Venafi as a Service account, have been granted at least the
 "Resource Owner" role, and know your API key.
 - A CA Account and Issuing Template exist and have been configured with:
@@ -173,6 +173,16 @@ for Terraform version 0.11 and below.
    }
    ```
 
+   **Venafi as a Service for EU**:
+
+   ```text
+   provider "venafi" {
+     url     = "https://api.venafi.eu"
+     api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     zone    = "Business App\\Enterprise CIT"
+   }
+   ```
+
    The `venafi` provider has the following options:
 
    | Property       | Type   | Description                                                  | Env. Variable |
@@ -182,7 +192,7 @@ for Terraform version 0.11 and below.
    | `tpp_username` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
    | `tpp_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
    | `trust_bundle` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform | |
-   | `url`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example"), generally only applicable to Trust Protection Platform | VENAFI_URL |
+   | `url`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example") | VENAFI_URL |
    | `zone`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT") | VENAFI_ZONE |
    | `dev_mode`     | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)   | When "true", the provider operates without connecting to TPP or VaaS | VENAFI_DEVMODE |
 
