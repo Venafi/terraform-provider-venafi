@@ -10,23 +10,24 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v4"
-	"github.com/Venafi/vcert/v4/pkg/certificate"
-	"github.com/Venafi/vcert/v4/pkg/endpoint"
-	"github.com/Venafi/vcert/v4/pkg/policy"
-	"github.com/Venafi/vcert/v4/pkg/util"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/youmark/pkcs8"
 	"log"
 	"math"
 	"net"
 	"net/url"
-	"software.sslmate.com/src/go-pkcs12"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/certificate"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/policy"
+	"github.com/Venafi/vcert/v5/pkg/util"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/youmark/pkcs8"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
@@ -52,118 +53,118 @@ func resourceVenafiCertificate() *schema.Resource {
 		UpdateContext: resourceVenafiCertificateUpdate,
 
 		Schema: map[string]*schema.Schema{
-			"csr_origin": &schema.Schema{
+			"csr_origin": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "csr origin",
 				ForceNew:    true,
 				Default:     "local",
 			},
-			"common_name": &schema.Schema{
+			"common_name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Common name of certificate",
 				ForceNew:    true,
 			},
-			venafiCertificateAttrNickname: &schema.Schema{
+			venafiCertificateAttrNickname: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP",
 				ForceNew:    true,
 			},
-			"algorithm": &schema.Schema{
+			"algorithm": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
 				Default:     "RSA",
 				Description: "Key encryption algorithm. RSA or ECDSA. RSA is default.",
 			},
-			"rsa_bits": &schema.Schema{
+			"rsa_bits": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Number of bits to use when generating an RSA key",
 				ForceNew:    true,
 				Default:     2048,
 			},
-			"ecdsa_curve": &schema.Schema{
+			"ecdsa_curve": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "ECDSA curve to use when generating a key",
 				ForceNew:    true,
 				Default:     "P521",
 			},
-			"san_dns": &schema.Schema{
+			"san_dns": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of DNS names to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"san_email": &schema.Schema{
+			"san_email": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of email addresses to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"san_ip": &schema.Schema{
+			"san_ip": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of IP addresses to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"san_uri": &schema.Schema{
+			"san_uri": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "List of Uniform Resource Identifiers (URIs) to use as subjects of the certificate",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"key_password": &schema.Schema{
+			"key_password": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Private key password.",
 				Sensitive:   true,
 			},
-			"expiration_window": &schema.Schema{
+			"expiration_window": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
 				ForceNew:    false,
 				Default:     expirationWindowDefault,
 			},
-			"private_key_pem": &schema.Schema{
+			"private_key_pem": {
 				Type:      schema.TypeString,
 				Optional:  true,
 				Computed:  true,
 				Sensitive: true,
 			},
-			"chain": &schema.Schema{
+			"chain": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"certificate": &schema.Schema{
+			"certificate": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"csr_pem": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"pkcs12": &schema.Schema{
+			"csr_pem": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"certificate_dn": &schema.Schema{
+			"pkcs12": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"custom_fields": &schema.Schema{
+			"certificate_dn": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"custom_fields": {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				ForceNew:    true,
@@ -172,13 +173,13 @@ func resourceVenafiCertificate() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"valid_days": &schema.Schema{
+			"valid_days": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The desired certificate requested time of validity",
 			},
-			"issuer_hint": &schema.Schema{
+			"issuer_hint": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -336,7 +337,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func resourceVenafiCertificateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 
 	if d.HasChange("expiration_window") {
 		// Getting expiration_window from state
@@ -360,7 +361,7 @@ func resourceVenafiCertificateUpdate(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiCertificateDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	// We don't support deletion for created certificates from TPP, so we just remove it from state
 	d.SetId("")
 	return nil

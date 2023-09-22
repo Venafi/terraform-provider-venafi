@@ -4,19 +4,19 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v4"
-	"github.com/Venafi/vcert/v4/pkg/certificate"
-	"github.com/Venafi/vcert/v4/pkg/endpoint"
-	"github.com/Venafi/vcert/v4/pkg/util"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
-	"time"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/certificate"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/util"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -35,7 +35,6 @@ func sliceContains(slice []string, item string) bool {
 }
 
 func randSeq(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
 	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	b := make([]rune, n)
 	for i := range b {
@@ -68,7 +67,7 @@ func sameStringSlice(x, y []string) bool {
 	return len(diff) == 0
 }
 
-//nolint
+// nolint
 type testData struct {
 	cert                 string
 	nickname             string
@@ -118,29 +117,23 @@ func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
 	return keyBytes, nil
 }
 
-func getIssuerHint(is string) string {
-
-	issuerHint := ""
-
+func getIssuerHint(is string) util.IssuerHint {
 	if is != "" {
-
 		issuerOpt := string(is[0])
 		issuerOpt = strings.ToLower(issuerOpt)
 
 		switch issuerOpt {
-
 		case "m":
-			issuerHint = util.IssuerHintMicrosoft
+			return util.IssuerHintMicrosoft
 		case "d":
-			issuerHint = util.IssuerHintDigicert
+			return util.IssuerHintDigicert
 		case "e":
-			issuerHint = util.IssuerHintEntrust
+			return util.IssuerHintEntrust
+		default:
+			return util.IssuerHintGeneric
 		}
-
 	}
-
-	return issuerHint
-
+	return util.IssuerHintGeneric
 }
 
 func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {

@@ -2,12 +2,13 @@ package venafi
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 var (
@@ -78,7 +79,7 @@ func TestSshCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkSshCertificate("venafi_ssh_certificate.test", t, &data),
@@ -100,7 +101,7 @@ func TestSshCertNewAttrPrincipals(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkSshCertificate("venafi_ssh_certificate.test-new-principals", t, &data),
@@ -123,7 +124,7 @@ func TestSshCertLocalPublicKey(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkSshCertificate("venafi_ssh_certificate.test", t, &data),
@@ -145,7 +146,7 @@ func TestSshCertLocalPublicKeyNewAttrPrincipals(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkSshCertificate("venafi_ssh_certificate.test-new-principals", t, &data),
@@ -161,7 +162,7 @@ func checkSshCertificate(resourceName string, t *testing.T, data *testData) reso
 		t.Log("Testing SSH certificate with key-id", data.keyId)
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		certificate := rs.Primary.Attributes["certificate"]
 		if certificate == "" {

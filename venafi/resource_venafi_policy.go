@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Venafi/vcert/v4/pkg/policy"
+	"os"
+	"regexp"
+
+	"github.com/Venafi/vcert/v5/pkg/policy"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"io/ioutil"
-	"regexp"
 )
 
 func resourceVenafiPolicy() *schema.Resource {
@@ -19,13 +20,13 @@ func resourceVenafiPolicy() *schema.Resource {
 		DeleteContext: resourceVenafiPolicyDelete,
 
 		Schema: map[string]*schema.Schema{
-			"zone": &schema.Schema{
+			"zone": {
 				Type:        schema.TypeString,
 				Description: "zone name",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"policy_specification": &schema.Schema{
+			"policy_specification": {
 				Type:        schema.TypeString,
 				Description: "policy specification",
 				ForceNew:    true,
@@ -83,7 +84,7 @@ func resourceVenafiPolicyCreate(ctx context.Context, d *schema.ResourceData, met
 	return nil
 }
 
-func resourceVenafiPolicyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiPolicyRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	// verify if since policy have been update, if we need to update it in the state our delete it
 	ps, ok := d.GetOk("policy_specification")
 
@@ -108,7 +109,7 @@ func resourceVenafiPolicyRead(ctx context.Context, d *schema.ResourceData, meta 
 	return nil
 }
 
-func resourceVenafiPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiPolicyDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }
@@ -151,7 +152,7 @@ func resourceVenafiPolicyImport(ctx context.Context, d *schema.ResourceData, met
 		return nil, err
 	}
 
-	var byte []byte
+	var data []byte
 
 	fileName := id
 
@@ -162,14 +163,14 @@ func resourceVenafiPolicyImport(ctx context.Context, d *schema.ResourceData, met
 
 	fileName = regex.ReplaceAllString(fileName, "_")
 
-	byte, err = json.MarshalIndent(ps, "", "  ")
+	data, err = json.MarshalIndent(ps, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 
 	fileName = fmt.Sprint(fileName, policy.JsonExtension)
 
-	err = ioutil.WriteFile(fileName, byte, 0600)
+	err = os.WriteFile(fileName, data, 0600)
 	if err != nil {
 		return nil, err
 	}

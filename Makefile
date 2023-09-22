@@ -115,6 +115,8 @@ clean:
 	rm -rfv $(PLUGIN_DIR)/*
 	rm -rfv $(DIST_DIR)/*
 	rm -rfv .terraform
+	rm -rfv terraform.d
+	rm -fv .terraform.lock.hcl
 
 dev: clean fmtcheck
 	go test ./...

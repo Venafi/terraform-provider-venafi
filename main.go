@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 	"github.com/terraform-providers/terraform-provider-venafi/venafi"
-	"log"
 )
 
 func main() {
