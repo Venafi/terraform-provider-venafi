@@ -1,6 +1,6 @@
 module github.com/terraform-providers/terraform-provider-venafi
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Venafi/vcert/v5 v5.1.1
