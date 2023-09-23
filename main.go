@@ -4,8 +4,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/Venafi/terraform-provider-venafi/venafi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
-	"github.com/terraform-providers/terraform-provider-venafi/venafi"
 )
 
 func main() {
