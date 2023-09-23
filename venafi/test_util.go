@@ -415,7 +415,9 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		req.FriendlyName = data.nickname
 	}
 	if data.valid_days != 0 {
-		req.ValidityHours = data.valid_days * 24
+		days := time.Duration(data.valid_days)
+		d := time.Hour * 24 * days
+		req.ValidityDuration = &d
 	}
 	req.IssuerHint = util.IssuerHintMicrosoft
 	req.CsrOrigin = certificate.LocalGeneratedCSR

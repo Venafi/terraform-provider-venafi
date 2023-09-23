@@ -190,5 +190,5 @@ test_e2e_dev_ecdsa:
 	cat /tmp/cert_private_key_dev_ecdsa.pem
 
 linter:
-	@golangci-lint --version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+	@golangci-lint --version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin
 	golangci-lint run

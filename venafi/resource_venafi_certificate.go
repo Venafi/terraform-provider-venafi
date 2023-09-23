@@ -606,7 +606,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 				return err
 			}
 		}
-		req.ValidityHours = validity
+		req.ValidityHours = validity //nolint:staticcheck
 		issuerHint := d.Get("issuer_hint").(string)
 		req.IssuerHint = getIssuerHint(issuerHint)
 	}
