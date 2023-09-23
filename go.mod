@@ -1,4 +1,4 @@
-module github.com/terraform-providers/terraform-provider-venafi
+module github.com/Venafi/terraform-provider-venafi
 
 go 1.21
 
