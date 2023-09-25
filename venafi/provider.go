@@ -44,30 +44,30 @@ const (
 	envVenafiClientID       = "VENAFI_CLIENT_ID"
 
 	// Attributes of the provider
-	fURL         = "url"
-	fZone        = "zone"
-	fDevMode     = "dev_mode"
-	fUsername    = "tpp_username"
-	fPassword    = "tpp_password"
-	fP12Cert     = "p12_cert"
-	fP12Password = "p12_password"
-	fAccessToken = "access_token"
-	fApiKey      = "api_key"
-	fTrustBundle = "trust_bundle"
-	fClientID    = "client_id"
+	providerURL         = "url"
+	providerZone        = "zone"
+	providerDevMode     = "dev_mode"
+	providerUsername    = "tpp_username"
+	providerPassword    = "tpp_password"
+	providerP12Cert     = "p12_cert"
+	providerP12Password = "p12_password"
+	providerAccessToken = "access_token"
+	providerApiKey      = "api_key"
+	providerTrustBundle = "trust_bundle"
+	providerClientID    = "client_id"
 )
 
 // Provider returns a terraform.ResourceProvider.
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			fURL: {
+			providerURL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiURL, nil),
 				Description: "The Venafi Platform URL. Example: https://tpp.venafi.example/vedsdk",
 			},
-			fZone: {
+			providerZone: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiZone, "Default"),
@@ -75,14 +75,14 @@ func Provider() *schema.Provider {
 Example for Platform: testPolicy\\vault
 Example for Venafi as a Service: myApp\\Default`,
 			},
-			fUsername: {
+			providerUsername: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiUsername, nil),
 				Description: "WebSDK user for Venafi TLSPDC. Example: admin",
 				Deprecated:  ", please use access_token instead",
 			},
-			fPassword: {
+			providerPassword: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiPassword, nil),
@@ -90,47 +90,47 @@ Example for Venafi as a Service: myApp\\Default`,
 				Deprecated:  ", please use access_token instead",
 				Sensitive:   true,
 			},
-			fAccessToken: {
+			providerAccessToken: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiAccessToken, nil),
 				Description: "Access token for Venafi TLSPDC, user should use this for authentication",
 				Sensitive:   true,
 			},
-			fP12Cert: {
+			providerP12Cert: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiP12Certificate, nil),
 				Description: "base64-encoded PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
 			},
-			fP12Password: {
+			providerP12Password: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiP12Password, nil),
 				Description: "Password for the PKCS#12 keystore declared in p12_cert",
 				Sensitive:   true,
 			},
-			fTrustBundle: {
+			providerTrustBundle: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `Use to specify a PEM-formatted file that contains certificates to be trust anchors for all communications with the Venafi Web Service.
 Example:
   trust_bundle = "${file("chain.pem")}"`,
 			},
-			fApiKey: {
+			providerApiKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiApiKey, nil),
 				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
 				Sensitive:   true,
 			},
-			fDevMode: {
+			providerDevMode: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiDevMode, nil),
 				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi as a Service or Trust Protection Platform. Useful for development and testing.`,
 			},
-			fClientID: {
+			providerClientID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiClientID, defaultClientID),
@@ -150,20 +150,20 @@ Example:
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
 	tflog.Info(ctx, "Configuring venafi provider")
-	apiKey := d.Get(fApiKey).(string)
-	url := d.Get(fURL).(string)
-	tppUser := d.Get(fUsername).(string)
-	tppPassword := d.Get(fPassword).(string)
-	accessToken := d.Get(fAccessToken).(string)
-	zone := d.Get(fZone).(string)
+	apiKey := d.Get(providerApiKey).(string)
+	url := d.Get(providerURL).(string)
+	tppUser := d.Get(providerUsername).(string)
+	tppPassword := d.Get(providerPassword).(string)
+	accessToken := d.Get(providerAccessToken).(string)
+	zone := d.Get(providerZone).(string)
 	zone = normalizeZone(zone)
-	trustBundle := d.Get(fTrustBundle).(string)
-	p12Certificate := d.Get(fP12Cert).(string)
-	p12Password := d.Get(fP12Password).(string)
-	clientID := d.Get(fClientID).(string)
+	trustBundle := d.Get(providerTrustBundle).(string)
+	p12Certificate := d.Get(providerP12Cert).(string)
+	p12Password := d.Get(providerP12Password).(string)
+	clientID := d.Get(providerClientID).(string)
 
 	//Dev Mode
-	devMode := d.Get(fDevMode).(bool)
+	devMode := d.Get(providerDevMode).(bool)
 	// TLSPDC auth methods
 	userPassMethod := tppUser != "" && tppPassword != ""
 	clientCertMethod := p12Certificate != "" && p12Password != ""
@@ -177,7 +177,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !devMode {
 		tflog.Error(ctx, fmt.Sprintf("no authorization attributes defined in provider. "+
 			"One of the following must be set: %s, %s/%s, %s/%s, or %s",
-			fAccessToken, fP12Cert, fP12Password, fUsername, fPassword, fApiKey))
+			providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey))
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  messageVenafiClientInitFailed,
@@ -208,9 +208,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, fmt.Sprintf(messageUseTLSPDC, url))
 		cfg.ConnectorType = endpoint.ConnectorTypeTPP
 		cfg.Credentials.ClientPKCS12 = true
-		insecure := trustBundle == ""
-		tflog.Info(ctx, "no trust-bundle provided. setting up Connection as insecure")
-		err := setTLSConfig(ctx, p12Certificate, p12Password, insecure)
+		err := setTLSConfig(p12Certificate, p12Password)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
@@ -294,13 +292,9 @@ func normalizeZone(zone string) string {
 	return newZone
 }
 
-func setTLSConfig(ctx context.Context, p12Certificate string, p12Password string, insecure bool) error {
-	if insecure {
-		tflog.Warn(ctx, "TLS Config set to skip verification of server's certificate chain and host name")
-	}
+func setTLSConfig(p12Certificate string, p12Password string) error {
 	tlsConfig := tls.Config{
-		Renegotiation:      tls.RenegotiateFreelyAsClient,
-		InsecureSkipVerify: insecure,
+		Renegotiation: tls.RenegotiateFreelyAsClient,
 	}
 
 	// We have a PKCS12 file to use, set it up for cert authentication
