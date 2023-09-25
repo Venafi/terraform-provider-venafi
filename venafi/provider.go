@@ -8,15 +8,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
-
-	"golang.org/x/crypto/pkcs12"
 
 	"github.com/Venafi/vcert/v5"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/venafi/tpp"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"golang.org/x/crypto/pkcs12"
 )
 
 const (
@@ -27,6 +28,7 @@ const (
 	messageUseDevMode             = "Using dev mode to issue certificate"
 	messageUseVaas                = "Using VaaS to issue certificate"
 	messageUseTLSPDC              = "Using Platform TLSPDC with url %s to issue certificate"
+	messageVenafiAuthFailed       = "Failed to authenticate to Venafi platform"
 
 	utilityName     = "HashiCorp Terraform"
 	defaultClientID = "hashicorp-terraform-by-venafi"
@@ -49,8 +51,8 @@ const (
 	providerDevMode     = "dev_mode"
 	providerUsername    = "tpp_username"
 	providerPassword    = "tpp_password"
-	providerP12Cert     = "p12_cert"
-	providerP12Password = "p12_password"
+	providerP12Cert     = "p12_cert_filename"
+	providerP12Password = "p12_cert_password"
 	providerAccessToken = "access_token"
 	providerApiKey      = "api_key"
 	providerTrustBundle = "trust_bundle"
@@ -101,7 +103,7 @@ Example for Venafi as a Service: myApp\\Default`,
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiP12Certificate, nil),
-				Description: "base64-encoded PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
+				Description: "Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
 			},
 			providerP12Password: {
 				Type:        schema.TypeString,
@@ -208,7 +210,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, fmt.Sprintf(messageUseTLSPDC, url))
 		cfg.ConnectorType = endpoint.ConnectorTypeTPP
 		cfg.Credentials.ClientPKCS12 = true
-		err := setTLSConfig(p12Certificate, p12Password)
+		err := setTLSConfig(ctx, p12Certificate, p12Password)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
@@ -244,7 +246,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		cfg.ConnectionTrust = trustBundle
 	}
 
-	client, err := vcert.NewClient(&cfg)
+	client, err := vcert.NewClient(&cfg, false)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -258,10 +260,24 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  messageVenafiPingFailed,
-			Detail:   messageVenafiConfigFailed + ": " + err.Error(),
+			Summary:  messageVenafiClientInitFailed,
+			Detail:   messageVenafiPingFailed + ": " + err.Error(),
 		})
 		return nil, diags
+	}
+
+	if clientCertMethod {
+		tflog.Info(ctx, "PFX Certificate provided for authentication: Trying to authenticate")
+		resp, err := client.(*tpp.Connector).GetRefreshToken(cfg.Credentials)
+		if err != nil {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  messageVenafiClientInitFailed,
+				Detail:   messageVenafiAuthFailed + ": " + err.Error(),
+			})
+		}
+		cfg.Credentials.AccessToken = resp.Access_token
+		tflog.Info(ctx, "Successfully authenticated")
 	}
 
 	return &cfg, diags
@@ -292,13 +308,18 @@ func normalizeZone(zone string) string {
 	return newZone
 }
 
-func setTLSConfig(p12Certificate string, p12Password string) error {
+func setTLSConfig(ctx context.Context, p12FileLocation string, p12Password string) error {
+	tflog.Info(ctx, "Setting up TLS Configuration")
 	tlsConfig := tls.Config{
 		Renegotiation: tls.RenegotiateFreelyAsClient,
 	}
 
+	data, err := os.ReadFile(p12FileLocation)
+	if err != nil {
+		return fmt.Errorf("unable to read PKCS#12 file at [%s]: %w", p12FileLocation, err)
+	}
 	// We have a PKCS12 file to use, set it up for cert authentication
-	blocks, err := pkcs12.ToPEM([]byte(p12Certificate), p12Password)
+	blocks, err := pkcs12.ToPEM(data, p12Password)
 	if err != nil {
 		return fmt.Errorf("failed converting PKCS#12 archive file to PEM blocks: %w", err)
 	}
