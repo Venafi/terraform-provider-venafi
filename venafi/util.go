@@ -137,17 +137,21 @@ func getIssuerHint(is string) util.IssuerHint {
 }
 
 func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {
+	tflog.Info(ctx, "Building Venafi Connector")
 	cfg := meta.(*vcert.Config)
 	cl, err := vcert.NewClient(cfg)
 	if err != nil {
-		tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
-		return nil, err
+		connectionErr := fmt.Errorf("%s: %w", messageVenafiClientInitFailed, err)
+		tflog.Error(ctx, err.Error())
+		return nil, connectionErr
 	}
 	err = cl.Ping()
 	if err != nil {
-		tflog.Error(ctx, messageVenafiPingFailed+err.Error())
-		return nil, err
+		pingErr := fmt.Errorf("%s: %s", messageVenafiPingFailed, err)
+		tflog.Error(ctx, pingErr.Error())
+		return nil, pingErr
 	}
+
 	tflog.Info(ctx, messageVenafiPingSuccessful)
 	return cl, nil
 }

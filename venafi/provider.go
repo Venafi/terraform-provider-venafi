@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -21,10 +20,10 @@ import (
 )
 
 const (
-	messageVenafiPingFailed       = "Failed to ping Venafi endpoint: "
+	messageVenafiPingFailed       = "Failed to ping Venafi endpoint"
 	messageVenafiPingSuccessful   = "Venafi ping successful"
 	messageVenafiClientInitFailed = "Failed to initialize Venafi client"
-	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer: "
+	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer"
 	messageUseDevMode             = "Using dev mode to issue certificate"
 	messageUseVaas                = "Using VaaS to issue certificate"
 	messageUseTLSPDC              = "Using Platform TLSPDC with url %s to issue certificate"
@@ -57,6 +56,12 @@ const (
 	providerApiKey      = "api_key"
 	providerTrustBundle = "trust_bundle"
 	providerClientID    = "client_id"
+)
+
+var (
+	messageVenafiNoAuthProvided = fmt.Sprintf("no authorization attributes defined in provider. "+
+		"One of the following must be set: %s, %s/%s, %s/%s, or %s",
+		providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey)
 )
 
 // Provider returns a terraform.ResourceProvider.
@@ -158,11 +163,13 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	tppPassword := d.Get(providerPassword).(string)
 	accessToken := d.Get(providerAccessToken).(string)
 	zone := d.Get(providerZone).(string)
-	zone = normalizeZone(zone)
 	trustBundle := d.Get(providerTrustBundle).(string)
 	p12Certificate := d.Get(providerP12Cert).(string)
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
+
+	// Normalize zone for VCert usage
+	zone = normalizeZone(zone)
 
 	//Dev Mode
 	devMode := d.Get(providerDevMode).(bool)
@@ -177,13 +184,11 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	var diags diag.Diagnostics
 
 	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !devMode {
-		tflog.Error(ctx, fmt.Sprintf("no authorization attributes defined in provider. "+
-			"One of the following must be set: %s, %s/%s, %s/%s, or %s",
-			providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey))
+		tflog.Error(ctx, messageVenafiNoAuthProvided)
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  messageVenafiClientInitFailed,
-			Detail:   messageVenafiConfigFailed,
+			Detail:   fmt.Sprintf("%s: %s", messageVenafiConfigFailed, messageVenafiNoAuthProvided),
 		})
 		return nil, diags
 	}
@@ -210,12 +215,14 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, fmt.Sprintf(messageUseTLSPDC, url))
 		cfg.ConnectorType = endpoint.ConnectorTypeTPP
 		cfg.Credentials.ClientPKCS12 = true
+
 		err := setTLSConfig(ctx, p12Certificate, p12Password)
 		if err != nil {
+			tflog.Error(ctx, err.Error())
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
 				Summary:  messageVenafiClientInitFailed,
-				Detail:   messageVenafiConfigFailed + err.Error(),
+				Detail:   fmt.Sprintf("%s: %s", messageVenafiConfigFailed, err.Error()),
 			})
 			return nil, diags
 		}
@@ -232,10 +239,11 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		cfg.Credentials.APIKey = apiKey
 
 	} else {
+		tflog.Error(ctx, messageVenafiNoAuthProvided)
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  messageVenafiClientInitFailed,
-			Detail:   messageVenafiConfigFailed,
+			Detail:   fmt.Sprintf("%s: %s", messageVenafiConfigFailed, messageVenafiNoAuthProvided),
 		})
 		return nil, diags
 	}
@@ -246,17 +254,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		cfg.ConnectionTrust = trustBundle
 	}
 
-	client, err := vcert.NewClient(&cfg, false)
-	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  messageVenafiClientInitFailed,
-			Detail:   messageVenafiConfigFailed + ": " + err.Error(),
-		})
-		return nil, diags
-	}
-
-	err = client.Ping()
+	err := pingVenafi(ctx, &cfg)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -267,8 +265,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	if clientCertMethod {
-		tflog.Info(ctx, "PFX Certificate provided for authentication: Trying to authenticate")
-		resp, err := client.(*tpp.Connector).GetRefreshToken(cfg.Credentials)
+		err = getAccessTokenFromClientCertificate(ctx, &cfg)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
@@ -276,8 +273,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 				Detail:   messageVenafiAuthFailed + ": " + err.Error(),
 			})
 		}
-		cfg.Credentials.AccessToken = resp.Access_token
-		tflog.Info(ctx, "Successfully authenticated")
 	}
 
 	return &cfg, diags
@@ -304,7 +299,6 @@ func normalizeZone(zone string) string {
 		newZone = "\\" + newZone
 	}
 
-	log.Printf("[INFO] Normalized zone : %s", newZone)
 	return newZone
 }
 
@@ -354,5 +348,39 @@ func setTLSConfig(ctx context.Context, p12FileLocation string, p12Password strin
 	//Setting Default HTTP Transport
 	http.DefaultTransport = transport
 
+	return nil
+}
+
+func pingVenafi(ctx context.Context, config *vcert.Config) error {
+	tflog.Info(ctx, fmt.Sprintf("Pinging Venafi Platform: %s", config.ConnectorType.String()))
+	client, err := vcert.NewClient(config, false)
+	if err != nil {
+		return err
+	}
+
+	err = client.Ping()
+	if err != nil {
+		return err
+	}
+
+	tflog.Info(ctx, "Ping Successful")
+	return nil
+}
+
+func getAccessTokenFromClientCertificate(ctx context.Context, config *vcert.Config) error {
+	tflog.Info(ctx, "PFX Certificate provided for authentication: Trying to authenticate")
+	client, err := vcert.NewClient(config, false)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.(*tpp.Connector).GetRefreshToken(config.Credentials)
+	if err != nil {
+		return err
+	}
+
+	config.Credentials.AccessToken = resp.Access_token
+
+	tflog.Info(ctx, "Successfully authenticated")
 	return nil
 }
