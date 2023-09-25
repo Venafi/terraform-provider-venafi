@@ -157,12 +157,13 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	accessToken := d.Get(fAccessToken).(string)
 	zone := d.Get(fZone).(string)
 	zone = normalizeZone(zone)
-	devMode := d.Get(fDevMode).(bool)
 	trustBundle := d.Get(fTrustBundle).(string)
 	p12Certificate := d.Get(fP12Cert).(string)
 	p12Password := d.Get(fP12Password).(string)
 	clientID := d.Get(fClientID).(string)
 
+	//Dev Mode
+	devMode := d.Get(fDevMode).(bool)
 	// TLSPDC auth methods
 	userPassMethod := tppUser != "" && tppPassword != ""
 	clientCertMethod := p12Certificate != "" && p12Password != ""
@@ -173,7 +174,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod {
+	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !devMode {
 		tflog.Error(ctx, fmt.Sprintf("no authorization attributes defined in provider. "+
 			"One of the following must be set: %s, %s/%s, %s/%s, or %s",
 			fAccessToken, fP12Cert, fP12Password, fUsername, fPassword, fApiKey))
