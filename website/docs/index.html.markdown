@@ -79,32 +79,31 @@ resource "venafi_certificate" "webserver" {
 
 The following arguments are supported:
 
-* `zone` - (Required, string) Application Name and Issuing
-  Template API Alias (e.g. "Business App\Enterprise CIT") for Venafi as a Service or policy folder for Venafi Platform.
-
+* `zone` - (**Required**, string) Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") 
+for Venafi as a Service or policy folder for Venafi Platform.
 * `url` - (Optional, string) Venafi URL (e.g. "https://tpp.venafi.example").
-
-* `access_token` - (Optional, string) authentication token for the 'hashicorp-terraform-by-venafi' API Application (applies only to Venafi Platform).
-
+* `access_token` - (Optional, string) Authentication token for the 'hashicorp-terraform-by-venafi' API Application (applies only to Venafi Platform).
 * `api_key` - (Optional, string) REST API key for authentication (applies only to Venafi as a Service).
-
-* `tpp_username` [DEPRECATED] - (Optional, string) WebSDK account username for authentication (applies only to Venafi Platform).
-
-* `tpp_password` [DEPRECATED] - (Optional, string) WebSDK account password for authentication (applies only to Venafi Platform).
-
+* `tpp_username` **[DEPRECATED]** - (Optional, string) WebSDK account username for authentication (applies only to Venafi Platform).
+* `tpp_password` **[DEPRECATED]** - (Optional, string) WebSDK account password for authentication (applies only to Venafi Platform).
+* `p12_cert` - (Optional, string) base64-encoded PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to Venafi Platform
+* `p12_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert`
 * `trust_bundle` - (Optional, string) PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ).
-
 * `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to Venafi Platform or Venafi as a Service.
+* `client_id` - (Optional, string) ID of the application that will request a token. Note necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`
 
 ## Environment Variables
 
 The following environment variables can also be used to specify provider
 argument values:
 
-* VENAFI_ZONE
-* VENAFI_URL
-* VENAFI_TOKEN
-* VENAFI_API
-* VENAFI_USER
-* VENAFI_PASS
-* VENAFI_DEVMODE
+* `VENAFI_ZONE` - for `zone` argument
+* `VENAFI_URL` - for `url` argument
+* `VENAFI_TOKEN` - for `access_token` argument
+* `VENAFI_API` - for `api_key` argument
+* `VENAFI_USER` - for `tpp_username` argument
+* `VENAFI_PASS` - for `tpp_password` argument
+* `VENAFI_P12_CERTIFICATE` - for `p12_cert` argument
+* `VENAFI_P12_PASSWORD` - for `p12_password` argument
+* `VENAFI_DEVMODE` - for `dev_mode` argument
+* `VENAFI_CLIENT_ID` - for `client_id` argument
