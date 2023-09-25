@@ -3,17 +3,18 @@ package venafi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Venafi/vcert/v4/pkg/policy"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Venafi/vcert/v5/pkg/policy"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-//#nosec
+// #nosec
 var (
 	envVariables = fmt.Sprintf(`
 variable "TPP_USER" {default = "%s"}
@@ -97,7 +98,7 @@ func TestCreateVaasEmptyPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS empty zone: ", data.zone)
@@ -119,7 +120,7 @@ func TestCreateVaasPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating VaaS zone: ", data.zone)
@@ -158,7 +159,7 @@ func checkCreateVaasPolicy(t *testing.T, data *testData, s *terraform.State, val
 		return err
 	}
 
-	fileBytes, err := ioutil.ReadAll(file)
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func TestImportVaasPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
 				ImportStateId: os.Getenv("CLOUD_POLICY_SAMPLE"),
@@ -239,7 +240,7 @@ func checkImportVaasPolicy(states []*terraform.InstanceState) error {
 		return err
 	}
 
-	fileBytes, err := ioutil.ReadAll(file)
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
@@ -305,7 +306,7 @@ func TestCreateTppEmptyPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating empty zone: ", data.zone)
@@ -329,7 +330,7 @@ func TestCreateTppPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Creating TPP zone: ", data.zone)
@@ -346,7 +347,7 @@ func TestImportTppPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_policy.read_policy",
 				ImportStateId: os.Getenv("TPP_PM_ROOT"),
@@ -388,7 +389,7 @@ func checkCreateTppPolicy(t *testing.T, data *testData, s *terraform.State, vali
 		return err
 	}
 
-	fileBytes, err := ioutil.ReadAll(file)
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
@@ -457,7 +458,7 @@ func checkImportTppPolicy(states []*terraform.InstanceState) error {
 		return err
 	}
 
-	fileBytes, err := ioutil.ReadAll(file)
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}

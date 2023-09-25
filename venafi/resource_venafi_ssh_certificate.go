@@ -3,13 +3,14 @@ package venafi
 import (
 	"context"
 	"fmt"
-	"github.com/Venafi/vcert/v4/pkg/certificate"
-	"github.com/Venafi/vcert/v4/pkg/util"
+	"strings"
+	"time"
+
+	"github.com/Venafi/vcert/v5/pkg/certificate"
+	"github.com/Venafi/vcert/v5/pkg/util"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"strings"
-	"time"
 )
 
 func resourceVenafiSshCertificate() *schema.Resource {
@@ -19,85 +20,85 @@ func resourceVenafiSshCertificate() *schema.Resource {
 		DeleteContext: resourceVenafiSshCertDelete,
 
 		Schema: map[string]*schema.Schema{
-			"key_id": &schema.Schema{
+			"key_id": {
 				Type:        schema.TypeString,
 				Description: "The identifier of the requested certificate",
 				ForceNew:    true,
 				Required:    true,
 			},
-			"template": &schema.Schema{
+			"template": {
 				Type:        schema.TypeString,
 				Description: "The certificate issuing template",
 				ForceNew:    true,
 				Required:    true,
 			},
-			"key_passphrase": &schema.Schema{
+			"key_passphrase": {
 				Type:        schema.TypeString,
 				Description: "Passphrase for encrypting the private key",
 				ForceNew:    true,
 				Optional:    true,
 				Sensitive:   true,
 			},
-			"folder": &schema.Schema{
+			"folder": {
 				Type:        schema.TypeString,
 				Description: "The DN of the policy folder where the certificate object will be created",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"force_command": &schema.Schema{
+			"force_command": {
 				Type:        schema.TypeString,
 				Description: "The requested force command.",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"key_size": &schema.Schema{
+			"key_size": {
 				Type:        schema.TypeInt,
 				Description: "The key size bits, they will be used for creating keypair",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"windows": &schema.Schema{
+			"windows": {
 				Type:        schema.TypeBool,
 				Description: "If the line endings of service's private key will end on MS windows format",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"valid_hours": &schema.Schema{
+			"valid_hours": {
 				Type:        schema.TypeInt,
 				Description: "How much time the requester wants to have the certificate valid, the format is hours",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"object_name": &schema.Schema{
+			"object_name": {
 				Type:        schema.TypeString,
 				Description: "The friendly name for the certificate object.",
 				ForceNew:    true,
 				Optional:    true,
 			},
-			"public_key": &schema.Schema{
+			"public_key": {
 				Type:        schema.TypeString,
 				Description: "Public key that will be used to generate the certificate",
 				Optional:    true,
 				ForceNew:    true,
 			},
-			"certificate": &schema.Schema{
+			"certificate": {
 				Type:        schema.TypeString,
 				Description: "The SSH Certificate",
 				Computed:    true,
 			},
-			"public_key_method": &schema.Schema{
+			"public_key_method": {
 				Type:        schema.TypeString,
 				Description: "If the public key will be: file provided or local, service generated",
 				Optional:    true,
 				Default:     "local",
 				ForceNew:    true,
 			},
-			"private_key": &schema.Schema{
+			"private_key": {
 				Type:        schema.TypeString,
 				Description: "Private key",
 				Computed:    true,
 			},
-			"principal": &schema.Schema{
+			"principal": {
 				Type:          schema.TypeList,
 				Description:   "The requested principals.",
 				ForceNew:      true,
@@ -106,7 +107,7 @@ func resourceVenafiSshCertificate() *schema.Resource {
 				ConflictsWith: []string{"principals"},
 				Deprecated:    "This will be removed in the future. Use \"principals\" instead",
 			},
-			"principals": &schema.Schema{
+			"principals": {
 				Type:          schema.TypeList,
 				Description:   "The requested principals.",
 				ForceNew:      true,
@@ -114,53 +115,53 @@ func resourceVenafiSshCertificate() *schema.Resource {
 				Elem:          &schema.Schema{Type: schema.TypeString},
 				ConflictsWith: []string{"principal"},
 			},
-			"source_address": &schema.Schema{
+			"source_address": {
 				Type:        schema.TypeList,
 				Description: "The requested source addresses as list of IP/CIDR",
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"destination_address": &schema.Schema{
+			"destination_address": {
 				Type:        schema.TypeList,
 				Description: "The address (FQDN/hostname/IP/CIDR) of the destination host where the certificate will be used to authenticate to",
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"extension": &schema.Schema{
+			"extension": {
 				Type:        schema.TypeList,
 				Description: "The requested certificate extensions.",
 				ForceNew:    true,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"certificate_type": &schema.Schema{
+			"certificate_type": {
 				Type:        schema.TypeString,
 				Description: "Certificate type, server or client",
 				Computed:    true,
 			},
-			"public_key_fingerprint": &schema.Schema{
+			"public_key_fingerprint": {
 				Type:        schema.TypeString,
 				Description: "Public key fingerprint SHA256",
 				Computed:    true,
 			},
-			"signing_ca": &schema.Schema{
+			"signing_ca": {
 				Type:        schema.TypeString,
 				Description: "CA fingerprint SHA256",
 				Computed:    true,
 			},
-			"serial": &schema.Schema{
+			"serial": {
 				Type:        schema.TypeString,
 				Description: "Serial number",
 				Computed:    true,
 			},
-			"valid_from": &schema.Schema{
+			"valid_from": {
 				Type:        schema.TypeString,
 				Description: "Valid from",
 				Computed:    true,
 			},
-			"valid_to": &schema.Schema{
+			"valid_to": {
 				Type:        schema.TypeString,
 				Description: "Valid to",
 				Computed:    true,
@@ -314,7 +315,7 @@ func resourceVenafiSshCertCreate(ctx context.Context, d *schema.ResourceData, me
 	return nil
 }
 
-func resourceVenafiSshCertRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiSshCertRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	certUntyped, ok := d.GetOk("certificate")
 	if !ok {
 		d.SetId("")
@@ -329,7 +330,7 @@ func resourceVenafiSshCertRead(ctx context.Context, d *schema.ResourceData, meta
 	return nil
 }
 
-func resourceVenafiSshCertDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiSshCertDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }

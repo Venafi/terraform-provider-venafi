@@ -5,13 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v4"
-	"github.com/Venafi/vcert/v4/pkg/certificate"
-	"github.com/Venafi/vcert/v4/pkg/endpoint"
-	"github.com/Venafi/vcert/v4/pkg/util"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -21,6 +14,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/certificate"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const (
@@ -28,7 +28,6 @@ const (
 	policySpecVaas    = "/test_files/policy_specification_vaas.json"
 	policySpecTpp     = "/test_files/policy_specification_tpp.json"
 	policyReadSpecTpp = "/test_files/policy_specification_tpp_management.json"
-	issuerHint        = "MICROSOFT"
 	validDays         = 30
 )
 
@@ -100,13 +99,13 @@ func RandTppSshCertName() string {
 func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Testing certificate with cn", data.cn)
 	certUntyped := s.RootModule().Outputs["certificate"].Value
-	certificate, ok := certUntyped.(string)
+	cert, ok := certUntyped.(string)
 	if !ok {
 		return fmt.Errorf("output for \"certificate\" is not a string")
 	}
 
-	t.Logf("Testing certificate PEM:\n %s", certificate)
-	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+	t.Logf("Testing certificate PEM:\n %s", cert)
+	if !strings.HasPrefix(cert, "-----BEGIN CERTIFICATE----") {
 		return fmt.Errorf("key is missing cert PEM preamble")
 	}
 	keyUntyped := s.RootModule().Outputs["private_key"].Value
@@ -115,7 +114,7 @@ func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 		return fmt.Errorf("output for \"private_key\" is not a string")
 	}
 
-	err := checkStandardCertInfo(t, data, certificate, privateKey)
+	err := checkStandardCertInfo(t, data, cert, privateKey)
 	if err != nil {
 		return err
 	}
@@ -129,14 +128,14 @@ func checkStandardCertNew(resourceName string, t *testing.T, data *testData) res
 		if !ok {
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
-		certificate := rs.Primary.Attributes["certificate"]
+		cert := rs.Primary.Attributes["certificate"]
 
-		t.Logf("Testing certificate PEM:\n %s", certificate)
-		if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+		t.Logf("Testing certificate PEM:\n %s", cert)
+		if !strings.HasPrefix(cert, "-----BEGIN CERTIFICATE----") {
 			return fmt.Errorf("key is missing cert PEM preamble")
 		}
 		privateKey := rs.Primary.Attributes["private_key_pem"]
-		err := checkStandardCertInfo(t, data, certificate, privateKey)
+		err := checkStandardCertInfo(t, data, cert, privateKey)
 		if err != nil {
 			return err
 		}
@@ -179,16 +178,16 @@ func checkStandardCertInfo(t *testing.T, data *testData, certificate string, pri
 func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error {
 	t.Log("Testing certificate with cn", data.cn)
 	certUntyped := s.RootModule().Outputs["certificate"].Value
-	certificate, ok := certUntyped.(string)
+	certStr, ok := certUntyped.(string)
 	if !ok {
 		return fmt.Errorf("output for \"certificate\" is not a string")
 	}
 
-	t.Logf("Testing certificate PEM:\n %s", certificate)
-	if !strings.HasPrefix(certificate, "-----BEGIN CERTIFICATE----") {
+	t.Logf("Testing certificate PEM:\n %s", certStr)
+	if !strings.HasPrefix(certStr, "-----BEGIN CERTIFICATE----") {
 		return fmt.Errorf("key is missing cert PEM preamble")
 	}
-	block, _ := pem.Decode([]byte(certificate))
+	block, _ := pem.Decode([]byte(certStr))
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return fmt.Errorf("error parsing cert: %s", err)
@@ -322,9 +321,9 @@ func checkImportWithObjectName(t *testing.T, data *testData, states []*terraform
 }
 
 func checkImportCert(t *testing.T, data *testData, attr map[string]string) error {
-	certificate := attr["certificate"]
+	cert := attr["certificate"]
 	privateKey := attr["private_key_pem"]
-	err := checkStandardCertInfo(t, data, certificate, privateKey)
+	err := checkStandardCertInfo(t, data, cert, privateKey)
 	if err != nil {
 		return err
 	}
@@ -368,7 +367,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 			cfg.Zone = data.zone
 		}
 		trustBundlePath := os.Getenv("TRUST_BUNDLE")
-		trustBundleBytes, err := ioutil.ReadFile(trustBundlePath)
+		trustBundleBytes, err := os.ReadFile(trustBundlePath)
 		if err != nil {
 			t.Fatalf("Error opening trust bundle file: %s", err.Error())
 		}
@@ -416,9 +415,11 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		req.FriendlyName = data.nickname
 	}
 	if data.valid_days != 0 {
-		req.ValidityHours = data.valid_days * 24
+		days := time.Duration(data.valid_days)
+		d := time.Hour * 24 * days
+		req.ValidityDuration = &d
 	}
-	req.IssuerHint = issuerHint
+	req.IssuerHint = util.IssuerHintMicrosoft
 	req.CsrOrigin = certificate.LocalGeneratedCSR
 
 	if data.custom_fields != "" {

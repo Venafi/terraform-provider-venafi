@@ -2,7 +2,8 @@ package venafi
 
 import (
 	"context"
-	"github.com/Venafi/vcert/v4/pkg/certificate"
+
+	"github.com/Venafi/vcert/v5/pkg/certificate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -14,18 +15,18 @@ func resourceVenafiSshConfig() *schema.Resource {
 		DeleteContext: resourceVenafiSshConfigDelete,
 
 		Schema: map[string]*schema.Schema{
-			"template": &schema.Schema{
+			"template": {
 				Type:        schema.TypeString,
 				Description: "The certificate issuing template",
 				ForceNew:    true,
 				Required:    true,
 			},
-			"ca_public_key": &schema.Schema{
+			"ca_public_key": {
 				Type:        schema.TypeString,
 				Description: "The template's CA PublicKey",
 				Computed:    true,
 			},
-			"principals": &schema.Schema{
+			"principals": {
 				Type:        schema.TypeList,
 				Description: "The requested principals.",
 				Computed:    true,
@@ -66,7 +67,7 @@ func resourceVenafiSshConfigCreate(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func resourceVenafiSshConfigRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiSshConfigRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 
 	principalsUntyped, ok := d.GetOk("principals")
 	if !ok {
@@ -98,7 +99,7 @@ func resourceVenafiSshConfigRead(ctx context.Context, d *schema.ResourceData, me
 	return nil
 }
 
-func resourceVenafiSshConfigDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceVenafiSshConfigDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }

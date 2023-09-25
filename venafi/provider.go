@@ -3,13 +3,14 @@ package venafi
 import (
 	"context"
 	"fmt"
-	"github.com/Venafi/vcert/v4"
-	"github.com/Venafi/vcert/v4/pkg/endpoint"
+	"log"
+	"strings"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
-	"strings"
 )
 
 const (

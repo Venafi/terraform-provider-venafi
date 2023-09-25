@@ -4,13 +4,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v4"
-	"github.com/Venafi/vcert/v4/pkg/endpoint"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"os"
 	"regexp"
 	"testing"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 var (
@@ -376,7 +378,7 @@ func TestDevSignedCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -401,7 +403,7 @@ func TestDevSignedCertECDSA(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -428,7 +430,7 @@ func TestVaasSignedCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -439,7 +441,7 @@ func TestVaasSignedCert(t *testing.T) {
 
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing VaaS certificate second run")
@@ -487,7 +489,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -500,7 +502,7 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 				},
 				ExpectNonEmptyPlan: true,
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
@@ -542,7 +544,7 @@ func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *tes
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
@@ -550,7 +552,7 @@ func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *tes
 				),
 				ExpectNonEmptyPlan: true,
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
@@ -582,14 +584,14 @@ func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
 					resource.TestCheckResourceAttr("venafi_certificate.vaas_certificate", "expiration_window", "1440"),
 				),
 			},
-			resource.TestStep{
+			{
 				Config: configUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
@@ -619,7 +621,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
@@ -627,7 +629,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 				},
 				ExpectNonEmptyPlan: true,
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate update")
@@ -667,14 +669,14 @@ func TestTPPSignedCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -714,7 +716,7 @@ func TestTPPSignedCertWithNickname(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.tpp_certificate", t, &data),
@@ -741,14 +743,14 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -798,7 +800,7 @@ func TestTokenSignedCertUpdateRenew(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
@@ -806,7 +808,7 @@ func TestTokenSignedCertUpdateRenew(t *testing.T) {
 				},
 				ExpectNonEmptyPlan: true,
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP Token certificate update")
@@ -846,14 +848,14 @@ func TestTokenSignedCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -892,14 +894,14 @@ func TestTokenECDSASignedCert(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -940,14 +942,14 @@ func TestSignedCertCustomFields(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -981,7 +983,8 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	data.expiration_window = 168
-	data.issuer_hint = issuerHint
+	hint := util.IssuerHintMicrosoft
+	data.issuer_hint = hint.String()
 	data.valid_days = validDays
 
 	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
@@ -989,14 +992,14 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
 					return checkCertValidDays(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -1028,14 +1031,15 @@ func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	data.expiration_window = 730
-	data.issuer_hint = issuerHint
+	hint := util.IssuerHintMicrosoft
+	data.issuer_hint = hint.String()
 	data.valid_days = validDays
 	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
 	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
@@ -1071,14 +1075,14 @@ func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
 					resource.TestCheckResourceAttr("venafi_certificate.token_certificate", "expiration_window", "100"),
 				),
 			},
-			resource.TestStep{
+			{
 				Config: configUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
@@ -1171,7 +1175,7 @@ func TestTppCsrService(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
@@ -1196,7 +1200,7 @@ func TestVaasCsrService(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					err := checkStandardCert(t, &data, s)
@@ -1216,15 +1220,14 @@ func TestImportCertificateTpp(t *testing.T) {
 	}
 	name := "import"
 	data := getCertTppImportConfig(name)
-	serviceGeneratedCSR := true
-	createCertificate(t, cfg, data, serviceGeneratedCSR)
+	createCertificate(t, cfg, data, true)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: importId,
@@ -1253,8 +1256,7 @@ func TestImportCertificateTppWithNickname(t *testing.T) {
 	data.dns_ip = "192.168.1.1"
 	data.dns_email = "venafi@example.com"
 	data.expiration_window = 100
-	serviceGeneratedCSR := true
-	createCertificate(t, cfg, &data, serviceGeneratedCSR)
+	createCertificate(t, cfg, &data, true)
 
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.nickname, data.private_key_password)
@@ -1262,7 +1264,7 @@ func TestImportCertificateTppWithNickname(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: importId,
@@ -1283,15 +1285,14 @@ func TestImportCertificateTppWithCustomFields(t *testing.T) {
 	data := getCertTppImportConfigWithCustomFields()
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
 	data.custom_fields = getCustomFields(cfEnvVarName)
-	serviceGeneratedCSR := true
-	createCertificate(t, cfg, data, serviceGeneratedCSR)
+	createCertificate(t, cfg, data, true)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert with custom fields:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: importId,
@@ -1312,15 +1313,14 @@ func TestImportCertificateECDSA(t *testing.T) {
 	name := "import.ecdsa"
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportECDSA)
-	serviceGeneratedCSR := true
 	data.zone = os.Getenv("TPP_ZONE_ECDSA")
-	createCertificate(t, cfg, data, serviceGeneratedCSR)
+	createCertificate(t, cfg, data, true)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
 	t.Logf("Testing importing TPP cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: importId,
@@ -1339,15 +1339,14 @@ func TestImportCertificateVaas(t *testing.T) {
 		ConnectorType: endpoint.ConnectorTypeCloud,
 	}
 	data := getCertVaasImportConfig()
-	serviceGeneratedCSR := true
-	pickupId := createCertificate(t, cfg, data, serviceGeneratedCSR)
+	pickupId := createCertificate(t, cfg, data, true)
 	config := fmt.Sprintf(vaasCsrServiceConfigImport, vaasProviderImport)
 	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
 	t.Logf("Testing importing VaaS cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_vaas_certificate_import",
 				ImportStateId: importId,
@@ -1370,35 +1369,35 @@ func TestValidateWrongImportEntries(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: fmt.Sprintf("%s,%s,exceeded", data.cn, data.private_key_password),
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importIdFailExceededValues),
 			},
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: data.cn,
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importIdFailMissingValues),
 			},
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: fmt.Sprintf("%s,", data.cn),
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importKeyPasswordFailEmpty),
 			},
-			resource.TestStep{
+			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: fmt.Sprintf(",%s", data.private_key_password),
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importPickupIdFailEmpty),
 			},
-			resource.TestStep{
+			{
 				Config:        configWithoutZone,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: fmt.Sprintf("%s,%s", data.cn, data.private_key_password),
@@ -1426,14 +1425,14 @@ func TestManyCertsTpp(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -1452,7 +1451,7 @@ func TestManyCertsTpp(t *testing.T) {
 					}
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate third run")
@@ -1471,7 +1470,7 @@ func TestManyCertsTpp(t *testing.T) {
 					}
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fourth run")
@@ -1490,7 +1489,7 @@ func TestManyCertsTpp(t *testing.T) {
 					}
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fifth run")
@@ -1528,14 +1527,14 @@ func TestManyCertsTppCsrService(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate second run")
@@ -1554,7 +1553,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 					}
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate third run")
@@ -1573,7 +1572,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 					}
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fourth run")
@@ -1592,7 +1591,7 @@ func TestManyCertsTppCsrService(t *testing.T) {
 					}
 				},
 			},
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Testing TPP certificate fifth run")
@@ -1632,7 +1631,7 @@ func TestTppSansCsrService(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: config,
 				Check: func(s *terraform.State) error {
 					t.Log("Issuing TPP certificate with CN", data.cn)
