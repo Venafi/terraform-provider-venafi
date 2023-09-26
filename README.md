@@ -185,16 +185,19 @@ for Terraform version 0.11 and below.
 
    The `venafi` provider has the following options:
 
-   | Property       | Type   | Description                                                  | Env. Variable |
-   | -------------- | ------ | ------------------------------------------------------------ | ------------ |
-   | `api_key`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi as a Service API key                                         | VENAFI_API |
-   | `access_token` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application | VENAFI_TOKEN |
-   | `tpp_username` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible | VENAFI_USER |
-   | `tpp_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible | VENAFI_PASS |
-   | `trust_bundle` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform | |
-   | `url`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example") | VENAFI_URL |
-   | `zone`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT") | VENAFI_ZONE |
-   | `dev_mode`     | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)   | When "true", the provider operates without connecting to TPP or VaaS | VENAFI_DEVMODE |
+   | Property            | Type                                                                                | Description                                                                                                                                               | Env. Variable          |
+   |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|---------------------|
+   | `api_key`           | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi as a Service API key                                                                                                                               | VENAFI_API             |
+   | `access_token`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application                                                            | VENAFI_TOKEN           |
+   | `client_id`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ID of the application that will request tokens. Not necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`  | VENAFI_CLIENT_ID       |
+   | `p12_cert_filename` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to Venafi Platform                      | VENAFI_P12_CERTIFICATE |
+   | `p12_cert_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Password for the PKCS#12 keystore declared in `p12_cert_filename`                                                                                         | VENAFI_P12_PASSWORD    |
+   | `tpp_username`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible                                                                | VENAFI_USER            |
+   | `tpp_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible                                                                | VENAFI_PASS            |
+   | `trust_bundle`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform                                            |                        |
+   | `url`               | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example")                                                                                                    | VENAFI_URL             |
+   | `zone`              | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT")                                    | VENAFI_ZONE            |
+   | `dev_mode`          | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)  | When "true", the provider operates without connecting to TPP or VaaS                                                                                      | VENAFI_DEVMODE         |
 
    >:pushpin: **NOTE**: The indicated environment variables can be used to specify
    values for provider settings rather than including them in a configuration 
