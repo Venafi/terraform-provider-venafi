@@ -90,7 +90,7 @@ for Venafi as a Service or policy folder for Venafi Platform.
 * `p12_cert_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert_filename`
 * `trust_bundle` - (Optional, string) PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ).
 * `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to Venafi Platform or Venafi as a Service.
-* `client_id` - (Optional, string) ID of the application that will request a token. Note necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`
+* `client_id` - (Optional, string) ID of the application that will request a token. Not necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`
 
 ## Environment Variables
 

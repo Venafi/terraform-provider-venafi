@@ -1,6 +1,6 @@
 ## 0.17.0 (September 25, 2023)
-Added support for client certificate as authentication method. Two attributes were added for this purpose: 
-p12_cert_filename (filename of the pkcs12 bundle) and p12_cert_password (password of the pkcs12 bundle)
+Added support for client certificate as authentication method. Two attributes were added for this purpose: p12_cert_filename (filename of the pkcs12 bundle) and p12_cert_password (password of the pkcs12 bundle)
+Added support for client_id attribute to allow users to customize which application is requesting tokens 
 
 ## 0.16.1 (October 7, 2022)
 Added support for nickname attribute to override certificate object name at TPP.
