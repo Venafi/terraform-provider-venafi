@@ -106,7 +106,7 @@ collect_artifacts:
 	cp -rv $(DIST_DIR)/* artifacts
 
 release:
-	go get -u github.com/tcnksm/ghr
+	go install github.com/tcnksm/ghr
 	ghr -prerelease -n $$RELEASE_VERSION $$RELEASE_VERSION artifacts/
 
 clean:
