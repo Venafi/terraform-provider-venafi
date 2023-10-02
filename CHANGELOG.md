@@ -1,3 +1,7 @@
+## 0.17.1 (October 2nd, 2023)
+Removes an error thrown during provider configuration. Instead the error is thrown at resource creation.
+This work is necessary to allow the venafi-token provider to successfully manage the tokens of this provider.
+
 ## 0.17.0 (September 25, 2023)
 Added support for client certificate as authentication method. Two attributes were added for this purpose: p12_cert_filename (filename of the pkcs12 bundle) and p12_cert_password (password of the pkcs12 bundle)
 Added support for client_id attribute to allow users to customize which application is requesting tokens 
