@@ -185,11 +185,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !devMode {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  messageVenafiClientInitFailed,
-			Detail:   fmt.Sprintf("%s: %s", messageVenafiConfigFailed, messageVenafiNoAuthProvided),
-		})
 		return nil, diags
 	}
 
