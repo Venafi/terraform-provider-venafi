@@ -27,6 +27,11 @@ This solution adds certificate enrollment capabilities to [HashiCorp Terraform](
 
 ## Requirements
 
+### Protection of the terraform state file
+
+Make sure that you are protecting your terraform state file as per the best practices by Hashicorp: [https://developer.hashicorp.com/terraform/language/state/sensitive-data](https://developer.hashicorp.com/terraform/language/state/sensitive-data).  
+This is an important step to prevent data breaches or leaks of sensitive data like usernames, passwords, tokens, secrets, etc.
+
 ### Venafi Trust Protection Platform
 
 Your certificate authority (CA) must be able to issue a certificate in
@@ -76,6 +81,15 @@ operating system. If you don't have administrative access, or prefer not to
 make changes to your system configuration, save the root certificate to a file
 in PEM format (e.g. /opt/venafi/bundle.pem) and include it using the
 `trust_bundle` parameter of your Venafi provider.
+
+### Trust Protection Platform Token Management
+The Venafi provider offers several authentication methods to Trust Protection Platform. All of them work by requesting 
+an access token that will grant access to the REST API. Automation becomes complex to manage when access tokens are 
+introduced as they have an expiration date. When that date is met, the token is no longer valid. 
+
+A new [Venafi-token provider](https://registry.terraform.io/providers/Venafi/venafi-token/latest) has been released that 
+allows customers to manage their access tokens. This way the Venafi provider will always have a valid token to use, and 
+automation will not be disrupted by token expiration.
 
 ### Venafi as a Service
 

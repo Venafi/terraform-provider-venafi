@@ -138,9 +138,6 @@ func getIssuerHint(is string) util.IssuerHint {
 
 func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {
 	tflog.Info(ctx, "Building Venafi Connector")
-	if meta == nil {
-		return nil, fmt.Errorf("%s: %s", messageVenafiClientInitFailed, messageVenafiNoAuthProvided)
-	}
 
 	cfg := meta.(*vcert.Config)
 	cl, err := vcert.NewClient(cfg)
