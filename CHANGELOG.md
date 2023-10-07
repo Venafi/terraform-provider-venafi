@@ -1,5 +1,8 @@
+## 0.17.2 (October 6th, 2023)
+Rolls back the error removal from version v0.17.1
+
 ## 0.17.1 (October 2nd, 2023)
-Removes an error thrown during provider configuration. Instead the error is thrown at resource creation.
+Removes an error thrown during provider configuration. Instead, the error is thrown at resource creation.
 This work is necessary to allow the venafi-token provider to successfully manage the tokens of this provider.
 
 ## 0.17.0 (September 25, 2023)
