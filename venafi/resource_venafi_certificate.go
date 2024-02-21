@@ -237,7 +237,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 	var keyPasswordFromImport string
 	var pickupID string
 
-	// When retrieving the certID we have to watch for to cases: when certificate is imported and when is not
+	// When retrieving the certID we have to watch for two cases: when certificate is imported and when is not
 	// For both cases we get the pickupID from the first parameter and the key password from state
 	pickupID = parameters[0]
 
@@ -361,9 +361,57 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func resourceVenafiCertificateDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
-	// We don't support deletion for created certificates from TPP, so we just remove it from state
+func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
+
+	cfg := meta.(*vcert.Config)
+	cl, err := vcert.NewClient(cfg)
+	if err != nil {
+		tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
+		return diag.FromErr(err)
+	}
+	err = cl.Ping()
+	if err != nil {
+		tflog.Error(ctx, messageVenafiPingFailed+err.Error())
+		return diag.FromErr(err)
+	}
+	tflog.Info(ctx, messageVenafiPingSuccessful)
+	// Warning or errors can be collected in a slice type
+	//var diags diag.Diagnostics
+
+	certID := d.Id()
+	parameters := strings.Split(certID, ",")
+
+	var pickupID string
+
+	// When retrieving the certID we have to watch for two cases: when certificate is imported and when is not
+	// For both cases we get the pickupID from the first parameter and the key password from state
+	pickupID = parameters[0]
+
+	// But we need to make extra verifications if state was tainted by a third party.
+	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
+	if len(parameters) < 1 {
+		return buildStantardDiagError(fmt.Sprintf("%s: certID was not found from terraform state", terraformStateTainted))
+	} else if len(parameters) > 1 {
+		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
+	}
+
+	zone := cfg.Zone
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		zone = buildAbsoluteZoneTPP(zone)
+		ok := strings.Contains(pickupID, zone)
+		if !ok {
+			pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
+		}
+	}
+
+	if err = cl.RetireCertificate(&certificate.RetireRequest{CertificateDN: pickupID}); err != nil {
+		tflog.Error(ctx, "failed to retire the certificate "+err.Error())
+		return diag.FromErr(err)
+	}
+
+	// removing it from state
 	d.SetId("")
+
 	return nil
 }
 
