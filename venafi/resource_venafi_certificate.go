@@ -215,8 +215,8 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 
 func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
-	cfg := meta.(*vcert.Config)
-	cl, err := vcert.NewClient(cfg)
+	vCertCfg := meta.(*venafiProviderConfig).vCertCfg
+	cl, err := vcert.NewClient(vCertCfg)
 	if err != nil {
 		tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
 		return diag.FromErr(err)
@@ -262,7 +262,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
 	}
 
-	zone := cfg.Zone
+	zone := vCertCfg.Zone
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
 		zone = buildAbsoluteZoneTPP(zone)
 		ok := strings.Contains(pickupID, zone)
@@ -363,22 +363,16 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 
 func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
 
-	cfg := meta.(*vcert.Config)
+	provConf := meta.(*venafiProviderConfig)
+	vCertCfg := provConf.vCertCfg
 
 	//VCert connector fake has not implemented the RetireCertificate functionality
-	if cfg.ConnectorType != endpoint.ConnectorTypeFake {
+	if !provConf.skipRetirement && vCertCfg.ConnectorType != endpoint.ConnectorTypeFake {
 
-		cl, err := vcert.NewClient(cfg)
+		cl, err := getConnection(ctx, meta)
 		if err != nil {
-			tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
 			return diag.FromErr(err)
 		}
-		err = cl.Ping()
-		if err != nil {
-			tflog.Error(ctx, messageVenafiPingFailed+err.Error())
-			return diag.FromErr(err)
-		}
-		tflog.Info(ctx, messageVenafiPingSuccessful)
 		// Warning or errors can be collected in a slice type
 		//var diags diag.Diagnostics
 
@@ -399,7 +393,7 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 			return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
 		}
 
-		zone := cfg.Zone
+		zone := vCertCfg.Zone
 		if cl.GetType() == endpoint.ConnectorTypeTPP {
 			zone = buildAbsoluteZoneTPP(zone)
 			ok := strings.Contains(pickupID, zone)
@@ -851,7 +845,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		return nil, fmt.Errorf(importKeyPasswordFailEmpty)
 	}
 
-	cfg := meta.(*vcert.Config)
+	cfg := meta.(*venafiProviderConfig).vCertCfg
 	zone := cfg.Zone
 	if zone == "" {
 		return nil, fmt.Errorf(importZoneFailEmpty)
