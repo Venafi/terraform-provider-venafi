@@ -22,6 +22,7 @@ import (
 const (
 	csrService              = "service"
 	expirationWindowDefault = 168 // hours
+	defaultTimeoutSeconds   = 180
 )
 
 func sliceContains(slice []string, item string) bool {

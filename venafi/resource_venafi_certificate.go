@@ -189,6 +189,11 @@ func resourceVenafiCertificate() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceVenafiCertificateImport,
 		},
+		Timeouts: &schema.ResourceTimeout{
+			Create:  schema.DefaultTimeout(defaultTimeoutSeconds * time.Second),
+			Read:    schema.DefaultTimeout(defaultTimeoutSeconds * time.Second),
+			Default: schema.DefaultTimeout(defaultTimeoutSeconds * time.Second),
+		},
 	}
 }
 
@@ -273,7 +278,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	origin := d.Get("csr_origin").(string)
-	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), origin)
+	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), origin, d.Timeout(schema.TimeoutRead))
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
@@ -611,6 +616,8 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		req.IssuerHint = getIssuerHint(issuerHint)
 	}
 
+	req.Timeout = d.Timeout(schema.TimeoutCreate)
+
 	tflog.Info(ctx, "Making certificate request")
 	err = cl.GenerateRequest(nil, req)
 	if err != nil {
@@ -629,7 +636,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		}
 	}
 
-	pickupReq := fillRetrieveRequest(requestID, pickupPass, cl.GetType(), origin)
+	pickupReq := fillRetrieveRequest(requestID, pickupPass, cl.GetType(), origin, d.Timeout(schema.TimeoutCreate))
 
 	err = d.Set("certificate_dn", requestID)
 	if err != nil {
@@ -814,7 +821,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
 	}
 
-	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), csrService)
+	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), csrService, d.Timeout(schema.TimeoutDefault))
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
@@ -844,9 +851,9 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	return []*schema.ResourceData{d}, nil
 }
 
-func fillRetrieveRequest(id string, password string, connectorType endpoint.ConnectorType, origin string) *certificate.Request {
+func fillRetrieveRequest(id string, password string, connectorType endpoint.ConnectorType, origin string, timeout time.Duration) *certificate.Request {
 	pickupReq := &certificate.Request{}
-	pickupReq.Timeout = 180 * time.Second
+	pickupReq.Timeout = timeout
 	pickupReq.PickupID = id
 	pickupReq.KeyPassword = password
 
