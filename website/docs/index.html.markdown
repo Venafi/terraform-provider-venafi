@@ -91,6 +91,7 @@ for Venafi as a Service or policy folder for Venafi Platform.
 * `trust_bundle` - (Optional, string) PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ).
 * `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to Venafi Platform or Venafi as a Service.
 * `client_id` - (Optional, string) ID of the application that will request a token. Not necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`
+* `skip_retirement` - (Optional, bool) If it's specified with value `true` then the certificate retirement on the related Venafi Platform (TLSPDC or TLSPC) will be skipped. A value of `false` is equivalent to omit this attribute.
 
 ## Environment Variables
 
@@ -107,3 +108,4 @@ argument values:
 * `VENAFI_P12_PASSWORD` - for `p12_password` argument
 * `VENAFI_DEVMODE` - for `dev_mode` argument
 * `VENAFI_CLIENT_ID` - for `client_id` argument
+* `VENAFI_SKIP_RETIREMENT` - for `skip_retirement` argument
