@@ -374,7 +374,6 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 		// Warning or errors can be collected in a slice type
-		//var diags diag.Diagnostics
 
 		certID := d.Id()
 		parameters := strings.Split(certID, ",")
