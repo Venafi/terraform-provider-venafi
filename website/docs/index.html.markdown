@@ -15,6 +15,11 @@ For backward compatibility during Terraform state refresh please update to versi
 !> As a part for upgrading our provider to SDK version 2, we dropped support for
 Terraform version 0.11 and below.
 
+!> Starting on [v.0.18.0](https://registry.terraform.io/providers/Venafi/venafi/0.18.0)
+the **certificate retirement** is added meaning when an infrastructure is destroyed
+then the related certificate will be retired from the related Venafi Platform (TLSPDC and TLSPC).
+It was also added the `skip_retirement` provider option to disable this behavior.
+
 [Venafi](https://www.venafi.com) is the enterprise platform for Machine Identity
 Protection. The Venafi provider streamlines the process of acquiring SSL/TLS
 keys and certificates from Venafi services giving assurance of compliance with
@@ -91,7 +96,7 @@ for Venafi as a Service or policy folder for Venafi Platform.
 * `trust_bundle` - (Optional, string) PEM trust bundle for Venafi Platform server certificate (e.g. "${file("bundle.pem")}" ).
 * `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to Venafi Platform or Venafi as a Service.
 * `client_id` - (Optional, string) ID of the application that will request a token. Not necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`
-* `skip_retirement` - (Optional, bool) If it's specified with value `true` then the certificate retirement on the related Venafi Platform (TLSPDC or TLSPC) will be skipped. A value of `false` is equivalent to omit this attribute.
+* `skip_retirement` - (Optional, bool) If it's specified with value `true` then the certificate retirement on the related Venafi Platform (TLSPDC or TLSPC) will be skipped. A value of `false` is equivalent to omit this argument
 
 ## Environment Variables
 
