@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Venafi/vcert/v5"
 	"github.com/Venafi/vcert/v5/pkg/certificate"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/policy"
@@ -26,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 	"github.com/youmark/pkcs8"
 	"software.sslmate.com/src/go-pkcs12"
 )
@@ -215,18 +215,18 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 
 func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
-	vCertCfg := meta.(*venafiProviderConfig).vCertCfg
-	cl, err := vcert.NewClient(vCertCfg)
+	provConf, ok := meta.(*venafiProviderConfig)
+	if !ok {
+		castError := errors.New(messageVenafiProviderConfigCastingFailed)
+		tflog.Error(ctx, castError.Error())
+		return diag.FromErr(castError)
+	}
+	vCertCfg := provConf.vCertCfg
+
+	cl, err := getConnection(ctx, meta)
 	if err != nil {
-		tflog.Error(ctx, messageVenafiClientInitFailed+err.Error())
 		return diag.FromErr(err)
 	}
-	err = cl.Ping()
-	if err != nil {
-		tflog.Error(ctx, messageVenafiPingFailed+err.Error())
-		return diag.FromErr(err)
-	}
-	tflog.Info(ctx, messageVenafiPingSuccessful)
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -363,7 +363,12 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 
 func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
 
-	provConf := meta.(*venafiProviderConfig)
+	provConf, ok := meta.(*venafiProviderConfig)
+	if !ok {
+		castError := errors.New(messageVenafiProviderConfigCastingFailed)
+		tflog.Error(ctx, castError.Error())
+		return diag.FromErr(castError)
+	}
 	vCertCfg := provConf.vCertCfg
 
 	//VCert connector fake has not implemented the RetireCertificate functionality

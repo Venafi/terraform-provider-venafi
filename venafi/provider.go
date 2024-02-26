@@ -20,14 +20,15 @@ import (
 )
 
 const (
-	messageVenafiPingFailed       = "Failed to ping Venafi endpoint"
-	messageVenafiPingSuccessful   = "Venafi ping successful"
-	messageVenafiClientInitFailed = "Failed to initialize Venafi client"
-	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer"
-	messageUseDevMode             = "Using dev mode to issue certificate"
-	messageUseVaas                = "Using VaaS to issue certificate"
-	messageUseTLSPDC              = "Using Platform TLSPDC with url %s to issue certificate"
-	messageVenafiAuthFailed       = "Failed to authenticate to Venafi platform"
+	messageVenafiPingFailed                  = "Failed to ping Venafi endpoint"
+	messageVenafiPingSuccessful              = "Venafi ping successful"
+	messageVenafiClientInitFailed            = "Failed to initialize Venafi client"
+	messageVenafiProviderConfigCastingFailed = "Failed to cast to Venafi Provider Configuration"
+	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
+	messageUseDevMode                        = "Using dev mode to issue certificate"
+	messageUseVaas                           = "Using VaaS to issue certificate"
+	messageUseTLSPDC                         = "Using Platform TLSPDC with url %s to issue certificate"
+	messageVenafiAuthFailed                  = "Failed to authenticate to Venafi platform"
 
 	utilityName           = "HashiCorp Terraform"
 	defaultClientID       = "hashicorp-terraform-by-venafi"
@@ -150,7 +151,7 @@ Example:
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
-				Description: `Skips the retirement certificate on the configured Venafi Platform. By default this is set to false enabling the retirement certificate functionality`,
+				Description: `Skips the retirement of certificates on terraform destroy on Venafi Platform's side. Default is false.`,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
