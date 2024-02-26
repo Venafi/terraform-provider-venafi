@@ -215,6 +215,7 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 
 func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
+	//casting meta interface to the expected *venafiProviderConfig
 	provConf, ok := meta.(*venafiProviderConfig)
 	if !ok {
 		castError := errors.New(messageVenafiProviderConfigCastingFailed)
@@ -363,6 +364,7 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 
 func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
 
+	//casting meta interface to the expected *venafiProviderConfig
 	provConf, ok := meta.(*venafiProviderConfig)
 	if !ok {
 		castError := errors.New(messageVenafiProviderConfigCastingFailed)
@@ -372,44 +374,46 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 	vCertCfg := provConf.vCertCfg
 
 	//VCert connector fake has not implemented the RetireCertificate functionality
-	if !provConf.skipRetirement && vCertCfg.ConnectorType != endpoint.ConnectorTypeFake {
+	if provConf.skipRetirement || vCertCfg.ConnectorType == endpoint.ConnectorTypeFake {
+		// removing it from state
+		d.SetId("")
+		return nil
+	}
 
-		cl, err := getConnection(ctx, meta)
-		if err != nil {
-			return diag.FromErr(err)
+	cl, err := getConnection(ctx, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	certID := d.Id()
+	parameters := strings.Split(certID, ",")
+
+	var pickupID string
+
+	// When retrieving the certID we have to watch for two cases: when certificate is imported and when is not
+	// For both cases we get the pickupID from the first parameter and the key password from state
+	pickupID = parameters[0]
+
+	// But we need to make extra verifications if state was tainted by a third party.
+	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
+	if len(parameters) < 1 {
+		return buildStantardDiagError(fmt.Sprintf("%s: certID was not found from terraform state", terraformStateTainted))
+	} else if len(parameters) > 1 {
+		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
+	}
+
+	zone := vCertCfg.Zone
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		zone = buildAbsoluteZoneTPP(zone)
+		ok := strings.Contains(pickupID, zone)
+		if !ok {
+			pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
 		}
-		// Warning or errors can be collected in a slice type
+	}
 
-		certID := d.Id()
-		parameters := strings.Split(certID, ",")
-
-		var pickupID string
-
-		// When retrieving the certID we have to watch for two cases: when certificate is imported and when is not
-		// For both cases we get the pickupID from the first parameter and the key password from state
-		pickupID = parameters[0]
-
-		// But we need to make extra verifications if state was tainted by a third party.
-		// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
-		if len(parameters) < 1 {
-			return buildStantardDiagError(fmt.Sprintf("%s: certID was not found from terraform state", terraformStateTainted))
-		} else if len(parameters) > 1 {
-			return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
-		}
-
-		zone := vCertCfg.Zone
-		if cl.GetType() == endpoint.ConnectorTypeTPP {
-			zone = buildAbsoluteZoneTPP(zone)
-			ok := strings.Contains(pickupID, zone)
-			if !ok {
-				pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
-			}
-		}
-
-		if err = cl.RetireCertificate(&certificate.RetireRequest{CertificateDN: pickupID}); err != nil {
-			tflog.Error(ctx, "failed to retire the certificate "+err.Error())
-			return diag.FromErr(err)
-		}
+	if err = cl.RetireCertificate(&certificate.RetireRequest{CertificateDN: pickupID}); err != nil {
+		tflog.Error(ctx, "failed to retire the certificate "+err.Error())
+		return diag.FromErr(err)
 	}
 
 	// removing it from state
@@ -849,8 +853,14 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		return nil, fmt.Errorf(importKeyPasswordFailEmpty)
 	}
 
-	cfg := meta.(*venafiProviderConfig).vCertCfg
-	zone := cfg.Zone
+	//casting meta interface to the expected *venafiProviderConfig
+	provConf, ok := meta.(*venafiProviderConfig)
+	if !ok {
+		castError := errors.New(messageVenafiProviderConfigCastingFailed)
+		return nil, castError
+	}
+	vCertCfg := provConf.vCertCfg
+	zone := vCertCfg.Zone
 	if zone == "" {
 		return nil, fmt.Errorf(importZoneFailEmpty)
 	}

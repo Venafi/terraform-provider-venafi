@@ -139,6 +139,7 @@ func getIssuerHint(is string) util.IssuerHint {
 func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {
 	tflog.Info(ctx, "Building Venafi Connector")
 
+	//casting meta interface to the expected *venafiProviderConfig
 	provConfig, ok := meta.(*venafiProviderConfig)
 	if !ok {
 		castError := errors.New(messageVenafiProviderConfigCastingFailed)
