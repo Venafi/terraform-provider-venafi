@@ -29,9 +29,9 @@ const (
 	messageUseTLSPDC              = "Using Platform TLSPDC with url %s to issue certificate"
 	messageVenafiAuthFailed       = "Failed to authenticate to Venafi platform"
 
-	utilityName               = "HashiCorp Terraform"
-	defaultClientID           = "hashicorp-terraform-by-venafi"
-	defaultRetireCertDisabled = false
+	utilityName           = "HashiCorp Terraform"
+	defaultClientID       = "hashicorp-terraform-by-venafi"
+	defaultSkipRetirement = false
 
 	// Environment variables for Provider attributes
 	envVenafiURL            = "VENAFI_URL"
@@ -149,7 +149,7 @@ Example:
 			providerSkipRetirement: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultRetireCertDisabled),
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
 				Description: `Skips the retirement certificate on the configured Venafi Platform. By default this is set to false enabling the retirement certificate functionality`,
 			},
 		},
