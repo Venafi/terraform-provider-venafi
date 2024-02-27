@@ -20,17 +20,19 @@ import (
 )
 
 const (
-	messageVenafiPingFailed       = "Failed to ping Venafi endpoint"
-	messageVenafiPingSuccessful   = "Venafi ping successful"
-	messageVenafiClientInitFailed = "Failed to initialize Venafi client"
-	messageVenafiConfigFailed     = "Failed to build config for Venafi issuer"
-	messageUseDevMode             = "Using dev mode to issue certificate"
-	messageUseVaas                = "Using VaaS to issue certificate"
-	messageUseTLSPDC              = "Using Platform TLSPDC with url %s to issue certificate"
-	messageVenafiAuthFailed       = "Failed to authenticate to Venafi platform"
+	messageVenafiPingFailed                  = "Failed to ping Venafi endpoint"
+	messageVenafiPingSuccessful              = "Venafi ping successful"
+	messageVenafiClientInitFailed            = "Failed to initialize Venafi client"
+	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
+	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
+	messageUseDevMode                        = "Using dev mode to issue certificate"
+	messageUseVaas                           = "Using VaaS to issue certificate"
+	messageUseTLSPDC                         = "Using Platform TLSPDC with url %s to issue certificate"
+	messageVenafiAuthFailed                  = "Failed to authenticate to Venafi platform"
 
-	utilityName     = "HashiCorp Terraform"
-	defaultClientID = "hashicorp-terraform-by-venafi"
+	utilityName           = "HashiCorp Terraform"
+	defaultClientID       = "hashicorp-terraform-by-venafi"
+	defaultSkipRetirement = false
 
 	// Environment variables for Provider attributes
 	envVenafiURL            = "VENAFI_URL"
@@ -43,19 +45,21 @@ const (
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD"
 	envVenafiClientID       = "VENAFI_CLIENT_ID"
+	envVenafiSkipRetirement = "VENAFI_SKIP_RETIREMENT"
 
 	// Attributes of the provider
-	providerURL         = "url"
-	providerZone        = "zone"
-	providerDevMode     = "dev_mode"
-	providerUsername    = "tpp_username"
-	providerPassword    = "tpp_password"
-	providerP12Cert     = "p12_cert_filename"
-	providerP12Password = "p12_cert_password"
-	providerAccessToken = "access_token"
-	providerApiKey      = "api_key"
-	providerTrustBundle = "trust_bundle"
-	providerClientID    = "client_id"
+	providerURL            = "url"
+	providerZone           = "zone"
+	providerDevMode        = "dev_mode"
+	providerUsername       = "tpp_username"
+	providerPassword       = "tpp_password"
+	providerP12Cert        = "p12_cert_filename"
+	providerP12Password    = "p12_cert_password"
+	providerAccessToken    = "access_token"
+	providerApiKey         = "api_key"
+	providerTrustBundle    = "trust_bundle"
+	providerClientID       = "client_id"
+	providerSkipRetirement = "skip_retirement"
 )
 
 var (
@@ -143,6 +147,12 @@ Example:
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiClientID, defaultClientID),
 				Description: "application that will be using the token",
 			},
+			providerSkipRetirement: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
+				Description: `When true, certificates will not be retired on Venafi platforms when terraform destroy is run. Default is false.`,
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"venafi_certificate":     resourceVenafiCertificate(),
@@ -152,6 +162,11 @@ Example:
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
+}
+
+type venafiProviderConfig struct {
+	vCertCfg       *vcert.Config
+	skipRetirement bool
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
@@ -167,6 +182,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	p12Certificate := d.Get(providerP12Cert).(string)
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
+	skipRetirement := d.Get(providerSkipRetirement).(bool)
 
 	// Normalize zone for VCert usage
 	zone = normalizeZone(zone)
@@ -275,7 +291,10 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		}
 	}
 
-	return &cfg, diags
+	return &venafiProviderConfig{
+		vCertCfg:       &cfg,
+		skipRetirement: skipRetirement,
+	}, diags
 }
 
 func normalizeZone(zone string) string {
