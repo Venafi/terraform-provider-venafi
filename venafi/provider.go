@@ -23,7 +23,7 @@ const (
 	messageVenafiPingFailed                  = "Failed to ping Venafi endpoint"
 	messageVenafiPingSuccessful              = "Venafi ping successful"
 	messageVenafiClientInitFailed            = "Failed to initialize Venafi client"
-	messageVenafiProviderConfigCastingFailed = "Failed to cast to Venafi Provider Configuration"
+	messageVenafiProviderConfigCastingFailed = "Failed to obtain/retrieve Venafi Provider Configuration from context/meta"
 	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
 	messageUseVaas                           = "Using VaaS to issue certificate"
@@ -151,7 +151,7 @@ Example:
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
-				Description: `Skips the retirement of certificates on terraform destroy on Venafi Platform's side. Default is false.`,
+				Description: `When true, certificates will not be retired on Venafi platforms when terraform destroy is run. Default is false.`,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{

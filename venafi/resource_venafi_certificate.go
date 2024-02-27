@@ -388,11 +388,9 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 	certID := d.Id()
 	parameters := strings.Split(certID, ",")
 
-	var pickupID string
-
 	// When retrieving the certID we have to watch for two cases: when certificate is imported and when is not
 	// For both cases we get the pickupID from the first parameter and the key password from state
-	pickupID = parameters[0]
+	pickupID := parameters[0]
 
 	// But we need to make extra verifications if state was tainted by a third party.
 	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
