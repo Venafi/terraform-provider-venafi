@@ -397,7 +397,7 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 	if len(parameters) < 1 {
 		return buildStantardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state", terraformStateTainted))
 	} else if len(parameters) > 2 {
-		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
+		return buildStantardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state. Too many values", terraformStateTainted))
 	}
 
 	zone := vCertCfg.Zone
