@@ -396,7 +396,7 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
 	if len(parameters) < 1 {
 		return buildStantardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state", terraformStateTainted))
-	} else if len(parameters) > 1 {
+	} else if len(parameters) > 2 {
 		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
 	}
 
