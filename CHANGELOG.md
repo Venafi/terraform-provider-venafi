@@ -1,4 +1,4 @@
-## 0.18.0 (February 26th, 2024)
+## 0.18.0 (February 27th, 2024)
 Added support for certificate retirement on the related Venafi Platform (TLSPDC and TLSPC). This action will be executed by default when a `Terraform destroy` is executed.
 In order to have the ability to keep the previous behavior (the certificate was not going to be retired) it was added the new provider's boolean attribute `skip_retirement`.
 
