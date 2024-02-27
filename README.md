@@ -151,10 +151,10 @@ For backward compatibility during Terraform state refresh please update to versi
 > :warning: As a part for upgrading our provider to SDK version 2, we dropped support
 for Terraform version 0.11 and below.
 
-> :warning: Starting on [v.0.18.0](https://github.com/Venafi/terraform-provider-venafi/releases/tag/v0.18.0) 
- the **certificate retirement** is added meaning when an infrastructure is destroyed
- then the related certificate will be retired from the related Venafi Platform (TLSPDC and TLSPC). 
- It was also added the `skip_retirement` provider option to disable this behavior.
+> :warning: With the introduction of version [0.18.0](https://github.com/Venafi/terraform-provider-venafi/releases/tag/v0.18.0)
+the Venafi Terraform provider now incorporates a new feature related to certificate retirement.
+When an infrastructure is decommissioned, the associated certificate will be automatically retired
+from the Venafi Platform (TLSPDC and TLSPC).
 
 1. Declare that the Venafi Provider is required:
 
