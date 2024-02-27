@@ -23,7 +23,7 @@ const (
 	messageVenafiPingFailed                  = "Failed to ping Venafi endpoint"
 	messageVenafiPingSuccessful              = "Venafi ping successful"
 	messageVenafiClientInitFailed            = "Failed to initialize Venafi client"
-	messageVenafiProviderConfigCastingFailed = "Failed to obtain/retrieve Venafi Provider Configuration from context/meta"
+	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
 	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
 	messageUseVaas                           = "Using VaaS to issue certificate"
