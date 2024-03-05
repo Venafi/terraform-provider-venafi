@@ -2,7 +2,7 @@ terraform {
   required_providers {
     venafi = {
       source  = "venafi/venafi"
-      version = "0.10.2"
+      version = "0.18.0"
     }
     aws = {
       source  = "hashicorp/aws"
@@ -44,4 +44,20 @@ variable "test_site_name" {
 
 variable "test_site_domain" {
   type = string
+}
+
+variable "aws_vpc_cidr" {
+  type = string
+}
+
+variable "aws_vpc_azs" {
+  type = list(string)
+}
+
+variable "aws_vpc_private_subnets" {
+  type = list(string)
+}
+
+variable "aws_vpc_public_subnets" { 
+  type = list(string)
 }
