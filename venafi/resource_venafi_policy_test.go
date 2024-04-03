@@ -9,9 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Venafi/vcert/v5/pkg/policy"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	"github.com/Venafi/vcert/v5/pkg/policy"
 )
 
 // #nosec

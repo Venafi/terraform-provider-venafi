@@ -63,6 +63,8 @@ endif
 TERRAFORM_TEST_VERSION := 99.9.9
 TERRAFORM_TEST_DIR := terraform.d/plugins/registry.terraform.io/venafi/venafi/$(TERRAFORM_TEST_VERSION)/$(OS_STR)_$(CPU_STR)
 
+GO_LDFLAGS=-ldflags "-X github.com/Venafi/terraform-provider-venafi/venafi.versionString=$(VERSION) -s -w -extldflags '-static'"
+
 os:
 	@echo $(OS_STRING)
 
@@ -70,20 +72,20 @@ all: build test testacc
 
 #Build
 build_dev_dynamic:
-	env CGO_ENABLED=0 GOOS=$(OS_STR)   GOARCH=$(CPU_STR) go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=$(OS_STR)   GOARCH=$(CPU_STR) go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) || exit 1
 
 build_dev:
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
 
 build:
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_$(VERSION) || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin_arm/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/darwin_arm/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	#Build with debugging options, use it for remote debugging. Comment the above line
 	#env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build '-gcflags="all=-N -l" -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
+	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
 
 compress:
@@ -120,7 +122,7 @@ clean:
 
 dev: clean fmtcheck
 	go test ./...
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_NAME)_$(VERSION) || exit 1
 	terraform init
 
 test: fmtcheck linter test_go testacc test_e2e

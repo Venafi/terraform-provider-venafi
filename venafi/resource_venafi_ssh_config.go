@@ -3,9 +3,10 @@ package venafi
 import (
 	"context"
 
-	"github.com/Venafi/vcert/v5/pkg/certificate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/Venafi/vcert/v5/pkg/certificate"
 )
 
 func resourceVenafiSshConfig() *schema.Resource {

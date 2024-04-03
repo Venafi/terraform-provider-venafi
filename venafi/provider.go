@@ -10,13 +10,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Venafi/vcert/v5"
-	"github.com/Venafi/vcert/v5/pkg/endpoint"
-	"github.com/Venafi/vcert/v5/pkg/venafi/tpp"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"golang.org/x/crypto/pkcs12"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/venafi/tpp"
 )
 
 const (
@@ -26,8 +27,8 @@ const (
 	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
 	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
-	messageUseVaas                           = "Using VaaS to issue certificate"
-	messageUseTLSPDC                         = "Using Platform TLSPDC with url %s to issue certificate"
+	messageUseVaas                           = "Using `Venafi as a Service` to issue certificate"
+	messageUseTLSPDC                         = "Using `Trust Protection Platform` with url %s to issue certificate"
 	messageVenafiAuthFailed                  = "Failed to authenticate to Venafi platform"
 
 	utilityName           = "HashiCorp Terraform"
@@ -41,6 +42,8 @@ const (
 	envVenafiPassword       = "VENAFI_PASS"
 	envVenafiAccessToken    = "VENAFI_TOKEN"
 	envVenafiApiKey         = "VENAFI_API"
+	envVenafiTenantID       = "VENAFI_TENANT_ID"
+	envVenafiExternalJWT    = "VENAFI_EXTERNAL_JWT"
 	envVenafiDevMode        = "VENAFI_DEVMODE"
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD"
@@ -57,6 +60,8 @@ const (
 	providerP12Password    = "p12_cert_password"
 	providerAccessToken    = "access_token"
 	providerApiKey         = "api_key"
+	providerTenantID       = "tenant_id"
+	providerExternalJWT    = "external_jwt"
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
@@ -66,6 +71,9 @@ var (
 	messageVenafiNoAuthProvided = fmt.Sprintf("no authorization attributes defined in provider. "+
 		"One of the following must be set: %s, %s/%s, %s/%s, or %s",
 		providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey)
+	// this variable gets populated at build time, it represents the version of the provider
+	versionString string
+	userAgent     = fmt.Sprintf("%s/%s", defaultClientID, getVersionString()[1:])
 )
 
 // Provider returns a terraform.ResourceProvider.
@@ -135,6 +143,20 @@ Example:
 				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
 				Sensitive:   true,
 			},
+			providerTenantID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiTenantID, nil),
+				Description: `ID of the VCP tenant used to request a new access token`,
+				Sensitive:   true,
+			},
+			providerExternalJWT: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiExternalJWT, nil),
+				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				Sensitive:   true,
+			},
 			providerDevMode: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -172,6 +194,7 @@ type venafiProviderConfig struct {
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
 	tflog.Info(ctx, "Configuring venafi provider")
+	tflog.Info(ctx, fmt.Sprintf("User-Agent: %s", userAgent))
 	apiKey := d.Get(providerApiKey).(string)
 	url := d.Get(providerURL).(string)
 	tppUser := d.Get(providerUsername).(string)
@@ -183,6 +206,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
+	tenantID := d.Get(providerTenantID).(string)
+	externalIdPJWT := d.Get(providerExternalJWT).(string)
 
 	// Normalize zone for VCert usage
 	zone = normalizeZone(zone)
@@ -195,11 +220,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	accessTokenMethod := accessToken != ""
 	// TLSPC auth methods
 	apiKeyMethod := apiKey != ""
+	svcAccountMethod := tenantID != "" && externalIdPJWT != ""
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !devMode {
+	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !svcAccountMethod && !devMode {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -213,6 +239,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		BaseUrl:    url,
 		Zone:       zone,
 		LogVerbose: true,
+		UserAgent:  &userAgent,
 		Credentials: &endpoint.Authentication{
 			ClientId: clientID,
 		},
@@ -253,6 +280,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, messageUseVaas)
 		cfg.ConnectorType = endpoint.ConnectorTypeCloud
 		cfg.Credentials.APIKey = apiKey
+
+	} else if svcAccountMethod {
+		tflog.Info(ctx, messageUseVaas)
+		cfg.ConnectorType = endpoint.ConnectorTypeCloud
+		cfg.Credentials.TenantID = tenantID
+		cfg.Credentials.ExternalIdPJWT = externalIdPJWT
 
 	} else {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
@@ -402,4 +435,11 @@ func getAccessTokenFromClientCertificate(ctx context.Context, config *vcert.Conf
 
 	tflog.Info(ctx, "Successfully authenticated")
 	return nil
+}
+
+func getVersionString() string {
+	if versionString == "" {
+		return "Unknown"
+	}
+	return versionString
 }
