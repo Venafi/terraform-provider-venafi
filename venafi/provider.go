@@ -27,8 +27,8 @@ const (
 	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
 	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
-	messageUseVaas                           = "Using `Venafi as a Service` to issue certificate"
-	messageUseTLSPDC                         = "Using `Trust Protection Platform` with url %s to issue certificate"
+	messageUseVaas                           = "Using `Venafi Control Plane to issue certificate"
+	messageUseTLSPDC                         = "Using `Venafi Trust Protection Platform` with url %s to issue certificate"
 	messageVenafiAuthFailed                  = "Failed to authenticate to Venafi platform"
 
 	utilityName           = "HashiCorp Terraform"
@@ -42,8 +42,8 @@ const (
 	envVenafiPassword       = "VENAFI_PASS"
 	envVenafiAccessToken    = "VENAFI_TOKEN"
 	envVenafiApiKey         = "VENAFI_API"
-	envVenafiTenantID       = "VENAFI_TENANT_ID"
-	envVenafiExternalJWT    = "VENAFI_EXTERNAL_JWT"
+	envVenafiTokenURL       = "VENAFI_TOKEN_URL"
+	envVenafiIdPJWT         = "VENAFI_IDP_JWT"
 	envVenafiDevMode        = "VENAFI_DEVMODE"
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD"
@@ -60,8 +60,8 @@ const (
 	providerP12Password    = "p12_cert_password"
 	providerAccessToken    = "access_token"
 	providerApiKey         = "api_key"
-	providerTenantID       = "tenant_id"
-	providerExternalJWT    = "external_jwt"
+	providerTokenURL       = "token_url"
+	providerIdPJWT         = "idp_jwt"
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
@@ -140,21 +140,21 @@ Example:
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiApiKey, nil),
-				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				Description: `API key for Venafi Control Plane. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
 				Sensitive:   true,
 			},
-			providerTenantID: {
+			providerTokenURL: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(envVenafiTenantID, nil),
-				Description: `ID of the VCP tenant used to request a new access token`,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiTokenURL, nil),
+				Description: `Endpoint URL to request new Venafi Control Plane access tokens`,
 				Sensitive:   true,
 			},
-			providerExternalJWT: {
+			providerIdPJWT: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(envVenafiExternalJWT, nil),
-				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiIdPJWT, nil),
+				Description: `JWT of the identity provider associated to the Venafi Control Plane service account that is granting the access token`,
 				Sensitive:   true,
 			},
 			providerDevMode: {
@@ -206,8 +206,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
-	tenantID := d.Get(providerTenantID).(string)
-	externalIdPJWT := d.Get(providerExternalJWT).(string)
+	tokenURL := d.Get(providerTokenURL).(string)
+	idPJWT := d.Get(providerIdPJWT).(string)
 
 	// Normalize zone for VCert usage
 	zone = normalizeZone(zone)
@@ -220,7 +220,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	accessTokenMethod := accessToken != ""
 	// TLSPC auth methods
 	apiKeyMethod := apiKey != ""
-	svcAccountMethod := tenantID != "" && externalIdPJWT != ""
+	svcAccountMethod := tokenURL != "" && idPJWT != ""
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -284,8 +284,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	} else if svcAccountMethod {
 		tflog.Info(ctx, messageUseVaas)
 		cfg.ConnectorType = endpoint.ConnectorTypeCloud
-		cfg.Credentials.TenantID = tenantID
-		cfg.Credentials.ExternalIdPJWT = externalIdPJWT
+		cfg.Credentials.IdPJWT = idPJWT
+		cfg.Credentials.IdentityProvider = &endpoint.OAuthProvider{TokenURL: tokenURL}
 
 	} else {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
