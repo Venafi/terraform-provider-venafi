@@ -3,7 +3,6 @@ package venafi
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -820,7 +819,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 		return nil, fmt.Errorf("private key error(3): %s", err)
 	}
 
-	bytes, err := pkcs12.Encode(rand.Reader, privKey, cert, chainList, keyPassword)
+	bytes, err := pkcs12.LegacyRC2.Encode(privKey, cert, chainList, keyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("encode error: %s", err)
 	}
