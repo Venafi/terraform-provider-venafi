@@ -10,13 +10,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Venafi/vcert/v5"
-	"github.com/Venafi/vcert/v5/pkg/endpoint"
-	"github.com/Venafi/vcert/v5/pkg/venafi/tpp"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"golang.org/x/crypto/pkcs12"
+
+	"github.com/Venafi/vcert/v5"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/venafi/tpp"
 )
 
 const (
@@ -26,8 +27,8 @@ const (
 	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
 	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
-	messageUseVaas                           = "Using VaaS to issue certificate"
-	messageUseTLSPDC                         = "Using Platform TLSPDC with url %s to issue certificate"
+	messageUseVaas                           = "Using `Venafi Control Plane to issue certificate"
+	messageUseTLSPDC                         = "Using `Venafi Trust Protection Platform` with url %s to issue certificate"
 	messageVenafiAuthFailed                  = "Failed to authenticate to Venafi platform"
 
 	utilityName           = "HashiCorp Terraform"
@@ -41,6 +42,8 @@ const (
 	envVenafiPassword       = "VENAFI_PASS"
 	envVenafiAccessToken    = "VENAFI_TOKEN"
 	envVenafiApiKey         = "VENAFI_API"
+	envVenafiTokenURL       = "VENAFI_TOKEN_URL"
+	envVenafiIdPJWT         = "VENAFI_IDP_JWT"
 	envVenafiDevMode        = "VENAFI_DEVMODE"
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD"
@@ -57,6 +60,8 @@ const (
 	providerP12Password    = "p12_cert_password"
 	providerAccessToken    = "access_token"
 	providerApiKey         = "api_key"
+	providerTokenURL       = "token_url"
+	providerIdPJWT         = "idp_jwt"
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
@@ -66,6 +71,9 @@ var (
 	messageVenafiNoAuthProvided = fmt.Sprintf("no authorization attributes defined in provider. "+
 		"One of the following must be set: %s, %s/%s, %s/%s, or %s",
 		providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey)
+	// this variable gets populated at build time, it represents the version of the provider
+	versionString string
+	userAgent     = fmt.Sprintf("%s/%s", defaultClientID, getVersionString()[1:])
 )
 
 // Provider returns a terraform.ResourceProvider.
@@ -132,7 +140,21 @@ Example:
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiApiKey, nil),
-				Description: `API key for Venafi as a Service. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				Description: `API key for Venafi Control Plane. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				Sensitive:   true,
+			},
+			providerTokenURL: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiTokenURL, nil),
+				Description: `Endpoint URL to request new Venafi Control Plane access tokens`,
+				Sensitive:   true,
+			},
+			providerIdPJWT: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiIdPJWT, nil),
+				Description: `JWT of the identity provider associated to the Venafi Control Plane service account that is granting the access token`,
 				Sensitive:   true,
 			},
 			providerDevMode: {
@@ -172,6 +194,7 @@ type venafiProviderConfig struct {
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
 	tflog.Info(ctx, "Configuring venafi provider")
+	tflog.Info(ctx, fmt.Sprintf("User-Agent: %s", userAgent))
 	apiKey := d.Get(providerApiKey).(string)
 	url := d.Get(providerURL).(string)
 	tppUser := d.Get(providerUsername).(string)
@@ -183,6 +206,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
+	tokenURL := d.Get(providerTokenURL).(string)
+	idPJWT := d.Get(providerIdPJWT).(string)
 
 	// Normalize zone for VCert usage
 	zone = normalizeZone(zone)
@@ -195,11 +220,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	accessTokenMethod := accessToken != ""
 	// TLSPC auth methods
 	apiKeyMethod := apiKey != ""
+	svcAccountMethod := tokenURL != "" && idPJWT != ""
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !devMode {
+	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !svcAccountMethod && !devMode {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -213,6 +239,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		BaseUrl:    url,
 		Zone:       zone,
 		LogVerbose: true,
+		UserAgent:  &userAgent,
 		Credentials: &endpoint.Authentication{
 			ClientId: clientID,
 		},
@@ -253,6 +280,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, messageUseVaas)
 		cfg.ConnectorType = endpoint.ConnectorTypeCloud
 		cfg.Credentials.APIKey = apiKey
+
+	} else if svcAccountMethod {
+		tflog.Info(ctx, messageUseVaas)
+		cfg.ConnectorType = endpoint.ConnectorTypeCloud
+		cfg.Credentials.IdPJWT = idPJWT
+		cfg.Credentials.IdentityProvider = &endpoint.OAuthProvider{TokenURL: tokenURL}
 
 	} else {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
@@ -402,4 +435,11 @@ func getAccessTokenFromClientCertificate(ctx context.Context, config *vcert.Conf
 
 	tflog.Info(ctx, "Successfully authenticated")
 	return nil
+}
+
+func getVersionString() string {
+	if versionString == "" {
+		return "Unknown"
+	}
+	return versionString
 }

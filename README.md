@@ -163,7 +163,7 @@ from the Venafi Platform (TLSPDC and TLSPC).
      required_providers {
        venafi = {
          source = "venafi/venafi"
-         version = "~> 0.15.5"
+         version = "~> 0.16.0"
        }
      }
      required_version = ">= 0.13"
@@ -191,7 +191,16 @@ from the Venafi Platform (TLSPDC and TLSPC).
      zone    = "Business App\\Enterprise CIT"
    }
    ```
+   
+   **Venafi as a Service with access token**:
 
+   ```text
+   provider "venafi" {
+     tenant_id = "xxxxxxxx-xxxx"
+     external_jwt = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     zone    = "Business App\\Enterprise CIT"
+   }
+   ```
    **Venafi as a Service for EU**:
 
    ```text
@@ -204,20 +213,22 @@ from the Venafi Platform (TLSPDC and TLSPC).
 
    The `venafi` provider has the following options:
 
-   | Property            | Type                                                                                | Description                                                                                                                                                                                | Env. Variable          |
-   |---------------------|-------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
-   | `api_key`           | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi as a Service API key                                                                                                                                                                | VENAFI_API             |
-   | `access_token`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Trust Protection Platform access token for the "hashicorp-terraform-by-venafi" API Application                                                                                             | VENAFI_TOKEN           |
-   | `client_id`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ID of the application that will request tokens. Not necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`                                   | VENAFI_CLIENT_ID       |
-   | `p12_cert_filename` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to Venafi Platform                                                       | VENAFI_P12_CERTIFICATE |
-   | `p12_cert_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Password for the PKCS#12 keystore declared in `p12_cert_filename`                                                                                                                          | VENAFI_P12_PASSWORD    |
-   | `tpp_username`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible                                                                                                 | VENAFI_USER            |
-   | `tpp_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible                                                                                                 | VENAFI_PASS            |
-   | `trust_bundle`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform                                                                             |                        |
-   | `url`               | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Venafi service URL (e.g. "https://tpp.venafi.example")                                                                                                                                     | VENAFI_URL             |
-   | `zone`              | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT")                                                                     | VENAFI_ZONE            |
-   | `skip_retirement`   | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)  | If it's specified with value `true` then the certificate retirement on the related Venafi Platform (TLSPDC or TLSPC) will be skipped. A value of `false` is equivalent to omit this option | VENAFI_SKIP_RETIREMENT |
-   | `dev_mode`          | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool)  | When "true", the provider operates without connecting to TPP or VaaS                                                                                                                       | VENAFI_DEVMODE         |
+   | Property            | Type                                                                              | Description                                                                                                                                                          | Env. Variable           |
+   |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|
+   | `api_key`           | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | `Venafi as a Service` API key                                                                                                                                        | VENAFI_API              |
+   | `access_token`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | `Trust Protection Platform` access token for the "hashicorp-terraform-by-venafi" API Application                                                                     | VENAFI_TOKEN            |
+   | `client_id`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ID of the application that will request tokens. Not necessary when `access_token` provided. If not provided, defaults to `hashicorp-terraform-by-venafi`             | VENAFI_CLIENT_ID        |
+   | `external_jwt` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | JWT of the Identity Provider associated to a `Venafi as a Service` service account. Use it along with `tenant_id` to request access tokens for `Venafi as a Service` | VENAFI_EXTERNAL_JWT |
+   | `p12_cert_filename` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to Venafi Platform                                 | VENAFI_P12_CERTIFICATE  |
+   | `p12_cert_password` | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Password for the PKCS#12 keystore declared in `p12_cert_filename`                                                                                                    | VENAFI_P12_PASSWORD     |
+   | `tenant_id`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ID of the `Venafi as a Service` tenant that will request the access token. Use it along with `external_jwt` to request access tokens for `Venafi as a Service`       | VENAFI_TENANT_ID |
+   | `tpp_username`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible                                                                           | VENAFI_USER             |
+   | `tpp_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible                                                                           | VENAFI_PASS             |
+   | `trust_bundle`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform                                                       |                         |
+   | `url`               | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | `Trust Protection Platform` service URL (e.g. "https://tpp.venafi.example")                                                                                          | VENAFI_URL              |
+   | `zone`              | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Policy folder for `Trust Protection Platform` or Application name and Issuing Template API Alias for `Venafi as a Service` (e.g. "Business App\\Enterprise CIT")     | VENAFI_ZONE             |
+   | `skip_retirement`   | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool) | When `true` the certificate retirement on the related Venafi Platform (`Trust Protection Platform` or `Venafi as a Service`) will be skipped                         | VENAFI_SKIP_RETIREMENT  |
+   | `dev_mode`          | [Boolean](https://www.terraform.io/docs/extend/schemas/schema-types.html#typebool) | When `true`, the provider operates without connecting to `Trust Protection Platform` or `Venafi as a Service`                                                        | VENAFI_DEVMODE          |
 
    >:pushpin: **NOTE**: The indicated environment variables can be used to specify
    values for provider settings rather than including them in a configuration 
@@ -225,7 +236,7 @@ from the Venafi Platform (TLSPDC and TLSPC).
    Service since that variable is used by the provider to decide which Venafi product
    to use.
 
- Create a `venafi_certificate` resource that will generate a new key pair and
+3. Create a `venafi_certificate` resource that will generate a new key pair and 
    enroll the certificate needed by a "tls_server" application:
 
    ```text
@@ -246,23 +257,23 @@ from the Venafi Platform (TLSPDC and TLSPC).
 
    >:pushpin: **NOTE**: Updating only `expiration_window` will not trigger another resource to be created by itself, thus won't enroll a new certificate. This won't apply if the expiration_window constraint allows it, this means, if time to expire of the certificate is within the expiration window.
 
-   | Property            | Type          |  Description                                                                      | Default   |
-   |---------------------| ------------------- |--------------------------------------------------------------------------------- | --------- |
-   | `common_name`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Common name of certificate                                                        | `none` |
-   | `nickname`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP.|`none`|
-   | `san_dns`           | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of DNS names to use as alternative subjects of the certificate               | `none` |
-   | `san_email`         | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of email addresses to use as alternative subjects of the certificate         | `none` |
-   | `san_ip`            | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of IP addresses to use as alternative subjects of the certificate            | `none` |
-   | `san_uri`           | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of Uniform Resource Identifiers (URIs) to use as alternative subjects of the certificate            | `none` |
-   | `algorithm`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Key encryption algorithm (i.e. RSA or ECDSA)                                      | RSA    |
-   | `rsa_bits`          | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of bits to use when generating an RSA key pair (i.e. 2048 or 4096). Applies when `algorithm`=RSA | 2048   |
-   | `ecdsa_curve`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ECDSA curve to use when generating a key pair (i.e. P256, P384, P521). Applies when `algorithm`=ECDSA | P521   |
-   | `key_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Private key password                                                              | `none` |
-   | `custom_fields`     | [Map](https://www.terraform.io/docs/extend/schemas/schema-types.html#typemap) | Collection of key-value pairs where the key is the name of the Custom Field in Trust Protection Platform.  For list type Custom Fields, use the \| character to delimit mulitple values.<br/>Example: `custom_fields = { "Number List" = "2\|4\|6" }` | `none` |
-   | `valid_days`        | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Desired number of days for which the new certificate will be valid | `none` |
+   | Property            | Type          | Description                                                                                                                                                                       | Default   |
+   |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------- | --------- |
+   | `common_name`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Common name of certificate                                                                                                                                                        | `none` |
+   | `nickname`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for Trust Protection Platform.                                       |`none`|
+   | `san_dns`           | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of DNS names to use as alternative subjects of the certificate                                                                                                       | `none` |
+   | `san_email`         | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of email addresses to use as alternative subjects of the certificate                                                                                                 | `none` |
+   | `san_ip`            | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of IP addresses to use as alternative subjects of the certificate                                                                                                    | `none` |
+   | `san_uri`           | [List](https://www.terraform.io/docs/extend/schemas/schema-types.html#typelist) | String array of Uniform Resource Identifiers (URIs) to use as alternative subjects of the certificate                                                                             | `none` |
+   | `algorithm`         | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Key encryption algorithm (i.e. RSA or ECDSA)                                                                                                                                      | RSA    |
+   | `rsa_bits`          | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of bits to use when generating an RSA key pair (i.e. 2048 or 4096). Applies when `algorithm`=RSA                                                                           | 2048   |
+   | `ecdsa_curve`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | ECDSA curve to use when generating a key pair (i.e. P256, P384, P521). Applies when `algorithm`=ECDSA                                                                             | P521   |
+   | `key_password`      | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Private key password                                                                                                                                                              | `none` |
+   | `custom_fields`     | [Map](https://www.terraform.io/docs/extend/schemas/schema-types.html#typemap) | Collection of key-value pairs where the key is the name of the Custom Field in Trust Protection Platform.  For list type Custom Fields, use the \                                 | character to delimit mulitple values.<br/>Example: `custom_fields = { "Number List" = "2\|4\|6" }` | `none` |
+   | `valid_days`        | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Desired number of days for which the new certificate will be valid                                                                                                                | `none` |
    | `issuer_hint`       | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Used with `valid_days` to indicate the target issuer when using Trust Protection Platform and the CA is DigiCert, Entrust, or Microsoft.<br/>Example: `issuer_hint = "Microsoft"` | `none` |
-   | `expiration_window` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of hours before certificate expiry to request a new certificate            | 168    |
-   | `csr_origin`        | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Option to decide whether key-pair generation will be `local` or `service` generated | `local` |
+   | `expiration_window` | [Integer](https://www.terraform.io/docs/extend/schemas/schema-types.html#typeint) | Number of hours before certificate expiry to request a new certificate                                                                                                            | 168    |
+   | `csr_origin`        | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Option to decide whether key-pair generation will be `local` or `service` generated                                                                                               | `local` |
 
    >:pushpin: **NOTE**: The `venafi_certificate` resource handles certificate
    renewals as long as a `terraform apply` is done within the `expiration_window`
@@ -279,7 +290,7 @@ from the Venafi Platform (TLSPDC and TLSPC).
    | `certificate`     | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | End-entity certificate in PEM format |
    | `pkcs12`          | [String](https://www.terraform.io/docs/extend/schemas/schema-types.html#typestring) | Base64-encoded PKCS#12 keystore encrypted using `key_password`, if specified. Useful when working with resources like [azurerm_key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html). Base64 decode to obtain file bytes. |
 
-5. For verification purposes, output the certificate, private key, and
+4. For verification purposes, output the certificate, private key, and
    chain in PEM format and as a PKCS#12 keystore (base64-encoded):
 
    ```text
@@ -301,7 +312,7 @@ from the Venafi Platform (TLSPDC and TLSPC).
    }
    ```
 
-6. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
+5. Execute `terraform init`, `terraform plan`, `terraform apply`, and finally
    `terraform show` from the directory containing the configuration file.
 
 ### Importing
@@ -317,17 +328,17 @@ The `import_id` is composed by an `id` which is different for each platform, a c
 
 The `id` for each platform is:
 
-**TPP:**
+**Trust Protection Platform:**
 
-The `nickname` of the certificate, which represents the name of the certificate object in TPP. Internally we built the `pickup_id` using the `zone` defined at the provider block.
+The `nickname` of the certificate, which represents the name of the certificate object in Trust Protection Platform. Internally we built the `pickup_id` using the `zone` defined at the provider block.
 
->:pushpin: **NOTE**: The certificate object name at TPP, usually, should be the same as the `common_name` provided as it is considered good practice, but the `nickname` actually could differ from the common name, as there some use cases whenever you want to handle certificates with different nicknames. For example, you could have certificates with same common name and different SANs, then, you could manage many certificate resources that share the same common name using `for_each` and `count` meta arguments.
+>:pushpin: **NOTE**: The certificate object name at Trust Protection Platform, usually, should be the same as the `common_name` provided as it is considered good practice, but the `nickname` actually could differ from the common name, as there some use cases whenever you want to handle certificates with different nicknames. For example, you could have certificates with same common name and different SANs, then, you could manage many certificate resources that share the same common name using `for_each` and `count` meta arguments.
 
-**VaaS:**
+**Venafi as a Service:**
 
 The `pickup-id`.
 
->:pushpin: **NOTE**: You can learn more about the `pickup-id` and pickup actions for TPP, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#certificate-retrieval-parameters), and for Vaas, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-CLOUD.md)
+>:pushpin: **NOTE**: You can learn more about the `pickup-id` and pickup actions for Trust Protection Platform [here](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#certificate-retrieval-parameters), and for Venafi as a Service, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-CLOUD.md#certificate-retrieval-parameters)
 ```sh
 terraform import "venafi_certificate.<resource_name>" "<id>,<key-password>"
 ```
@@ -337,12 +348,12 @@ Example (assuming our resource name is `imported_certificate`):
 resource "venafi_certificate" "imported_certificate" {}
 ```
 
-**TPP:**
+**Trust Protection Platform:**
 ```sh
 terraform import "venafi_certificate.imported_certificate" "tpp.venafi.example,my_key_password"
 ```
 
-**VaaS:**
+**Venafi as a Service:**
 ```sh
 terraform import "venafi_certificate.imported_certificate" "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,my_key_password"
 ```
@@ -381,7 +392,7 @@ terraform import "venafi_certificate.imported_certificate" "xxxxxxxx-xxxx-xxxx-x
    specification is populated from the existing infrastructure.
    Policy that is successfully imported is also output to a file
    named after the zone that was specified.  The 
-   *certificate:manage* scope is require to import policy from TPP.
+   *certificate:manage* scope is require to import policy from Trust Protection Platform.
 
 ## SSH Certificate Management
 

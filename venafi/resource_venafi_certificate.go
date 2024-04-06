@@ -3,7 +3,6 @@ package venafi
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -18,16 +17,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Venafi/vcert/v5/pkg/certificate"
-	"github.com/Venafi/vcert/v5/pkg/endpoint"
-	"github.com/Venafi/vcert/v5/pkg/policy"
-	"github.com/Venafi/vcert/v5/pkg/util"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
 	"github.com/youmark/pkcs8"
 	"software.sslmate.com/src/go-pkcs12"
+
+	"github.com/Venafi/vcert/v5/pkg/certificate"
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/policy"
+	"github.com/Venafi/vcert/v5/pkg/util"
 )
 
 const (
@@ -819,7 +819,7 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 		return nil, fmt.Errorf("private key error(3): %s", err)
 	}
 
-	bytes, err := pkcs12.Encode(rand.Reader, privKey, cert, chainList, keyPassword)
+	bytes, err := pkcs12.LegacyRC2.Encode(privKey, cert, chainList, keyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("encode error: %s", err)
 	}
