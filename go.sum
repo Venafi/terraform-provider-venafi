@@ -68,6 +68,10 @@ github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 h1:kkhsdkhsCv
 github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371/go.mod h1:EjAoLdwvbIOoOQr3ihjnSoLZRtE8azugULFRteWMNc0=
 github.com/Venafi/vcert/v5 v5.6.2 h1:w4fL6lEWPXXoHfyetVTyAl5hI30cGVR2cLxZ2ueNH90=
 github.com/Venafi/vcert/v5 v5.6.2/go.mod h1:6NgXvi7m0MJzma4vNDmoMt0Pj12pGPKLPr293kcdyEA=
+github.com/Venafi/vcert/v5 v5.6.3-0.20240408220949-0dd99e9f0c6c h1:UpbAsh0S3ZBRLlbiGwZXBdqQq0/ujw/Jtc6p+WAubPU=
+github.com/Venafi/vcert/v5 v5.6.3-0.20240408220949-0dd99e9f0c6c/go.mod h1:6NgXvi7m0MJzma4vNDmoMt0Pj12pGPKLPr293kcdyEA=
+github.com/Venafi/vcert/v5 v5.6.3-0.20240409005006-5fad1adc4450 h1:zh+9nyl9MaPkJjhynBAJfBUG1WB4uOfX9hv5+KpnKUA=
+github.com/Venafi/vcert/v5 v5.6.3-0.20240409005006-5fad1adc4450/go.mod h1:6NgXvi7m0MJzma4vNDmoMt0Pj12pGPKLPr293kcdyEA=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
