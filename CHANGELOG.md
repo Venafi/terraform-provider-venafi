@@ -1,7 +1,10 @@
-## 0.19.0 (April 2nd, 2024)
+## 0.20.0 (April 10th, 2024)
+- Changed attribute name from `idp_jwt` to `external_jwt`
+
+## 0.19.0 (April 8th, 2024)
 - Added support for service account authentication for Venafi as a Service. Two new attributes have been added 
-to the provider: `token_url` and `idp_jwt`.
-Check [README.md](https://github.com/Venafi/terraform-provider-venafi/blob/master/README.md) for more details.
+to the provider: `token_url` and `idp_jwt`. Check [README.md](https://github.com/Venafi/terraform-provider-venafi/blob/master/README.md) 
+for more details.
 - Added custom User-Agent to identify API calls made by the provider, in the form: `hashicorp-terraform-by-venafi/x.x.x` 
 where x is the provider's version.
 
