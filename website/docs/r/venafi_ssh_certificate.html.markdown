@@ -38,27 +38,35 @@ The following arguments are supported:
 
 * `force_command` - (Optional, string) A command to run after successful login.
 
-* `key_size` - (Optional, integer) Number of bits to use when creating a key pair. (e.g. 3072)
+* `key_size` - (Optional, integer) Number of bits to use when creating a key pair. (e.g. `3072`).
 
 * `windows` - (Optional, boolean) Specifies whether the private key will use Windows/DOS style line breaks.
 
 * `valid_hours` - (Optional, integer) Desired number of hours for which the certificate will be valid.
 
-* `object_name` - (Optional, string) The friendly name of the SSH certificate object. When not specified the `key_id` is used for the friendly name. If the object already exists the old certificate is archived and the CA issues a new certificate.
+* `object_name` - (Optional, string) The friendly name of the SSH certificate object. When not specified the `key_id` 
+is used for the friendly name. If the object already exists the old certificate is archived and the CA issues a new 
+certificate.
 
 * `public_key` - (Optional, string) The OpenSSH formatted public key that will be used to generate the SSH certificate.
 
-* `public_key_method` - (Optional, string) Specifies whether the public key will be "local" (default), "file" or "service" generated.
+* `public_key_method` - (Optional, string) Specifies whether the public key will be `local` (default), `file` or 
+`service` generated.
 
-* `principal` [DEPRECATED] - (Optional, set of strings) Use "principals" instead. A list of user names for whom the requested certificate will be valid.
+* `principal` [DEPRECATED] - (Optional, set of strings) Use "principals" instead. A list of usernames for whom the 
+requested certificate will be valid.
 
-* `principals` - (Optional, set of strings) A list of user names for whom the requested certificate will be valid.
+* `principals` - (Optional, set of strings) A list of usernames for whom the requested certificate will be valid.
 
-* `source_address` - (Optional, set of strings) A list of one or more valid IP or CIDR addresses that can use the SSH certificate.
+* `source_address` - (Optional, set of strings) A list of one or more valid IP or CIDR addresses that can use the SSH 
+certificate.
 
-* `destination_address` - (Optional, set of strings) A list of one or more valid IP or CIDR destination hosts where the certificate will authenticate.
+* `destination_address` - (Optional, set of strings) A list of one or more valid IP or CIDR destination hosts where the 
+certificate will authenticate.
 
-* `extension` - (Optional, set of strings) A list of key-value pairs that contain certificate extensions from the CA template for client certificates. Allowed values (case-sensitive): *permit-X11-forwarding, permit-agent-forwarding, permit-port-forwarding, permit-pty, permit-user-rc*
+* `extension` - (Optional, set of strings) A list of key-value pairs that contain certificate extensions from the CA 
+template for client certificates. Allowed values (case-sensitive): `permit-X11-forwarding`, `permit-agent-forwarding`, 
+`permit-port-forwarding`, `permit-pty`, `permit-user-rc`.
 
 
 ## Attributes Reference

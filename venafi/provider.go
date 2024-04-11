@@ -43,7 +43,7 @@ const (
 	envVenafiAccessToken    = "VENAFI_TOKEN"
 	envVenafiApiKey         = "VENAFI_API"
 	envVenafiTokenURL       = "VENAFI_TOKEN_URL"
-	envVenafiIdPJWT         = "VENAFI_IDP_JWT"
+	envVenafiExternalJWT    = "VENAFI_EXTERNAL_JWT"
 	envVenafiDevMode        = "VENAFI_DEVMODE"
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD"
@@ -61,7 +61,7 @@ const (
 	providerAccessToken    = "access_token"
 	providerApiKey         = "api_key"
 	providerTokenURL       = "token_url"
-	providerIdPJWT         = "idp_jwt"
+	providerExternalJWT    = "external_jwt"
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
@@ -150,10 +150,10 @@ Example:
 				Description: `Endpoint URL to request new Venafi Control Plane access tokens`,
 				Sensitive:   true,
 			},
-			providerIdPJWT: {
+			providerExternalJWT: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(envVenafiIdPJWT, nil),
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiExternalJWT, nil),
 				Description: `JWT of the identity provider associated to the Venafi Control Plane service account that is granting the access token`,
 				Sensitive:   true,
 			},
@@ -207,7 +207,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	clientID := d.Get(providerClientID).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
 	tokenURL := d.Get(providerTokenURL).(string)
-	idPJWT := d.Get(providerIdPJWT).(string)
+	externalJWT := d.Get(providerExternalJWT).(string)
 
 	// Normalize zone for VCert usage
 	zone = normalizeZone(zone)
@@ -220,7 +220,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	accessTokenMethod := accessToken != ""
 	// TLSPC auth methods
 	apiKeyMethod := apiKey != ""
-	svcAccountMethod := tokenURL != "" && idPJWT != ""
+	svcAccountMethod := tokenURL != "" && externalJWT != ""
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -284,8 +284,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	} else if svcAccountMethod {
 		tflog.Info(ctx, messageUseVaas)
 		cfg.ConnectorType = endpoint.ConnectorTypeCloud
-		cfg.Credentials.IdPJWT = idPJWT
-		cfg.Credentials.IdentityProvider = &endpoint.OAuthProvider{TokenURL: tokenURL}
+		cfg.Credentials.ExternalJWT = externalJWT
+		cfg.Credentials.TokenURL = tokenURL
 
 	} else {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)

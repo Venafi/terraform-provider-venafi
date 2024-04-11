@@ -6,7 +6,7 @@ variable "CLOUD_ZONE" {
   type = string
 }
 
-variable "TENANT_ID" {
+variable "TOKEN_URL" {
   type = string
 }
 
@@ -16,7 +16,7 @@ variable "EXTERNAL_JWT" {
 
 provider "venafi" {
   alias = "dev"
-  tenant_id = var.TENANT_ID
+  token_url = var.TOKEN_URL
   external_jwt = var.EXTERNAL_JWT
   zone = var.CLOUD_ZONE
 }
