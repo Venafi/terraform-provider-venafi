@@ -905,7 +905,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 
 func fillRetrieveRequest(id string, password string, connectorType endpoint.ConnectorType, origin string) *certificate.Request {
 	pickupReq := &certificate.Request{}
-	pickupReq.Timeout = 180 * time.Second
+	pickupReq.Timeout = 600 * time.Second
 	pickupReq.PickupID = id
 	pickupReq.KeyPassword = password
 

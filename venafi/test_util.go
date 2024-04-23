@@ -463,7 +463,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	startTime := time.Now()
 	for {
 		if serviceGenerated {
-			req.Timeout = 180 * time.Second
+			req.Timeout = 600 * time.Second
 			req.KeyPassword = data.private_key_password
 			if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
 				req.FetchPrivateKey = true
