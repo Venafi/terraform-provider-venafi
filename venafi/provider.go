@@ -182,13 +182,16 @@ Example:
 			"venafi_ssh_certificate": resourceVenafiSshCertificate(),
 			"venafi_ssh_config":      resourceVenafiSshConfig(),
 		},
+		DataSourcesMap: map[string]*schema.Resource{
+			"venafi_cloud_provider": DataSourceCloudProvider(),
+		},
 		ConfigureContextFunc: providerConfigure,
 	}
 }
 
-type venafiProviderConfig struct {
-	vCertCfg       *vcert.Config
-	skipRetirement bool
+type ProviderConfig struct {
+	VCertConfig    *vcert.Config
+	SkipRetirement bool
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
@@ -324,9 +327,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		}
 	}
 
-	return &venafiProviderConfig{
-		vCertCfg:       &cfg,
-		skipRetirement: skipRetirement,
+	return &ProviderConfig{
+		VCertConfig:    &cfg,
+		SkipRetirement: skipRetirement,
 	}, diags
 }
 

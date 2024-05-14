@@ -56,7 +56,20 @@ else
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		OS_STR := darwin
-		CPU_STR := amd64
+
+		UNAME_P := $(shell uname -p)
+		ifeq ($(UNAME_P),x86_64)
+			CPU_STR := amd64
+		else
+			ifneq ($(filter %86,$(UNAME_P)),)
+				CPU_STR := 386
+			else
+				CPU_STR := amd64
+			endif
+			ifeq ($(UNAME_P),arm)
+				CPU_STR := arm64
+			endif
+		endif
 	endif
 endif
 

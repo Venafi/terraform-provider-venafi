@@ -216,7 +216,7 @@ func resourceVenafiSshCertCreate(ctx context.Context, d *schema.ResourceData, me
 
 		if pubKeyS == "" {
 
-			return buildStantardDiagError("public key is empty")
+			return buildStandardDiagError("public key is empty")
 
 		}
 
