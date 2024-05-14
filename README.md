@@ -55,7 +55,7 @@ has been granted WebSDK Access (deprecated).
   - Management Type not locked or locked to `Enrollment`.
   - Certificate Signing Request (CSR) Generation unlocked or not locked to `Service Generated CSR`.
   - Generate Key/CSR on Application not locked or locked to `No`.
-  - Private Key PBE Algorithm to either `SHA1 3DES` or `SHA256 AES256` to `Service Generated CSR`
+  - Private Key PBE Algorithm to either `SHA1 3DES` or `SHA256 AES256` to `Service Generated CSR`.
   - (Recommended) Disable Automatic Renewal set to `Yes`.
   - (Recommended) Key Bit Strength set to `2048` or higher.
   - (Recommended) Domain Whitelisting policy appropriately assigned.
