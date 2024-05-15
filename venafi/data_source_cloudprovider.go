@@ -61,7 +61,7 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if connector.GetType() != endpoint.ConnectorTypeCloud {
-		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Provider Data source is only available for VCP", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Provider data source is only available for VCP", connector.GetType().String()))
 	}
 
 	cpName := d.Get(cloudProviderName)
