@@ -80,6 +80,8 @@ github.com/Venafi/vcert/v5 v5.6.5-0.20240514001319-bc2871bc5f19 h1:qvrfy7wzfOMSJ
 github.com/Venafi/vcert/v5 v5.6.5-0.20240514001319-bc2871bc5f19/go.mod h1:GCTxMfAADT3lG3alUk1BxVIKGMw458YzGPiXTQ0K/dE=
 github.com/Venafi/vcert/v5 v5.6.5-0.20240514235243-14c15881e8ce h1:V2v+7Fi2GaSuJDKif9NGQsKWcNdIU/0rQuJZm1bZ8TI=
 github.com/Venafi/vcert/v5 v5.6.5-0.20240514235243-14c15881e8ce/go.mod h1:GCTxMfAADT3lG3alUk1BxVIKGMw458YzGPiXTQ0K/dE=
+github.com/Venafi/vcert/v5 v5.6.5-0.20240515162630-55e78bc0587e h1:WavmaZpG0x85GOFhvvwLKxYmFXpqOMO29obBYpsYhXA=
+github.com/Venafi/vcert/v5 v5.6.5-0.20240515162630-55e78bc0587e/go.mod h1:GCTxMfAADT3lG3alUk1BxVIKGMw458YzGPiXTQ0K/dE=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
