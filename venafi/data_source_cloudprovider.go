@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	cloudProviderID             = "id"
 	cloudProviderName           = "name"
 	cloudProviderType           = "type"
 	cloudProviderStatus         = "status"
