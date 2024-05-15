@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
 
 const (
