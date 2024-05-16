@@ -3,14 +3,14 @@ module github.com/Venafi/terraform-provider-venafi
 go 1.21
 
 require (
-	github.com/Venafi/vcert/v5 v5.6.5-0.20240515230500-55203efd5e07
+	github.com/Venafi/vcert/v5 v5.6.5-0.20240516011016-3f129abb0388
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.29.0
 	github.com/pkg/errors v0.9.1
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
-	golang.org/x/crypto v0.22.0
+	golang.org/x/crypto v0.23.0
 	software.sslmate.com/src/go-pkcs12 v0.4.0
 )
 
@@ -210,11 +210,11 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.15.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.19.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230911183012-2d3300fd4832 // indirect
