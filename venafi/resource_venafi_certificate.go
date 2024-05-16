@@ -215,14 +215,14 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 
 func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
-	//casting meta interface to the expected *venafiProviderConfig
-	provConf, ok := meta.(*venafiProviderConfig)
+	//casting meta interface to the expected *ProviderConfig
+	provConf, ok := meta.(*ProviderConfig)
 	if !ok {
 		castError := errors.New(messageVenafiProviderConfigCastingFailed)
 		tflog.Error(ctx, castError.Error())
 		return diag.FromErr(castError)
 	}
-	vCertCfg := provConf.vCertCfg
+	vCertCfg := provConf.VCertConfig
 
 	cl, err := getConnection(ctx, meta)
 	if err != nil {
@@ -250,17 +250,17 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 	// But we need to make extra verifications if state was tainted by a third party.
 	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
 	if len(parameters) < 1 {
-		return buildStantardDiagError(fmt.Sprintf("%s: certID was not found from terraform state", terraformStateTainted))
+		return buildStandardDiagError(fmt.Sprintf("%s: certID was not found from terraform state", terraformStateTainted))
 	} else if len(parameters) == 2 {
 		// since the key password is also within the certID, we want to verify if it differs from the one defined at state
 		keyPasswordFromImport = parameters[1]
 		if keyPassword != "" {
 			if keyPassword != keyPasswordFromImport {
-				return buildStantardDiagError(fmt.Sprintf("%s: key passwords mismatch! the key_password defined in the id,, differs from the attribute key_password defined at terraform state", terraformStateTainted))
+				return buildStandardDiagError(fmt.Sprintf("%s: key passwords mismatch! the key_password defined in the id,, differs from the attribute key_password defined at terraform state", terraformStateTainted))
 			}
 		}
 	} else if len(parameters) > 2 {
-		return buildStantardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
+		return buildStandardDiagError(fmt.Sprintf("%s: many values were found defined at certID from terraform state", terraformStateTainted))
 	}
 
 	zone := vCertCfg.Zone
@@ -274,7 +274,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	origin := d.Get("csr_origin").(string)
-	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), origin)
+	pickupReq := fillRetrieveRequest(pickupID, keyPassword, origin)
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
@@ -364,17 +364,17 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 
 func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
 
-	//casting meta interface to the expected *venafiProviderConfig
-	provConf, ok := meta.(*venafiProviderConfig)
+	//casting meta interface to the expected *ProviderConfig
+	provConf, ok := meta.(*ProviderConfig)
 	if !ok {
 		castError := errors.New(messageVenafiProviderConfigCastingFailed)
 		tflog.Error(ctx, castError.Error())
 		return diag.FromErr(castError)
 	}
-	vCertCfg := provConf.vCertCfg
+	vCertCfg := provConf.VCertConfig
 
 	//VCert connector fake has not implemented the RetireCertificate functionality
-	if provConf.skipRetirement || vCertCfg.ConnectorType == endpoint.ConnectorTypeFake {
+	if provConf.SkipRetirement || vCertCfg.ConnectorType == endpoint.ConnectorTypeFake {
 		// removing it from state
 		d.SetId("")
 		return nil
@@ -395,9 +395,9 @@ func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData
 	// But we need to make extra verifications if state was tainted by a third party.
 	// We ignore the case when parameters length is equal to 1, since that's standard accepted case when certificate is not imported.
 	if len(parameters) < 1 {
-		return buildStantardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state", terraformStateTainted))
+		return buildStandardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state", terraformStateTainted))
 	} else if len(parameters) > 2 {
-		return buildStantardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state. Too many values", terraformStateTainted))
+		return buildStandardDiagError(fmt.Sprintf("%s: certificate ID not found in terraform state. Too many values", terraformStateTainted))
 	}
 
 	zone := vCertCfg.Zone
@@ -682,7 +682,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		}
 	}
 
-	pickupReq := fillRetrieveRequest(requestID, pickupPass, cl.GetType(), origin)
+	pickupReq := fillRetrieveRequest(requestID, pickupPass, origin)
 
 	err = d.Set("certificate_dn", requestID)
 	if err != nil {
@@ -851,13 +851,13 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		return nil, fmt.Errorf(importKeyPasswordFailEmpty)
 	}
 
-	//casting meta interface to the expected *venafiProviderConfig
-	provConf, ok := meta.(*venafiProviderConfig)
+	//casting meta interface to the expected *ProviderConfig
+	provConf, ok := meta.(*ProviderConfig)
 	if !ok {
 		castError := errors.New(messageVenafiProviderConfigCastingFailed)
 		return nil, castError
 	}
-	vCertCfg := provConf.vCertCfg
+	vCertCfg := provConf.VCertConfig
 	zone := vCertCfg.Zone
 	if zone == "" {
 		return nil, fmt.Errorf(importZoneFailEmpty)
@@ -873,7 +873,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		pickupID = fmt.Sprintf("%s\\%s", zone, pickupID)
 	}
 
-	pickupReq := fillRetrieveRequest(pickupID, keyPassword, cl.GetType(), csrService)
+	pickupReq := fillRetrieveRequest(pickupID, keyPassword, csrService)
 
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
@@ -903,13 +903,13 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	return []*schema.ResourceData{d}, nil
 }
 
-func fillRetrieveRequest(id string, password string, connectorType endpoint.ConnectorType, origin string) *certificate.Request {
+func fillRetrieveRequest(id string, password string, origin string) *certificate.Request {
 	pickupReq := &certificate.Request{}
 	pickupReq.Timeout = 180 * time.Second
 	pickupReq.PickupID = id
 	pickupReq.KeyPassword = password
 
-	if connectorType == endpoint.ConnectorTypeTPP && origin == csrService {
+	if origin == csrService {
 		pickupReq.FetchPrivateKey = true
 	}
 	return pickupReq

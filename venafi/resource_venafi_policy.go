@@ -51,12 +51,12 @@ func resourceVenafiPolicyCreate(ctx context.Context, d *schema.ResourceData, met
 	zoneName := d.Get("zone").(string)
 
 	if zoneName == "" {
-		return buildStantardDiagError("zone is empty")
+		return buildStandardDiagError("zone is empty")
 	}
 
 	ps := d.Get("policy_specification").(string)
 	if ps == "" {
-		return buildStantardDiagError("policy specification file is empty")
+		return buildStandardDiagError("policy specification file is empty")
 	}
 
 	bytes := []byte(ps)
