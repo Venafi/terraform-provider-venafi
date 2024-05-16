@@ -65,27 +65,13 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	cpName := d.Get(cloudProviderName)
-	if cpName == nil {
-		return buildStandardDiagError("cloud provider name not provided")
-	}
-
 	tflog.Info(ctx, "reading cloud provider", map[string]interface{}{"name": cpName})
 	cpObject, err := connector.(*cloud.Connector).GetCloudProviderByName(cpName.(string))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	tflog.Debug(ctx, "cloud provider details", map[string]interface{}{
-		"id":              cpObject.ID,
-		"name":            cpObject.Name,
-		"type":            cpObject.Type,
-		"status":          cpObject.Status,
-		"status_details":  cpObject.StatusDetails,
-		"keystores_count": cpObject.KeystoresCount,
-	})
-
 	d.SetId(cpObject.ID)
-
 	err = d.Set(cloudProviderType, cpObject.Type)
 	if err != nil {
 		return diag.FromErr(err)

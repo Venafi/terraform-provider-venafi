@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Venafi/vcert/v5/pkg/endpoint"
-	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/Venafi/vcert/v5/pkg/endpoint"
+	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
 
 const (
-	cloudKeystoreProviderID             = "provider_id"
+	cloudKeystoreProviderID             = "cloud_provider_id"
 	cloudKeystoreName                   = "name"
 	cloudKeystoreType                   = "type"
 	cloudKeystoreMachineIdentitiesCount = "machine_identities_count"
@@ -59,16 +61,22 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 
 	providerID := d.Get(cloudKeystoreProviderID).(string)
 	keystoreName := d.Get(cloudKeystoreName).(string)
-
+	tflog.Info(ctx, "reading cloud keystore", map[string]interface{}{
+		cloudKeystoreProviderID: providerID,
+		cloudKeystoreName:       keystoreName,
+	})
 	keystore, err := connector.(*cloud.Connector).GetCloudKeystoreByName(providerID, keystoreName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(keystore.ID)
-
 	err = d.Set(cloudKeystoreType, keystore.Type)
 	err = d.Set(cloudKeystoreMachineIdentitiesCount, keystore.MachineIdentitiesCount)
 
+	tflog.Info(ctx, "cloud keystore found", map[string]interface{}{
+		cloudKeystoreProviderID: providerID,
+		cloudKeystoreName:       keystoreName,
+	})
 	return nil
 }
