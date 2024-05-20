@@ -65,6 +65,9 @@ const (
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
+
+	dataSourceCloudProvider = "venafi_cloud_provider"
+	dataSourceCloudKeystore = "venafi_cloud_keystore"
 )
 
 var (
@@ -183,7 +186,8 @@ Example:
 			"venafi_ssh_config":      resourceVenafiSshConfig(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"venafi_cloud_provider": DataSourceCloudProvider(),
+			dataSourceCloudProvider: DataSourceCloudProvider(),
+			dataSourceCloudKeystore: DataSourceCloudKeystore(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
