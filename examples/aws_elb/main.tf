@@ -2,7 +2,7 @@ terraform {
   required_providers {
     venafi = {
       source  = "venafi/venafi"
-      version = "0.18.0"
+      version = "0.20.0"
     }
     aws = {
       source  = "hashicorp/aws"

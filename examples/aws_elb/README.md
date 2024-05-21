@@ -91,7 +91,7 @@ aws_vpc_public_subnets = [ "10.0.36.0/24", "10.0.48.0/24" ]
         required_providers {
             venafi = {
                 source = "venafi/venafi"
-                version = "~> 0.18.0"
+                version = "~> 0.20.0"
             }
             aws = {
                 source = "hashicorp/aws"
