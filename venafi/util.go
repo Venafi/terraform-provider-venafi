@@ -137,7 +137,7 @@ func getIssuerHint(is string) util.IssuerHint {
 }
 
 func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {
-	tflog.Info(ctx, "Getting Venafi Connector")
+	tflog.Info(ctx, "Getting VCert connector from context")
 
 	//casting meta interface to the expected *ProviderConfig
 	provConfig, ok := meta.(*ProviderConfig)
