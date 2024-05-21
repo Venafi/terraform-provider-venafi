@@ -347,6 +347,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	return &ProviderConfig{
 		VCertClient:    client,
+		VCertConfig:    &cfg,
 		SkipRetirement: skipRetirement,
 	}, diags
 }
