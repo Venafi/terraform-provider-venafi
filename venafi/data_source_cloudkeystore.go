@@ -72,7 +72,13 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 
 	d.SetId(keystore.ID)
 	err = d.Set(cloudKeystoreType, keystore.Type)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	err = d.Set(cloudKeystoreMachineIdentitiesCount, keystore.MachineIdentitiesCount)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	tflog.Info(ctx, "cloud keystore found", map[string]interface{}{
 		cloudKeystoreProviderID: providerID,
