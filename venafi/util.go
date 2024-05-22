@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
 
-	"github.com/Venafi/vcert/v5"
 	"github.com/Venafi/vcert/v5/pkg/certificate"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/util"
@@ -138,7 +137,7 @@ func getIssuerHint(is string) util.IssuerHint {
 }
 
 func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, error) {
-	tflog.Info(ctx, "Building Venafi Connector")
+	tflog.Info(ctx, "Getting VCert connector from context")
 
 	//casting meta interface to the expected *ProviderConfig
 	provConfig, ok := meta.(*ProviderConfig)
@@ -147,22 +146,13 @@ func getConnection(ctx context.Context, meta interface{}) (endpoint.Connector, e
 		tflog.Error(ctx, castError.Error())
 		return nil, castError
 	}
-
-	cl, err := vcert.NewClient(provConfig.VCertConfig)
-	if err != nil {
-		connectionErr := fmt.Errorf("%s: %w", messageVenafiClientInitFailed, err)
+	if provConfig.VCertClient == nil {
+		err := errors.New(messageVenafiClientNil)
 		tflog.Error(ctx, err.Error())
-		return nil, connectionErr
-	}
-	err = cl.Ping()
-	if err != nil {
-		pingErr := fmt.Errorf("%s: %s", messageVenafiPingFailed, err)
-		tflog.Error(ctx, pingErr.Error())
-		return nil, pingErr
+		return nil, err
 	}
 
-	tflog.Info(ctx, messageVenafiPingSuccessful)
-	return cl, nil
+	return provConfig.VCertClient, nil
 }
 
 func buildSshCertRequest(d *schema.ResourceData) certificate.SshCertRequest {

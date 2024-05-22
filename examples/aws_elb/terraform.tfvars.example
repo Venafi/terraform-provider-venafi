@@ -1,8 +1,23 @@
-tpp_url = "" ## TPP Server URL
-bundle_path = "" ## Location where your trust bundle file is located
-access_token = "" ## Access Token with permissions to access specific policy folder in Venafi
+# -- Venafi Cloud --
+# Uncomment for Venafi Cloud
 
-venafi_zone = "" ## Venafi Policy
+# venafi_api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# venafi_zone = "DevOps\\Terraform"
 
-test_site_name = "" ## Site Name
-test_site_domain = "" ## Domain Name
+# -- TPP --
+# Uncomment for Venafi Trust Protection Platform
+
+# tpp_url = "https://tpp.venafi.example" 
+# bundle_path = "/path/to/bundle.pem" 
+# access_token = "p0WTt3sDPbzm2BDIkoJROQ==" 
+
+# venafi_zone = "DevOps\\Terraform" 
+
+# ---------------------------
+test_site_name = "demo-aws" 
+test_site_domain = "venafi.example" 
+aws_vpc_cidr = "10.0.0.0/16"
+aws_vpc_azs = [ "us-east-1a", "us-east-1c"]
+aws_vpc_private_subnets = [ "10.0.12.0/24", "10.0.24.0.24" ]
+aws_vpc_public_subnets = [ "10.0.36.0/24", "10.0.48.0/24" ]
+
