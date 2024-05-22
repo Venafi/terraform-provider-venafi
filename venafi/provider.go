@@ -25,6 +25,7 @@ const (
 	messageVenafiPingSuccessful              = "Venafi ping successful"
 	messageVenafiClientInitFailed            = "Failed to initialize Venafi client"
 	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
+	messageVenafiClientNil                   = "Venafi connector is nil"
 	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
 	messageUseVaas                           = "Using `Venafi Control Plane to issue certificate"
@@ -194,6 +195,7 @@ Example:
 }
 
 type ProviderConfig struct {
+	VCertClient    endpoint.Connector
 	VCertConfig    *vcert.Config
 	SkipRetirement bool
 }
@@ -310,7 +312,16 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		cfg.ConnectionTrust = trustBundle
 	}
 
-	err := pingVenafi(ctx, &cfg)
+	client, err := buildVCertClient(&cfg)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  messageVenafiClientInitFailed,
+			Detail:   messageVenafiClientInitFailed + ": " + err.Error(),
+		})
+	}
+
+	err = client.Ping()
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -321,17 +332,21 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	if clientCertMethod {
-		err = getAccessTokenFromClientCertificate(ctx, &cfg)
-		if err != nil {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  messageVenafiClientInitFailed,
-				Detail:   messageVenafiAuthFailed + ": " + err.Error(),
-			})
-		}
+		err = getAccessTokenFromClientCertificate(ctx, client.(*tpp.Connector), cfg.Credentials)
+	} else {
+		err = client.Authenticate(cfg.Credentials)
+	}
+
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  messageVenafiClientInitFailed,
+			Detail:   messageVenafiAuthFailed + ": " + err.Error(),
+		})
 	}
 
 	return &ProviderConfig{
+		VCertClient:    client,
 		VCertConfig:    &cfg,
 		SkipRetirement: skipRetirement,
 	}, diags
@@ -410,35 +425,26 @@ func setTLSConfig(ctx context.Context, p12FileLocation string, p12Password strin
 	return nil
 }
 
-func pingVenafi(ctx context.Context, config *vcert.Config) error {
-	tflog.Info(ctx, fmt.Sprintf("Pinging Venafi Platform: %s", config.ConnectorType.String()))
-	client, err := vcert.NewClient(config, false)
+func buildVCertClient(cfg *vcert.Config) (endpoint.Connector, error) {
+	client, err := vcert.NewClient(cfg, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = client.Ping()
-	if err != nil {
-		return err
-	}
-
-	tflog.Info(ctx, "Ping Successful")
-	return nil
+	return client, nil
 }
 
-func getAccessTokenFromClientCertificate(ctx context.Context, config *vcert.Config) error {
-	tflog.Info(ctx, "PFX Certificate provided for authentication: Trying to authenticate")
-	client, err := vcert.NewClient(config, false)
+func getAccessTokenFromClientCertificate(ctx context.Context, client *tpp.Connector, credentials *endpoint.Authentication) error {
+	tflog.Info(ctx, "PFX certificate provided for authentication, getting access token")
+	resp, err := client.GetRefreshToken(credentials)
 	if err != nil {
 		return err
 	}
-
-	resp, err := client.(*tpp.Connector).GetRefreshToken(config.Credentials)
+	credentials.AccessToken = resp.Access_token
+	err = client.Authenticate(credentials)
 	if err != nil {
 		return err
 	}
-
-	config.Credentials.AccessToken = resp.Access_token
 
 	tflog.Info(ctx, "Successfully authenticated")
 	return nil

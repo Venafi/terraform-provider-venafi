@@ -431,10 +431,8 @@ func verifyCertKeyPair(certPEM string, privateKeyPEM string, keyPassword string)
 			return err
 		}
 	}
+
 	pk8PEMBytes = []byte(pk8PEM)
-	if err != nil {
-		return fmt.Errorf("error getting key")
-	}
 	_, err = tls.X509KeyPair([]byte(certPEM), pk8PEMBytes)
 	if err != nil {
 		if len(pk1PEMBytes) != 0 {
