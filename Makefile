@@ -205,4 +205,4 @@ test_e2e_dev_ecdsa:
 
 linter:
 	@golangci-lint --version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin
-	golangci-lint run
+	golangci-lint run --timeout 10m0s
