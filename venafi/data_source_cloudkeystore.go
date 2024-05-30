@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
@@ -65,7 +66,10 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 		cloudKeystoreProviderID: providerID,
 		cloudKeystoreName:       keystoreName,
 	})
-	keystore, err := connector.(*cloud.Connector).GetCloudKeystoreByName(providerID, keystoreName)
+	keystore, err := connector.(*cloud.Connector).GetCloudKeystore(domain.GetCloudKeystoreRequest{
+		CloudProviderID:   &providerID,
+		CloudKeystoreName: &keystoreName,
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}

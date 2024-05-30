@@ -67,8 +67,14 @@ const (
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
 
-	dataSourceCloudProvider = "venafi_cloud_provider"
-	dataSourceCloudKeystore = "venafi_cloud_keystore"
+	// Resource names
+	resourceVenafiCertificateName         = "venafi_certificate"
+	resourceVenafiPolicyName              = "venafi_policy"
+	resourceVenafiSSHCertificateName      = "venafi_ssh_certificate"
+	resourceVenafiSSHConfigName           = "venafi_ssh_config"
+	resourceCloudKeystoreInstallationName = "venafi_cloud_keystore_installation"
+	dataSourceCloudProvider               = "venafi_cloud_provider"
+	dataSourceCloudKeystore               = "venafi_cloud_keystore"
 )
 
 var (
@@ -181,10 +187,11 @@ Example:
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"venafi_certificate":     resourceVenafiCertificate(),
-			"venafi_policy":          resourceVenafiPolicy(),
-			"venafi_ssh_certificate": resourceVenafiSshCertificate(),
-			"venafi_ssh_config":      resourceVenafiSshConfig(),
+			resourceVenafiCertificateName:         resourceVenafiCertificate(),
+			resourceVenafiPolicyName:              resourceVenafiPolicy(),
+			resourceVenafiSSHCertificateName:      resourceVenafiSshCertificate(),
+			resourceVenafiSSHConfigName:           resourceVenafiSshConfig(),
+			resourceCloudKeystoreInstallationName: resourceCloudKeystoreInstallation(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			dataSourceCloudProvider: DataSourceCloudProvider(),

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
@@ -66,25 +67,30 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 
 	cpName := d.Get(cloudProviderName)
 	tflog.Info(ctx, "reading cloud provider", map[string]interface{}{"name": cpName})
-	cpObject, err := connector.(*cloud.Connector).GetCloudProviderByName(cpName.(string))
+
+	request := domain.GetCloudProviderRequest{
+		Name: cpName.(string),
+	}
+
+	cloudProvider, err := connector.(*cloud.Connector).GetCloudProvider(request)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(cpObject.ID)
-	err = d.Set(cloudProviderType, cpObject.Type)
+	d.SetId(cloudProvider.ID)
+	err = d.Set(cloudProviderType, cloudProvider.Type)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = d.Set(cloudProviderStatus, cpObject.Status)
+	err = d.Set(cloudProviderStatus, cloudProvider.Status)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = d.Set(cloudProviderStatusDetails, cpObject.StatusDetails)
+	err = d.Set(cloudProviderStatusDetails, cloudProvider.StatusDetails)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = d.Set(cloudProviderKeystoresCount, cpObject.KeystoresCount)
+	err = d.Set(cloudProviderKeystoresCount, cloudProvider.KeystoresCount)
 	if err != nil {
 		return diag.FromErr(err)
 	}
