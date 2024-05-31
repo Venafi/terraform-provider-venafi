@@ -56,6 +56,11 @@ func DataSourceCloudProvider() *schema.Resource {
 }
 
 func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	cpName := d.Get(cloudProviderName)
+	tflog.Info(ctx, "reading cloud provider", map[string]interface{}{
+		cloudProviderName: cpName,
+	})
+
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -65,24 +70,22 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Provider data source is only available for VCP", connector.GetType().String()))
 	}
 
-	cpName := d.Get(cloudProviderName)
-	tflog.Info(ctx, "reading cloud provider", map[string]interface{}{"name": cpName})
-
-	request := domain.GetCloudProviderRequest{
+	cloudProvider, err := connector.(*cloud.Connector).GetCloudProvider(domain.GetCloudProviderRequest{
 		Name: cpName.(string),
-	}
-
-	cloudProvider, err := connector.(*cloud.Connector).GetCloudProvider(request)
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully retrieved cloud provider from VCP API", map[string]interface{}{
+		cloudProviderName: cpName,
+	})
 
 	d.SetId(cloudProvider.ID)
-	err = d.Set(cloudProviderType, cloudProvider.Type)
+	err = d.Set(cloudProviderType, cloudProvider.Type.String())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = d.Set(cloudProviderStatus, cloudProvider.Status)
+	err = d.Set(cloudProviderStatus, cloudProvider.Status.String())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -95,6 +98,8 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	tflog.Info(ctx, "cloud provider found", map[string]interface{}{"name": cpName})
+	tflog.Info(ctx, "cloud provider stored in state", map[string]interface{}{
+		cloudProviderName: cpName,
+	})
 	return nil
 }

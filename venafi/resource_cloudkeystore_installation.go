@@ -3,8 +3,9 @@ package venafi
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -16,7 +17,8 @@ import (
 )
 
 const (
-	cloudKeystoreInstallationKeystoreID               = "keystore_id"
+	cloudKeystoreInstallationID                       = "id"
+	cloudKeystoreInstallationKeystoreID               = "cloud_keystore_id"
 	cloudKeystoreInstallationCertificateID            = "certificate_id"
 	cloudKeystoreInstallationCloudCertificateName     = "cloud_certificate_name"
 	cloudKeystoreInstallationCloudCertificateID       = "cloud_certificate_id"
@@ -35,22 +37,21 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			cloudKeystoreInstallationKeystoreID: {
 				Type:        schema.TypeString,
-				Description: "ID of the keystore where the certificate will be provisioned",
+				Description: "ID of the cloud keystore where the certificate will be provisioned",
 				Required:    true,
 				ForceNew:    true,
 			},
 			cloudKeystoreInstallationCertificateID: {
 				Type:        schema.TypeString,
-				Description: "ID of the certificate to be provisioned to the keystore",
+				Description: "ID of the certificate to be provisioned to the cloud keystore",
 				Required:    true,
 			},
 			cloudKeystoreInstallationCloudCertificateName: {
-				Type:        schema.TypeString,
-				Description: "ID of the parent Cloud Provider the keystore belongs to",
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    true,
+				Type:             schema.TypeString,
+				Description:      "Name the certificate will be identified as in the cloud keystore",
+				Required:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: diffSuppressFuncCloudCertificateName,
 			},
 			cloudKeystoreInstallationCloudCertificateID: {
 				Type:        schema.TypeString,
@@ -71,7 +72,16 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 }
 
 func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	tflog.Info(ctx, "Creating cloud keystore installation")
+	keystoreID := d.Get(cloudKeystoreInstallationKeystoreID).(string)
+	certificateID := d.Get(cloudKeystoreInstallationCertificateID).(string)
+	cloudCertificateName := d.Get(cloudKeystoreInstallationCloudCertificateName).(string)
+	logFieldsMap := map[string]interface{}{
+		cloudKeystoreInstallationKeystoreID:           keystoreID,
+		cloudKeystoreInstallationCertificateID:        certificateID,
+		cloudKeystoreInstallationCloudCertificateName: cloudCertificateName,
+	}
+	tflog.Info(ctx, "creating cloud keystore installation", logFieldsMap)
+
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -86,10 +96,6 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 		return buildStandardDiagError(fmt.Sprintf("unexpected Connector type. Expected *cloud.Connector, got %T", connector))
 	}
 
-	keystoreID := d.Get(cloudKeystoreInstallationKeystoreID).(string)
-	certificateID := d.Get(cloudKeystoreInstallationCertificateID).(string)
-	cloudCertificateName := d.Get(cloudKeystoreInstallationCloudCertificateName).(string)
-
 	// Check certificate is CSR service generated
 	isService, err := cloudConnector.IsCSRServiceGenerated(&certificate.Request{
 		CertID: certificateID,
@@ -102,58 +108,77 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 	}
 
 	// Get parent CloudKeystore
-	keystoreRequest := domain.GetCloudKeystoreRequest{
+	cloudKeystore, err := cloudConnector.GetCloudKeystore(domain.GetCloudKeystoreRequest{
 		CloudKeystoreID: &keystoreID,
-	}
-	cloudKeystore, err := cloudConnector.GetCloudKeystore(keystoreRequest)
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully retrieved cloud keystore installation from VCP", logFieldsMap)
 
 	// Provision certificate to keystore
 	options := getProvisioningOptions(ctx, cloudKeystore.Type, cloudCertificateName)
-	request := getProvisioningRequest(keystoreID, certificateID)
+	request := &domain.ProvisioningRequest{
+		CertificateID: &certificateID,
+		KeystoreID:    &keystoreID,
+	}
+
 	metadata, err := cloudConnector.ProvisionCertificate(request, options)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	logFieldsMap[cloudKeystoreInstallationID] = metadata.MachineIdentityID
+	tflog.Info(ctx, "successfully provisioned certificate to cloud keystore", logFieldsMap)
 
 	// Get newly created machine identity
 	machineIdentity, err := getMachineIdentity(ctx, metadata.MachineIdentityID, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully retrieved machine identity from VCP", logFieldsMap)
 
 	// Store machine identity in state
-	err = storeMachineIdentityInState(ctx, machineIdentity, d)
+	err = storeMachineIdentityInState(machineIdentity, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "cloud keystore installation stored in state", logFieldsMap)
 
+	tflog.Info(ctx, "cloud keystore installation created", logFieldsMap)
 	return diag.Diagnostics{}
 }
 
 func resourceCloudKeystoreInstallationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	tflog.Info(ctx, "Reading cloud keystore installation")
+	id := d.Id()
+	logFieldsMap := map[string]interface{}{cloudKeystoreInstallationID: id}
+	tflog.Info(ctx, "reading cloud keystore installation", logFieldsMap)
 
 	// Get machine identity from VCP
-	id := d.Id()
 	machineIdentity, err := getMachineIdentity(ctx, id, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully retrieved machine identity from VCP", logFieldsMap)
 
 	// Store machine identity in state
-	err = storeMachineIdentityInState(ctx, machineIdentity, d)
+	err = storeMachineIdentityInState(machineIdentity, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "cloud keystore installation stored in state", logFieldsMap)
 
+	tflog.Info(ctx, "cloud keystore installation read", logFieldsMap)
 	return diag.Diagnostics{}
 }
 
 func resourceCloudKeystoreInstallationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	tflog.Info(ctx, "Updating cloud keystore installation")
+	machineIdentityID := d.Id()
+	certificateID := d.Get(cloudKeystoreInstallationCertificateID).(string)
+	logFieldsMap := map[string]interface{}{
+		cloudKeystoreInstallationID:            machineIdentityID,
+		cloudKeystoreInstallationCertificateID: certificateID,
+	}
+	tflog.Info(ctx, "updating cloud keystore installation", logFieldsMap)
 
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
@@ -169,9 +194,6 @@ func resourceCloudKeystoreInstallationUpdate(ctx context.Context, d *schema.Reso
 		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Keystore Installation resource is only available for VCP", connector.GetType().String()))
 	}
 
-	machineIdentityID := d.Id()
-	certificateID := d.Get(cloudKeystoreInstallationCertificateID).(string)
-
 	// Check certificate is CSR service generated
 	isService, err := cloudConnector.IsCSRServiceGenerated(&certificate.Request{
 		CertID: certificateID,
@@ -183,32 +205,39 @@ func resourceCloudKeystoreInstallationUpdate(ctx context.Context, d *schema.Reso
 		return buildStandardDiagError("Cloud Keystore Installation resource only supports certificates whose CSR was generated by VCP")
 	}
 
-	request := domain.ProvisioningRequest{
+	metadata, err := cloudConnector.ProvisionCertificateToMachineIdentity(domain.ProvisioningRequest{
 		MachineIdentityID: &machineIdentityID,
 		CertificateID:     &certificateID,
-	}
-	metadata, err := cloudConnector.ProvisionCertificateToMachineIdentity(request)
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully provisioned certificate to existing machine identity in VCP", logFieldsMap)
 
 	// Get newly created machine identity
 	machineIdentity, err := getMachineIdentity(ctx, metadata.MachineIdentityID, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully retrieved machine identity from VCP", logFieldsMap)
 
 	// Store machine identity in state
-	err = storeMachineIdentityInState(ctx, machineIdentity, d)
+	err = storeMachineIdentityInState(machineIdentity, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "cloud keystore installation stored in state", logFieldsMap)
 
+	tflog.Info(ctx, "cloud keystore installation updated", logFieldsMap)
 	return diag.Diagnostics{}
 }
 
 func resourceCloudKeystoreInstallationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	tflog.Info(ctx, "Deleting cloud keystore installation")
+	machineIdentityID := d.Id()
+	logFieldsMap := map[string]interface{}{
+		cloudKeystoreInstallationID: machineIdentityID,
+	}
+	tflog.Info(ctx, "deleting cloud keystore installation", logFieldsMap)
 
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
@@ -225,27 +254,26 @@ func resourceCloudKeystoreInstallationDelete(ctx context.Context, d *schema.Reso
 	}
 
 	// Delete machine identity
-	machineIdentityID := d.Id()
-	id, err := uuid.Parse(machineIdentityID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	deleted, err := cloudConnector.DeleteMachineIdentity(id)
+	deleted, err := cloudConnector.DeleteMachineIdentity(machineIdentityID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if !deleted {
 		return buildStandardDiagError("failed to delete Cloud Keystore installation")
 	}
+	tflog.Info(ctx, "successfully deleted machine identity from VCP", logFieldsMap)
 
 	// Remove id from state
 	d.SetId("")
+	tflog.Info(ctx, "cloud keystore installation deleted", logFieldsMap)
 	return diag.Diagnostics{}
 }
 
 func resourceCloudKeystoreInstallationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	tflog.Info(ctx, "Importing cloud keystore installation")
 	id := d.Id()
+	logFieldsMap := map[string]interface{}{cloudKeystoreInstallationID: id}
+	tflog.Info(ctx, "importing cloud keystore installation", logFieldsMap)
+
 	if id == "" {
 		return nil, fmt.Errorf("cloud keystore installation ID is empty")
 	}
@@ -255,13 +283,16 @@ func resourceCloudKeystoreInstallationImport(ctx context.Context, d *schema.Reso
 	if err != nil {
 		return nil, err
 	}
+	tflog.Info(ctx, "successfully retrieved machine identity from VCP", logFieldsMap)
 
 	// Store machine identity in state
-	err = storeMachineIdentityInState(ctx, machineIdentity, d)
+	err = storeMachineIdentityInState(machineIdentity, d)
 	if err != nil {
 		return nil, err
 	}
+	tflog.Info(ctx, "cloud keystore installation stored in state", logFieldsMap)
 
+	tflog.Info(ctx, "cloud keystore installation imported", logFieldsMap)
 	return []*schema.ResourceData{d}, nil
 }
 
@@ -271,23 +302,16 @@ func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudK
 		return nil
 	}
 
+	normalizedCertName := normalizeCloudCertificateName(certificateName)
 	tflog.Info(ctx, "using provisioning options", map[string]interface{}{
-		"name": certificateName,
+		cloudKeystoreInstallationCloudCertificateName: normalizedCertName,
 	})
 	return &domain.ProvisioningOptions{
-		CloudCertificateName: certificateName,
-	}
-}
-
-func getProvisioningRequest(keystoreID string, certificateID string) *domain.ProvisioningRequest {
-	return &domain.ProvisioningRequest{
-		CertificateID: &certificateID,
-		KeystoreID:    &keystoreID,
+		CloudCertificateName: normalizedCertName,
 	}
 }
 
 func getMachineIdentity(ctx context.Context, machineIdentityID string, meta interface{}) (*domain.CloudMachineIdentity, error) {
-	tflog.Info(ctx, "Retrieving machine identity from VCP")
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
 		return nil, err
@@ -314,9 +338,7 @@ func getMachineIdentity(ctx context.Context, machineIdentityID string, meta inte
 	return machineIdentity, nil
 }
 
-func storeMachineIdentityInState(ctx context.Context, machineIdentity *domain.CloudMachineIdentity, d *schema.ResourceData) error {
-	tflog.Info(ctx, "Storing machine identity in terraform state")
-
+func storeMachineIdentityInState(machineIdentity *domain.CloudMachineIdentity, d *schema.ResourceData) error {
 	if machineIdentity == nil {
 		return fmt.Errorf("cannot store machine identity. CloudMachineIdenity object is nil")
 	}
@@ -360,8 +382,7 @@ func storeMachineIdentityInState(ctx context.Context, machineIdentity *domain.Cl
 		return err
 	}
 
-	d.SetId(machineIdentity.ID.String())
-
+	d.SetId(machineIdentity.ID)
 	return nil
 }
 
@@ -491,4 +512,24 @@ func getMetadataMapFromMachineIdentityGCM(metadata *domain.CertificateCloudMetad
 	metadataMap["name"] = name
 
 	return metadataMap, nil
+}
+
+// excludes everything, except alphanumeric characters, dashes, and underscores
+var certificateNameRegex = regexp.MustCompile(`[^a-zA-Z0-9\-]+`)
+
+func normalizeCloudCertificateName(name string) string {
+	if name == "" {
+		return name
+	}
+	sanitizedName := certificateNameRegex.ReplaceAllString(strings.ReplaceAll(name, ".", "-"), "")
+	return sanitizedName
+}
+
+func diffSuppressFuncCloudCertificateName(_ string, oldValue string, newValue string, _ *schema.ResourceData) bool {
+	if oldValue == "" {
+		return false
+	}
+	normalizedNewValue := normalizeCloudCertificateName(newValue)
+
+	return oldValue == normalizedNewValue
 }

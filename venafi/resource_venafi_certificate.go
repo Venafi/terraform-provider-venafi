@@ -42,7 +42,8 @@ const (
 
 // Started work to make resource attribute less error-prone
 const (
-	venafiCertificateAttrNickname = "nickname"
+	venafiCertificateAttrNickname      = "nickname"
+	venafiCertificateAttrCertificateID = "certificate_id"
 )
 
 func resourceVenafiCertificate() *schema.Resource {
@@ -185,6 +186,10 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Description: "Indicate the target issuer to enable valid days with Venafi Platform; DigiCert, Entrust, and Microsoft are supported values.",
 			},
+			venafiCertificateAttrCertificateID: {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceVenafiCertificateImport,
@@ -209,7 +214,6 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	//resourceVenafiCertificateRead(ctx, d, meta)
 	return diags
 }
 
@@ -733,7 +737,13 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	}
 	tflog.Info(ctx, fmt.Sprintf("Certificate chain set to %s", pcc.Chain))
 
+	err = d.Set(venafiCertificateAttrCertificateID, pickupReq.CertID)
+	if err != nil {
+		return fmt.Errorf("error setting certificate id attribute: %w", err)
+	}
+
 	d.SetId(req.PickupID)
+
 	tflog.Info(ctx, "Setting up private key")
 
 	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
@@ -896,6 +906,13 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	err = fillSchemaPropertiesImport(d, data, certMetadata, pickupID, keyPassword, cl.GetType())
 	if err != nil {
 		return nil, err
+	}
+
+	if pickupReq.CertID != "" {
+		err = d.Set(venafiCertificateAttrCertificateID, pickupReq.CertID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return []*schema.ResourceData{d}, nil
