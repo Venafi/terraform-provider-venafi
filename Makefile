@@ -76,7 +76,9 @@ endif
 TERRAFORM_TEST_VERSION := 99.9.9
 TERRAFORM_TEST_DIR := terraform.d/plugins/registry.terraform.io/venafi/venafi/$(TERRAFORM_TEST_VERSION)/$(OS_STR)_$(CPU_STR)
 
-GO_LDFLAGS=-ldflags "-X github.com/Venafi/terraform-provider-venafi/venafi.versionString=$(VERSION) -s -w -extldflags '-static'"
+GO_LDFLAGS := -ldflags "-X github.com/Venafi/terraform-provider-venafi/venafi.versionString=$(VERSION) -s -w -extldflags '-static'"
+GO_GCFLAGS := -gcflags="all=-N -l"
+DEBUG_PORT := 61006
 
 os:
 	@echo $(OS_STRING)
@@ -84,11 +86,8 @@ os:
 all: build test testacc
 
 #Build
-build_dev_dynamic:
-	env CGO_ENABLED=0 GOOS=$(OS_STR)   GOARCH=$(CPU_STR) go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) || exit 1
-
 build_dev:
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=$(OS_STR) GOARCH=$(CPU_STR) go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
 
 build:
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
@@ -100,6 +99,10 @@ build:
 	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
+
+debug:
+	env CGO_ENABLED=0 GOOS=$(OS_STR) GOARCH=$(CPU_STR) go build $(GO_GCFLAGS) -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
+	dlv exec --listen=:$(DEBUG_PORT) --accept-multiclient --continue --headless $(PLUGIN_DIR)/$(PLUGIN_NAME) -- -debug
 
 compress:
 	$(foreach var,linux linux86 darwin darwin_arm windows windows86,cp LICENSE $(PLUGIN_DIR)/$(var);)
@@ -157,9 +160,10 @@ fmtcheck:
 test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_vaas test_e2e_tpp_token
 
 # This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
-e2e_init: build_dev_dynamic
+e2e_init: build_dev
+	rm -f .terraform.lock.hcl
 	mkdir -p $(TERRAFORM_TEST_DIR)
-	mv $(PLUGIN_DIR)/$(OS_STR)/$(PLUGIN_NAME)_$(VERSION) $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
+	mv $(PLUGIN_DIR)/$(PLUGIN_NAME) $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
 	chmod 755 $(TERRAFORM_TEST_DIR)/$(PLUGIN_NAME)_v$(TERRAFORM_TEST_VERSION)
 	terraform init
 
