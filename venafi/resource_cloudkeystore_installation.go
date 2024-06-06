@@ -239,6 +239,22 @@ func resourceCloudKeystoreInstallationDelete(ctx context.Context, d *schema.Reso
 	}
 	tflog.Info(ctx, "deleting cloud keystore installation", logFieldsMap)
 
+	provConfig, ok := meta.(*ProviderConfig)
+	if !ok {
+		castError := fmt.Errorf(messageVenafiProviderConfigCastingFailed)
+		tflog.Error(ctx, castError.Error())
+		return diag.FromErr(castError)
+	}
+
+	if !provConfig.SkipRetirement {
+		tflog.Info(ctx, "skipRetirement is false. Certificate will be retired when destroyed and Machine Identity deletion will be handled by VCP. Removing from terraform state only")
+		d.SetId("")
+		tflog.Info(ctx, "cloud keystore installation deleted from terraform state only", logFieldsMap)
+		return nil
+	}
+
+	tflog.Info(ctx, "skipRetirement is true. Removing Machine Identity from VCP by API invocation")
+
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
 		return diag.FromErr(err)

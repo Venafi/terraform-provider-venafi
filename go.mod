@@ -3,7 +3,7 @@ module github.com/Venafi/terraform-provider-venafi
 go 1.21
 
 require (
-	github.com/Venafi/vcert/v5 v5.7.1-0.20240531161556-9e254e9906c7
+	github.com/Venafi/vcert/v5 v5.7.1-0.20240606155549-b88242f05796
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/hashicorp/terraform-plugin-log v0.9.0
