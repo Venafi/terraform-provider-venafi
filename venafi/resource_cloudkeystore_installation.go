@@ -29,8 +29,8 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceCloudKeystoreInstallationCreate,
 		ReadContext:   resourceCloudKeystoreInstallationRead,
-		UpdateContext: resourceCloudKeystoreInstallationDelete,
-		DeleteContext: resourceCloudKeystoreInstallationUpdate,
+		UpdateContext: resourceCloudKeystoreInstallationUpdate,
+		DeleteContext: resourceCloudKeystoreInstallationDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceCloudKeystoreInstallationImport,
 		},
@@ -239,47 +239,8 @@ func resourceCloudKeystoreInstallationDelete(ctx context.Context, d *schema.Reso
 	}
 	tflog.Info(ctx, "deleting cloud keystore installation", logFieldsMap)
 
-	provConfig, ok := meta.(*ProviderConfig)
-	if !ok {
-		castError := fmt.Errorf(messageVenafiProviderConfigCastingFailed)
-		tflog.Error(ctx, castError.Error())
-		return diag.FromErr(castError)
-	}
-
-	if !provConfig.SkipRetirement {
-		tflog.Info(ctx, "skipRetirement is false. Certificate will be retired when destroyed and Machine Identity deletion will be handled by VCP. Removing from terraform state only")
-		d.SetId("")
-		tflog.Info(ctx, "cloud keystore installation deleted from terraform state only", logFieldsMap)
-		return nil
-	}
-
-	tflog.Info(ctx, "skipRetirement is true. Removing Machine Identity from VCP by API invocation")
-
-	connector, err := getConnection(ctx, meta)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	// Check Connector is VCP
-	if connector.GetType() != endpoint.ConnectorTypeCloud {
-		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Keystore Installation resource is only available for VCP", connector.GetType().String()))
-	}
-	cloudConnector, ok := connector.(*cloud.Connector)
-	if !ok {
-		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Keystore Installation resource is only available for VCP", connector.GetType().String()))
-	}
-
-	// Delete machine identity
-	deleted, err := cloudConnector.DeleteMachineIdentity(machineIdentityID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if !deleted {
-		return buildStandardDiagError("failed to delete Cloud Keystore installation")
-	}
-	tflog.Info(ctx, "successfully deleted machine identity from VCP", logFieldsMap)
-
 	// Remove id from state
+	tflog.Info(ctx, "Certificate will be retired when destroyed and Machine Identity deletion will be handled by VCP. Removing from terraform state only")
 	d.SetId("")
 	tflog.Info(ctx, "cloud keystore installation deleted", logFieldsMap)
 	return diag.Diagnostics{}
