@@ -33,7 +33,6 @@ import (
 
 const (
 	importIdFailEmpty          = "the id for import method is empty"
-	importIdFailMissingValues  = "there are missing attributes in the import id being passed"
 	importIdFailExceededValues = "there are more attributes than expected in the import id being passed"
 	importPickupIdFailEmpty    = "empty pickupID for VaaS or common_name for TPP during import method"
 	importKeyPasswordFailEmpty = "empty key_password for import method" //#nosec
