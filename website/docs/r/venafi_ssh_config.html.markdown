@@ -1,7 +1,7 @@
 ---
+subcategory: "Certificate Issuance"
 layout: "venafi"
 page_title: "Venafi: venafi_ssh_config"
-sidebar_current: "docs-venafi-resource-venafi-ssh-config"
 description: |-
   Provides access to retrieve configuration from SSH certificate issuance template from Venafi Trust Protection Platform.
 ---

@@ -1,9 +1,9 @@
 ---
+subcategory: "Certificate Issuance"
 layout: "venafi"
 page_title: "Venafi: venafi_certificate"
-sidebar_current: "docs-venafi-resource-venafi-certificate"
 description: |-
-Provides access to TLS key and certificate data in Venafi. This can be used to define a Venafi certificate.
+  Provides access to TLS key and certificate data in Venafi. This can be used to define a Venafi certificate.
 ---
 
 # venafi_certificate

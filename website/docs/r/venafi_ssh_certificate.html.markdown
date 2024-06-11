@@ -1,7 +1,7 @@
 ---
+subcategory: "Certificate Issuance"
 layout: "venafi"
 page_title: "Venafi: venafi_ssh_certificate"
-sidebar_current: "docs-venafi-resource-venafi-ssh-certificate"
 description: |-
   Provides access to request and retrieve SSH certificates from Venafi Trust Protection Platform.
 ---
