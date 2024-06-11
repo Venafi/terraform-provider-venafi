@@ -34,9 +34,27 @@ requesting certificates. Zones define the machine identity policy that will be a
 certificate authority that will issue certificates. The zone is formed by combining the Application Name and Issuing 
 Template API Alias (e.g. "Business App\Enterprise CIT").
 
+### US tenants
+
 ```hcl
-# Configure the Venafi provider
+# Configure the Venafi provider. US api url is set by default
 provider "venafi" {
+  api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  zone    = "Business App\\Enterprise CIT"
+}
+
+# Generate a key pair and request a certificate
+resource "venafi_certificate" "webserver" {
+  # ...
+}
+```
+
+### EU tenants
+
+```hcl
+# Configure the Venafi provider with EU api url
+provider "venafi" {
+  url     = "https://api.venafi.eu"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   zone    = "Business App\\Enterprise CIT"
 }
