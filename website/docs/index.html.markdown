@@ -3,9 +3,9 @@ layout: "venafi"
 page_title: "Provider: Venafi"
 sidebar_current: "docs-venafi-index"
 description: |-
-Venafi is the enterprise platform for Machine Identity Protection. The Venafi provider streamlines the process of 
-acquiring SSL/TLS keys and certificates from Venafi services giving assurance of compliance with Information Security 
-policies. It provides resources that allow private keys and certificates to be created as part of a Terraform deployment.
+  Venafi is the enterprise platform for Machine Identity Protection. The Venafi provider streamlines the process of 
+  acquiring SSL/TLS keys and certificates from Venafi services giving assurance of compliance with Information Security 
+  policies. It provides resources that allow private keys and certificates to be created as part of a Terraform deployment.
 ---
 
 # Venafi Provider

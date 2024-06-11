@@ -1,7 +1,7 @@
 ---
+subcategory: "Policy Management"
 layout: "venafi"
 page_title: "Venafi: venafi_policy"
-sidebar_current: "docs-venafi-resource-venafi-policy"
 description: |-
   Provides access to read and write certificate policy in Venafi. This can be used to define a new policy.
 ---
