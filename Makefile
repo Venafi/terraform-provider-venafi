@@ -26,7 +26,7 @@ ZIP_VERSION := $(shell echo ${VERSION} | cut -c 2-)
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
-# Get the OS dinamically.
+# Get the OS dynamically.
 # credits to https://gist.github.com/sighingnow/deee806603ec9274fd47
 OS_STR :=
 CPU_STR :=
@@ -94,8 +94,6 @@ build:
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/darwin_arm/$(PLUGIN_NAME)_$(VERSION) || exit 1
-	#Build with debugging options, use it for remote debugging. Comment the above line
-	#env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build '-gcflags="all=-N -l" -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
