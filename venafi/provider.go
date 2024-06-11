@@ -10,10 +10,11 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/crypto/pkcs12"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"golang.org/x/crypto/pkcs12"
 
 	"github.com/Venafi/vcert/v5"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
@@ -67,8 +68,14 @@ const (
 	providerClientID       = "client_id"
 	providerSkipRetirement = "skip_retirement"
 
-	dataSourceCloudProvider = "venafi_cloud_provider"
-	dataSourceCloudKeystore = "venafi_cloud_keystore"
+	// Resource names
+	resourceVenafiCertificateName         = "venafi_certificate"
+	resourceVenafiPolicyName              = "venafi_policy"
+	resourceVenafiSSHCertificateName      = "venafi_ssh_certificate"
+	resourceVenafiSSHConfigName           = "venafi_ssh_config"
+	resourceCloudKeystoreInstallationName = "venafi_cloud_keystore_installation"
+	dataSourceCloudProvider               = "venafi_cloud_provider"
+	dataSourceCloudKeystore               = "venafi_cloud_keystore"
 )
 
 var (
@@ -165,7 +172,7 @@ Example:
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiDevMode, nil),
-				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi as a Service or Trust Protection Platform. Useful for development and testing.`,
+				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi as a Service or Trust Protection Platform. Useful for development and testing`,
 			},
 			providerClientID: {
 				Type:        schema.TypeString,
@@ -177,14 +184,15 @@ Example:
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
-				Description: `When true, certificates will not be retired on Venafi platforms when terraform destroy is run. Default is false.`,
+				Description: `When true, certificates will not be retired on Venafi platforms when terraform destroy is run. Default is false`,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"venafi_certificate":     resourceVenafiCertificate(),
-			"venafi_policy":          resourceVenafiPolicy(),
-			"venafi_ssh_certificate": resourceVenafiSshCertificate(),
-			"venafi_ssh_config":      resourceVenafiSshConfig(),
+			resourceVenafiCertificateName:         resourceVenafiCertificate(),
+			resourceVenafiPolicyName:              resourceVenafiPolicy(),
+			resourceVenafiSSHCertificateName:      resourceVenafiSshCertificate(),
+			resourceVenafiSSHConfigName:           resourceVenafiSshConfig(),
+			resourceCloudKeystoreInstallationName: resourceCloudKeystoreInstallation(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			dataSourceCloudProvider: DataSourceCloudProvider(),

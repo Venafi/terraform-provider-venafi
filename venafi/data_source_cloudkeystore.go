@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
@@ -50,6 +51,13 @@ func DataSourceCloudKeystore() *schema.Resource {
 }
 
 func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	providerID := d.Get(cloudKeystoreProviderID).(string)
+	keystoreName := d.Get(cloudKeystoreName).(string)
+	tflog.Info(ctx, "reading cloud keystore", map[string]interface{}{
+		cloudKeystoreProviderID: providerID,
+		cloudKeystoreName:       keystoreName,
+	})
+
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -59,19 +67,20 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Keystore data source is only available for VCP", connector.GetType().String()))
 	}
 
-	providerID := d.Get(cloudKeystoreProviderID).(string)
-	keystoreName := d.Get(cloudKeystoreName).(string)
-	tflog.Info(ctx, "reading cloud keystore", map[string]interface{}{
-		cloudKeystoreProviderID: providerID,
-		cloudKeystoreName:       keystoreName,
+	keystore, err := connector.(*cloud.Connector).GetCloudKeystore(domain.GetCloudKeystoreRequest{
+		CloudProviderID:   &providerID,
+		CloudKeystoreName: &keystoreName,
 	})
-	keystore, err := connector.(*cloud.Connector).GetCloudKeystoreByName(providerID, keystoreName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	tflog.Info(ctx, "successfully retrieved cloud keystore from VCP API", map[string]interface{}{
+		cloudKeystoreProviderID: providerID,
+		cloudKeystoreName:       keystoreName,
+	})
 
 	d.SetId(keystore.ID)
-	err = d.Set(cloudKeystoreType, keystore.Type)
+	err = d.Set(cloudKeystoreType, keystore.Type.String())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -80,7 +89,7 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	tflog.Info(ctx, "cloud keystore found", map[string]interface{}{
+	tflog.Info(ctx, "cloud keystore stored in state", map[string]interface{}{
 		cloudKeystoreProviderID: providerID,
 		cloudKeystoreName:       keystoreName,
 	})

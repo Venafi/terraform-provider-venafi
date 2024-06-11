@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
@@ -55,6 +56,11 @@ func DataSourceCloudProvider() *schema.Resource {
 }
 
 func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	cpName := d.Get(cloudProviderName)
+	tflog.Info(ctx, "reading cloud provider", map[string]interface{}{
+		cloudProviderName: cpName,
+	})
+
 	connector, err := getConnection(ctx, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -64,31 +70,36 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Provider data source is only available for VCP", connector.GetType().String()))
 	}
 
-	cpName := d.Get(cloudProviderName)
-	tflog.Info(ctx, "reading cloud provider", map[string]interface{}{"name": cpName})
-	cpObject, err := connector.(*cloud.Connector).GetCloudProviderByName(cpName.(string))
+	cloudProvider, err := connector.(*cloud.Connector).GetCloudProvider(domain.GetCloudProviderRequest{
+		Name: cpName.(string),
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	tflog.Info(ctx, "successfully retrieved cloud provider from VCP API", map[string]interface{}{
+		cloudProviderName: cpName,
+	})
+
+	d.SetId(cloudProvider.ID)
+	err = d.Set(cloudProviderType, cloudProvider.Type.String())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set(cloudProviderStatus, cloudProvider.Status.String())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set(cloudProviderStatusDetails, cloudProvider.StatusDetails)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set(cloudProviderKeystoresCount, cloudProvider.KeystoresCount)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(cpObject.ID)
-	err = d.Set(cloudProviderType, cpObject.Type)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = d.Set(cloudProviderStatus, cpObject.Status)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = d.Set(cloudProviderStatusDetails, cpObject.StatusDetails)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = d.Set(cloudProviderKeystoresCount, cpObject.KeystoresCount)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	tflog.Info(ctx, "cloud provider found", map[string]interface{}{"name": cpName})
+	tflog.Info(ctx, "cloud provider stored in state", map[string]interface{}{
+		cloudProviderName: cpName,
+	})
 	return nil
 }

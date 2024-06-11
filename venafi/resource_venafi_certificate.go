@@ -17,12 +17,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
 	"github.com/youmark/pkcs8"
 	"software.sslmate.com/src/go-pkcs12"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/Venafi/vcert/v5/pkg/certificate"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
@@ -40,9 +41,10 @@ const (
 	terraformStateTainted      = "terraform state was modified by another party"
 )
 
-// Started work to make resource attribute less error-prone
 const (
-	venafiCertificateAttrNickname = "nickname"
+	venafiCertificateAttrNickname      = "nickname"
+	venafiCertificateAttrCertificateID = "certificate_id"
+	venafiCertificateAttrRenew         = "renew_required"
 )
 
 func resourceVenafiCertificate() *schema.Resource {
@@ -51,14 +53,14 @@ func resourceVenafiCertificate() *schema.Resource {
 		ReadContext:   resourceVenafiCertificateRead,
 		DeleteContext: resourceVenafiCertificateDelete,
 		UpdateContext: resourceVenafiCertificateUpdate,
-
 		Schema: map[string]*schema.Schema{
 			"csr_origin": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "csr origin",
-				ForceNew:    true,
-				Default:     "local",
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Origin of the CSR. One of local or service. Local: The CSR will be generated locally and " +
+					"sent over for certificate issuance. Service: The CSR will be generated and managed by the Venafi platform. Default is local",
+				ForceNew: true,
+				Default:  "local",
 			},
 			"common_name": {
 				Type:        schema.TypeString,
@@ -77,7 +79,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Default:     "RSA",
-				Description: "Key encryption algorithm. RSA or ECDSA. RSA is default.",
+				Description: "Key encryption algorithm. RSA or ECDSA. RSA is default",
 			},
 			"rsa_bits": {
 				Type:        schema.TypeInt,
@@ -125,14 +127,13 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "Private key password.",
+				Description: "Password for the private key",
 				Sensitive:   true,
 			},
 			"expiration_window": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Number of hours before the certificates expiry when a new certificate will be generated",
-				ForceNew:    false,
 				Default:     expirationWindowDefault,
 			},
 			"private_key_pem": {
@@ -177,13 +178,25 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "The desired certificate requested time of validity",
+				Description: "The desired validity time for the certificate, in days",
 			},
 			"issuer_hint": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "Indicate the target issuer to enable valid days with Venafi Platform; DigiCert, Entrust, and Microsoft are supported values.",
+				Description: "Indicate the target issuer to enable valid days with Venafi Platform. Supported values are DigiCert, Entrust, and Microsoft",
+			},
+			venafiCertificateAttrCertificateID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the issued certificate",
+			},
+			venafiCertificateAttrRenew: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				ForceNew:    true,
+				Default:     false,
+				Description: "Indicates the certificate should be reissued. This means the resource will destroyed and recreated",
 			},
 		},
 		Importer: &schema.ResourceImporter{
@@ -209,12 +222,19 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	//resourceVenafiCertificateRead(ctx, d, meta)
+	origin := d.Get("csr_origin").(string)
+	_, passOk := d.GetOk("key_password")
+
+	//Add warning message when no password for private key was set and CSR origin is service.
+	if origin == csrService && !passOk {
+		detailMsg := fmt.Sprintf("No key password provided for service generated CSR. Certificate contents (certificate, chain, private key) not stored in terraform state")
+		tflog.Info(ctx, detailMsg)
+	}
+
 	return diags
 }
 
 func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
 	//casting meta interface to the expected *ProviderConfig
 	provConf, ok := meta.(*ProviderConfig)
 	if !ok {
@@ -299,29 +319,37 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	stateCertUntyped, ok := d.GetOk("certificate")
-	if !ok {
-		return diag.FromErr(fmt.Errorf("certificate is not defined at state"))
+	err = d.Set(venafiCertificateAttrCertificateID, pickupReq.CertID)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("error setting certificate id attribute: %w", err))
 	}
 
-	stateCertPEM := stateCertUntyped.(string)
+	d.SetId(pickupReq.PickupID)
+
+	stateCertUntyped, ok := d.GetOk("certificate")
 	certPEM := data.Certificate
-	if certPEM != stateCertPEM {
-		diag.FromErr(fmt.Errorf("certificate (%s) from remote differs from the one defined at state", d.Id()))
+	if ok {
+		// Check certificate
+		stateCertPEM := stateCertUntyped.(string)
+		if certPEM != stateCertPEM {
+			diag.FromErr(fmt.Errorf("certificate (%s) from remote differs from the one defined at state", d.Id()))
+		}
+
+		//Checking Private Key
+		if privateKeyUntyped, ok := d.GetOk("private_key_pem"); ok {
+			privateKey := privateKeyUntyped.(string)
+			err = verifyCertKeyPair(certPEM, privateKey, keyPassword)
+			if err != nil {
+				diag.FromErr(err)
+			}
+		}
 	}
+
+	// Check if certificate needs to be renewed
 	block, _ := pem.Decode([]byte(certPEM))
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error parsing cert: %s", err))
-	}
-	//Checking Private Key
-	var privateKey string
-	if privateKeyUntyped, ok := d.GetOk("private_key_pem"); ok {
-		privateKey = privateKeyUntyped.(string)
-	}
-	err = verifyCertKeyPair(certPEM, privateKey, keyPassword)
-	if err != nil {
-		diag.FromErr(err)
 	}
 
 	renewRequired := checkForRenew(*cert, d.Get("expiration_window").(int))
@@ -332,14 +360,15 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 			Summary:  "Certificate About to Expire",
 			Detail:   detailMsg,
 		})
-		d.SetId("")
-		return diags
 	}
-	return nil
+	err = d.Set(venafiCertificateAttrRenew, renewRequired)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diags
 }
 
 func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
-
 	if d.HasChange("expiration_window") {
 		// Getting expiration_window from state
 		expirationWindow := d.Get("expiration_window").(int)
@@ -359,11 +388,19 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
+
+	if d.HasChange(venafiCertificateAttrRenew) {
+		renew := d.Get(venafiCertificateAttrRenew).(bool)
+		err := d.Set(venafiCertificateAttrRenew, renew)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return nil
 }
 
 func resourceVenafiCertificateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
-
 	//casting meta interface to the expected *ProviderConfig
 	provConf, ok := meta.(*ProviderConfig)
 	if !ok {
@@ -494,24 +531,11 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	origin := d.Get("csr_origin").(string)
 	if origin == csrService {
 		req.CsrOrigin = certificate.ServiceGeneratedCSR
-		if pass, ok := d.GetOk("key_password"); ok {
-			resolvedPass := pass.(string)
-			if strings.TrimSpace(resolvedPass) == "" {
-				return fmt.Errorf("key_password is empty")
-			}
-		} else {
-			return fmt.Errorf("key_password is required")
-		}
 	}
-
 	//Configuring keys
-	var (
-		err         error
-		keyPassword string
-	)
-
 	keyType := d.Get("algorithm").(string)
 
+	var keyPassword string
 	if pass, ok := d.GetOk("key_password"); ok {
 		keyPassword = pass.(string)
 		req.KeyPassword = keyPassword
@@ -523,7 +547,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	} else if keyType == "ECDSA" {
 		keyCurve := d.Get("ecdsa_curve").(string)
 		req.KeyType = certificate.KeyTypeECDSA
-		err = req.KeyCurve.Set(keyCurve)
+		err := req.KeyCurve.Set(keyCurve)
 		if err != nil {
 			return err
 		}
@@ -615,6 +639,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	tflog.Info(ctx, fmt.Sprintf("Requested SAN: %s", req.DNSNames))
 
 	if origin != csrService {
+		var err error
 		switch req.KeyType {
 		case certificate.KeyTypeECDSA:
 			req.PrivateKey, err = certificate.GenerateECDSAPrivateKey(req.KeyCurve)
@@ -646,24 +671,17 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		}
 	}
 
-	expirationWindow := d.Get("expiration_window").(int)
 	ttl, ok := d.GetOk("valid_days")
 	if ok {
 		validity := ttl.(int)
 		validity = validity * 24
-		if validity < expirationWindow {
-			err = d.Set("expiration_window", validity)
-			if err != nil {
-				return err
-			}
-		}
 		req.ValidityHours = validity //nolint:staticcheck
 		issuerHint := d.Get("issuer_hint").(string)
 		req.IssuerHint = getIssuerHint(issuerHint)
 	}
 
 	tflog.Info(ctx, "Making certificate request")
-	err = cl.GenerateRequest(nil, req)
+	err := cl.GenerateRequest(nil, req)
 	if err != nil {
 		return err
 	}
@@ -692,17 +710,16 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		return err
 	}
 
-	// validate expiration_window against cert validity period
-	ok, duration, err := validExpirationWindowCert(pcc.Certificate, expirationWindow)
-	durationHoursInt := int(*duration / time.Hour)
+	err = d.Set(venafiCertificateAttrCertificateID, pickupReq.CertID)
 	if err != nil {
-		return err
+		return fmt.Errorf("error setting certificate id attribute: %w", err)
 	}
-	if ok {
-		err = d.Set("expiration_window", durationHoursInt)
-		if err != nil {
-			return err
-		}
+
+	d.SetId(req.PickupID)
+
+	if origin == csrService && keyPassword == "" {
+		// Nothing else to do here. Send warning message, certificate contents not stored in state
+		return nil
 	}
 
 	if origin != csrService {
@@ -716,15 +733,14 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		}
 	}
 
-	KeyPassword := d.Get("key_password").(string)
 	tflog.Info(ctx, "Creating certificate resource: Verifying certificate key-pair")
-	err = verifyCertKeyPair(pcc.Certificate, pcc.PrivateKey, KeyPassword)
+	err = verifyCertKeyPair(pcc.Certificate, pcc.PrivateKey, keyPassword)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("Could not add certificate resource to state. Certificate and private key mismatch. Err: %s", err.Error()))
 	}
 
 	if err = d.Set("certificate", pcc.Certificate); err != nil {
-		return fmt.Errorf("Error setting certificate: %s", err)
+		return fmt.Errorf("error setting certificate: %s", err)
 	}
 	tflog.Info(ctx, fmt.Sprintf("Certificate set to %s", pcc.Certificate))
 
@@ -733,15 +749,14 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	}
 	tflog.Info(ctx, fmt.Sprintf("Certificate chain set to %s", pcc.Chain))
 
-	d.SetId(req.PickupID)
 	tflog.Info(ctx, "Setting up private key")
 
-	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, KeyPassword)
+	privKey, err := util.DecryptPkcs8PrivateKey(pcc.PrivateKey, keyPassword)
 	if err != nil {
 		return err
 	}
 
-	certPkcs12, err := AsPKCS12(pcc.Certificate, privKey, pcc.Chain, KeyPassword)
+	certPkcs12, err := AsPKCS12(pcc.Certificate, privKey, pcc.Chain, keyPassword)
 
 	if err != nil {
 		return err
@@ -826,8 +841,11 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 }
 
 func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-
 	id := d.Id()
+	logFields := map[string]interface{}{
+		"id": id,
+	}
+	tflog.Info(ctx, "Importing Venafi certificate", logFields)
 
 	if id == "" {
 		return nil, fmt.Errorf(importIdFailEmpty)
@@ -835,18 +853,22 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 
 	parameters := strings.Split(id, ",")
 
-	if len(parameters) < 2 {
-		return nil, fmt.Errorf(importIdFailMissingValues)
-	} else if len(parameters) > 2 {
+	var pickupID string
+	var keyPassword string
+
+	if len(parameters) > 2 {
 		return nil, fmt.Errorf(importIdFailExceededValues)
 	}
-	pickupID := parameters[0]
-	keyPassword := parameters[1]
+
+	if len(parameters) >= 1 {
+		pickupID = parameters[0]
+	}
+	if len(parameters) == 2 {
+		keyPassword = parameters[1]
+	}
+
 	if pickupID == "" {
 		return nil, fmt.Errorf(importPickupIdFailEmpty)
-	}
-	if keyPassword == "" {
-		return nil, fmt.Errorf(importKeyPasswordFailEmpty)
 	}
 
 	//casting meta interface to the expected *ProviderConfig
@@ -881,9 +903,6 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		}
 		return nil, err
 	}
-	if data.PrivateKey == "" {
-		return nil, fmt.Errorf("private key was not found. Was certificate service generated? Import method does not support importing of local generated private keys")
-	}
 
 	var certMetadata *certificate.CertificateMetaData
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
@@ -893,9 +912,20 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
+	if pickupReq.CertID != "" {
+		err = d.Set(venafiCertificateAttrCertificateID, pickupReq.CertID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	err = fillSchemaPropertiesImport(d, data, certMetadata, pickupID, keyPassword, cl.GetType())
 	if err != nil {
 		return nil, err
+	}
+	if keyPassword == "" {
+		detailMsg := fmt.Sprintf("No key password provided for certificate import. Certificate contents (certificate, chain, private key) not stored in terraform state")
+		tflog.Info(ctx, detailMsg)
 	}
 
 	return []*schema.ResourceData{d}, nil
@@ -907,40 +937,21 @@ func fillRetrieveRequest(id string, password string, origin string) *certificate
 	pickupReq.PickupID = id
 	pickupReq.KeyPassword = password
 
-	if origin == csrService {
+	if origin == csrService && password != "" {
 		pickupReq.FetchPrivateKey = true
 	}
 	return pickupReq
 }
 
-func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCollection, certMetadata *certificate.CertificateMetaData, id string, p string, c endpoint.ConnectorType) error {
-	err := d.Set("certificate", data.Certificate)
+func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCollection, certMetadata *certificate.CertificateMetaData,
+	id string, keyPassword string, connectorType endpoint.ConnectorType) error {
+	err := d.Set("csr_origin", csrService)
 	if err != nil {
 		return err
-	}
-
-	err = d.Set("private_key_pem", data.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	err = d.Set("key_password", p)
-	if err != nil {
-		return err
-	}
-
-	err = d.Set("csr_origin", csrService)
-	if err != nil {
-		return err
-	}
-
-	if err = d.Set("chain", strings.Join(data.Chain, "")); err != nil {
-		return fmt.Errorf("error setting chain: %s", err)
 	}
 
 	block, _ := pem.Decode([]byte(data.Certificate))
 	cert, err := x509.ParseCertificate(block.Bytes)
-
 	if err != nil {
 		return fmt.Errorf("error parsing cert: %s", err)
 	}
@@ -965,55 +976,6 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 		return err
 	}
 
-	privDER, _ := pem.Decode([]byte(data.PrivateKey))
-	key, _, err := pkcs8.ParsePrivateKey(privDER.Bytes, []byte(p))
-	if err != nil {
-		return err
-	}
-
-	var pemType string
-
-	// We are adding the default values for other algorithms,
-	// since Terraform expects them as they are defined as defaults in the schema
-	switch keyValue := key.(type) {
-	case *rsa.PrivateKey:
-		err = d.Set("algorithm", "RSA")
-		if err != nil {
-			return err
-		}
-		err = d.Set("rsa_bits", keyValue.N.BitLen())
-		if err != nil {
-			return err
-		}
-		// Setting default value for other algorithm as mentioned above
-		err = d.Set("ecdsa_curve", "P521")
-		if err != nil {
-			return err
-		}
-		pemType = "RSA PRIVATE KEY"
-	case *ecdsa.PrivateKey:
-		if c == endpoint.ConnectorTypeCloud {
-			return fmt.Errorf("ecdsa private key import operation currently is not supported for VaaS")
-		}
-		keySize := strconv.Itoa(keyValue.Curve.Params().BitSize)
-		err = d.Set("ecdsa_curve", fmt.Sprintf("P%s", keySize))
-		if err != nil {
-			return err
-		}
-		err = d.Set("rsa_bits", 2048)
-		if err != nil {
-			return err
-		}
-		// Setting default value for other algorithm as mentioned above
-		err = d.Set("algorithm", "ECDSA")
-		if err != nil {
-			return err
-		}
-		pemType = "EC PRIVATE KEY"
-	default:
-		return fmt.Errorf("failed to determine private key type")
-	}
-
 	ipAddresses := IPArrayToStringArray(cert.IPAddresses)
 	err = d.Set("san_ip", ipAddresses)
 	if err != nil {
@@ -1026,7 +988,102 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 		return err
 	}
 
-	if c == endpoint.ConnectorTypeTPP {
+	duration := cert.NotAfter.Sub(cert.NotBefore)
+	certValidDays := int64(math.Floor(duration.Hours() / 24))
+	err = d.Set("valid_days", certValidDays)
+	if err != nil {
+		return err
+	}
+
+	// Only store certificate information if key_password is present
+	if keyPassword != "" {
+		err = d.Set("certificate", data.Certificate)
+		if err != nil {
+			return err
+		}
+
+		err = d.Set("private_key_pem", data.PrivateKey)
+		if err != nil {
+			return err
+		}
+
+		err = d.Set("chain", strings.Join(data.Chain, ""))
+		if err != nil {
+			return fmt.Errorf("error setting chain: %w", err)
+		}
+
+		err = d.Set("key_password", keyPassword)
+		if err != nil {
+			return err
+		}
+
+		privDER, _ := pem.Decode([]byte(data.PrivateKey))
+		key, _, parSeErr := pkcs8.ParsePrivateKey(privDER.Bytes, []byte(keyPassword))
+		if parSeErr != nil {
+			return parSeErr
+		}
+
+		var pemType string
+		// We are adding the default values for other algorithms,
+		// since Terraform expects them as they are defined as defaults in the schema
+		switch keyValue := key.(type) {
+		case *rsa.PrivateKey:
+			err = d.Set("algorithm", "RSA")
+			if err != nil {
+				return err
+			}
+			err = d.Set("rsa_bits", keyValue.N.BitLen())
+			if err != nil {
+				return err
+			}
+			// Setting default value for other algorithm as mentioned above
+			err = d.Set("ecdsa_curve", "P521")
+			if err != nil {
+				return err
+			}
+			pemType = "RSA PRIVATE KEY"
+		case *ecdsa.PrivateKey:
+			if connectorType == endpoint.ConnectorTypeCloud {
+				return fmt.Errorf("ecdsa private key import operation currently is not supported for VaaS")
+			}
+			keySize := strconv.Itoa(keyValue.Curve.Params().BitSize)
+			err = d.Set("ecdsa_curve", fmt.Sprintf("P%s", keySize))
+			if err != nil {
+				return err
+			}
+			err = d.Set("rsa_bits", 2048)
+			if err != nil {
+				return err
+			}
+			// Setting default value for other algorithm as mentioned above
+			err = d.Set("algorithm", "ECDSA")
+			if err != nil {
+				return err
+			}
+			pemType = "EC PRIVATE KEY"
+		default:
+			return fmt.Errorf("failed to determine private key type")
+		}
+
+		privateKeyBytes, pkErr := pkcs8.MarshalPrivateKey(key, nil, nil)
+		if pkErr != nil {
+			return pkErr
+		}
+
+		pemBytes := pem.EncodeToMemory(&pem.Block{Type: pemType, Bytes: privateKeyBytes})
+		certPkcs12, p12Err := AsPKCS12(data.Certificate, string(pemBytes), data.Chain, keyPassword)
+		if p12Err != nil {
+			return p12Err
+		}
+
+		certPkcs12string := base64.StdEncoding.EncodeToString(certPkcs12)
+		err = d.Set("pkcs12", certPkcs12string)
+		if err != nil {
+			return err
+		}
+	}
+
+	if connectorType == endpoint.ConnectorTypeTPP {
 		// only TPP handle the concept of object name so only then we set it
 		// we are expecting "id" have something like \\VED\\Policy\\MyPolicy\\my-object-name
 		certificateDNsplit := strings.Split(id, "\\")
@@ -1058,30 +1115,6 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 		if err != nil {
 			return err
 		}
-	}
-
-	duration := cert.NotAfter.Sub(cert.NotBefore)
-	validDays := int64(math.Floor(duration.Hours() / 24))
-	err = d.Set("valid_days", validDays)
-	if err != nil {
-		return err
-	}
-
-	privateKeyBytes, err := pkcs8.MarshalPrivateKey(key, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	pemBytes := pem.EncodeToMemory(&pem.Block{Type: pemType, Bytes: privateKeyBytes})
-	certPkcs12, err := AsPKCS12(data.Certificate, string(pemBytes), data.Chain, p)
-	if err != nil {
-		return err
-	}
-	certPkcs12string := base64.StdEncoding.EncodeToString(certPkcs12)
-
-	err = d.Set("pkcs12", certPkcs12string)
-	if err != nil {
-		return err
 	}
 
 	err = d.Set("expiration_window", expirationWindowDefault)
