@@ -227,7 +227,7 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 
 	//Add warning message when no password for private key was set and CSR origin is service.
 	if origin == csrService && !passOk {
-		detailMsg := fmt.Sprintf("No key password provided for service generated CSR. Certificate contents (certificate, chain, private key) not stored in terraform state")
+		detailMsg := "No key password provided for service generated CSR. Certificate contents (certificate, chain, private key) not stored in terraform state"
 		tflog.Info(ctx, detailMsg)
 	}
 
@@ -862,13 +862,15 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 
 	if len(parameters) >= 1 {
 		pickupID = parameters[0]
+		if pickupID == "" {
+			return nil, fmt.Errorf(importPickupIdFailEmpty)
+		}
 	}
 	if len(parameters) == 2 {
 		keyPassword = parameters[1]
-	}
-
-	if pickupID == "" {
-		return nil, fmt.Errorf(importPickupIdFailEmpty)
+		if keyPassword == "" {
+			return nil, fmt.Errorf(importKeyPasswordFailEmpty)
+		}
 	}
 
 	//casting meta interface to the expected *ProviderConfig
@@ -924,7 +926,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 		return nil, err
 	}
 	if keyPassword == "" {
-		detailMsg := fmt.Sprintf("No key password provided for certificate import. Certificate contents (certificate, chain, private key) not stored in terraform state")
+		detailMsg := "No key password provided for certificate import. Certificate contents (certificate, chain, private key) not stored in terraform state"
 		tflog.Info(ctx, detailMsg)
 	}
 

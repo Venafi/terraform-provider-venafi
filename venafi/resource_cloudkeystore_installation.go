@@ -21,6 +21,7 @@ const (
 	cloudKeystoreInstallationKeystoreID               = "cloud_keystore_id"
 	cloudKeystoreInstallationCertificateID            = "certificate_id"
 	cloudKeystoreInstallationCloudCertificateName     = "cloud_certificate_name"
+	cloudKeystoreInstallationARN                      = "arn"
 	cloudKeystoreInstallationCloudCertificateID       = "cloud_certificate_id"
 	cloudKeystoreInstallationCloudCertificateMetadata = "cloud_certificate_metadata"
 )
@@ -48,10 +49,16 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 			},
 			cloudKeystoreInstallationCloudCertificateName: {
 				Type:             schema.TypeString,
-				Description:      "Name the certificate will be identified as in the cloud keystore",
-				Required:         true,
+				Description:      "Name the certificate will be identified as in the cloud keystore. Only used when provisioning for AKV and GCM keystores",
+				Optional:         true,
 				ForceNew:         true,
 				DiffSuppressFunc: diffSuppressFuncCloudCertificateName,
+			},
+			cloudKeystoreInstallationARN: {
+				Type:        schema.TypeString,
+				Description: "ARN of the certificate in AWS. Only used when provisioning for ACM keystore",
+				Optional:    true,
+				ForceNew:    true,
 			},
 			cloudKeystoreInstallationCloudCertificateID: {
 				Type:        schema.TypeString,
@@ -74,11 +81,21 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keystoreID := d.Get(cloudKeystoreInstallationKeystoreID).(string)
 	certificateID := d.Get(cloudKeystoreInstallationCertificateID).(string)
-	cloudCertificateName := d.Get(cloudKeystoreInstallationCloudCertificateName).(string)
 	logFieldsMap := map[string]interface{}{
-		cloudKeystoreInstallationKeystoreID:           keystoreID,
-		cloudKeystoreInstallationCertificateID:        certificateID,
-		cloudKeystoreInstallationCloudCertificateName: cloudCertificateName,
+		cloudKeystoreInstallationKeystoreID:    keystoreID,
+		cloudKeystoreInstallationCertificateID: certificateID,
+	}
+	cloudCertificateNameInterface, cerNameOk := d.GetOk(cloudKeystoreInstallationCloudCertificateName)
+	cloudCertificateName := ""
+	if cerNameOk {
+		cloudCertificateName = cloudCertificateNameInterface.(string)
+		logFieldsMap[cloudKeystoreInstallationCloudCertificateName] = cloudCertificateName
+	}
+	certificateARNInterface, arnOk := d.GetOk(cloudKeystoreInstallationARN)
+	certificateARN := ""
+	if arnOk {
+		certificateARN = certificateARNInterface.(string)
+		logFieldsMap[cloudKeystoreInstallationARN] = certificateARN
 	}
 	tflog.Info(ctx, "creating cloud keystore installation", logFieldsMap)
 
@@ -117,7 +134,7 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 	tflog.Info(ctx, "successfully retrieved cloud keystore installation from VCP", logFieldsMap)
 
 	// Provision certificate to keystore
-	options := getProvisioningOptions(ctx, cloudKeystore.Type, cloudCertificateName)
+	options := getProvisioningOptions(ctx, cloudKeystore.Type, cloudCertificateName, certificateARN)
 	request := &domain.ProvisioningRequest{
 		CertificateID: &certificateID,
 		KeystoreID:    &keystoreID,
@@ -273,9 +290,20 @@ func resourceCloudKeystoreInstallationImport(ctx context.Context, d *schema.Reso
 	return []*schema.ResourceData{d}, nil
 }
 
-func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudKeystoreType, certificateName string) *domain.ProvisioningOptions {
+func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudKeystoreType, certificateName string, arn string) *domain.ProvisioningOptions {
 	if cloudKeystoreType == domain.CloudKeystoreTypeACM {
-		tflog.Info(ctx, fmt.Sprintf("cloud keystore type %s does not support provisioning options. Ignoring certificate name value: %s", cloudKeystoreType, certificateName))
+		if arn == "" {
+			return nil
+		}
+		tflog.Info(ctx, "using provisioning options", map[string]interface{}{
+			cloudKeystoreInstallationARN: arn,
+		})
+		return &domain.ProvisioningOptions{
+			ARN: arn,
+		}
+	}
+
+	if certificateName == "" {
 		return nil
 	}
 
@@ -332,16 +360,6 @@ func storeMachineIdentityInState(machineIdentity *domain.CloudMachineIdentity, d
 	if err != nil {
 		return err
 	}
-	cloudCertificateName, err := getCloudCertNameFromMachineIdentity(machineIdentity.Metadata)
-	if err != nil {
-		return err
-	}
-	if cloudCertificateName != "" {
-		err = d.Set(cloudKeystoreInstallationCloudCertificateName, cloudCertificateName)
-		if err != nil {
-			return err
-		}
-	}
 	cloudID, err := getCloudIDFromMachineIdentity(machineIdentity.Metadata)
 	if err != nil {
 		return err
@@ -357,6 +375,32 @@ func storeMachineIdentityInState(machineIdentity *domain.CloudMachineIdentity, d
 	err = d.Set(cloudKeystoreInstallationCloudCertificateMetadata, metadataMap)
 	if err != nil {
 		return err
+	}
+
+	if machineIdentity.Metadata.GetKeystoreType() == domain.CloudKeystoreTypeACM {
+		arn, err := getCloudIDFromMachineIdentityACM(machineIdentity.Metadata)
+		if err != nil {
+			return err
+		}
+		if arn != "" {
+			err = d.Set(cloudKeystoreInstallationARN, arn)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if machineIdentity.Metadata.GetKeystoreType() != domain.CloudKeystoreTypeACM {
+		cloudCertificateName, err := getCloudCertNameFromMachineIdentity(machineIdentity.Metadata)
+		if err != nil {
+			return err
+		}
+		if cloudCertificateName != "" {
+			err = d.Set(cloudKeystoreInstallationCloudCertificateName, cloudCertificateName)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	d.SetId(machineIdentity.ID)

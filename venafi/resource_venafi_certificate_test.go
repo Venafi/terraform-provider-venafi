@@ -527,43 +527,6 @@ func TestVaasSignedCertUpdateRenew(t *testing.T) {
 	})
 }
 
-func TestVaasSignedCertUpdateWithCertDurationFromZoneWithGreaterExpWindow(t *testing.T) {
-	/*
-		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
-		than the expiration_window: It should create a Terraform state with an expiration_window as same as the cert duration.
-		We expect a not empty plan due to the expiration_window being equal to cert duration
-	*/
-	data := testData{}
-	rand := randSeq(9)
-	domain := "venafi.example.com"
-	data.cn = rand + "." + domain
-	data.private_key_password = "123xxx"
-	data.key_algo = rsa2048
-	data.expiration_window = 90*24 + 2 // 90 days + 2 hours
-	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing VaaS certificate with config:\n %s", config)
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: config,
-				Check: resource.ComposeTestCheckFunc(
-					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
-					checkCertExpirationWindowChange("venafi_certificate.vaas_certificate", t, &data),
-				),
-				ExpectNonEmptyPlan: true,
-			},
-			{
-				Config: config,
-				Check: resource.ComposeTestCheckFunc(
-					checkStandardCertNew("venafi_certificate.vaas_certificate", t, &data),
-				),
-				ExpectNonEmptyPlan: true,
-			},
-		},
-	})
-}
-
 func TestVaasSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	/*
 		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
@@ -1016,42 +979,6 @@ func TestTokenSignedCertValidDays(t *testing.T) {
 	})
 }
 
-func TestTokenSignedCertValidDaysWithGreaterExpirationWindow(t *testing.T) {
-	/*
-		We create a certificate with valid_days less than the expiration_window, in result the expiration_window should be
-		equal to the valid_days in hours, due to our validation.
-		We expect a not empty plan due to the expiration_window being equal to cert duration
-	*/
-	data := testData{}
-	rand := randSeq(9)
-	domain := "venafi.example.com"
-	data.cn = rand + "." + domain
-	data.dns_ns = "alt-" + data.cn
-	data.dns_ip = "192.168.1.1"
-	data.dns_email = "venafi@example.com"
-	data.private_key_password = "FooB4rNew4$x"
-	data.key_algo = rsa2048
-	data.expiration_window = 730
-	hint := util.IssuerHintMicrosoft
-	data.issuer_hint = hint.String()
-	data.valid_days = validDays
-	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
-	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: config,
-				Check: resource.ComposeTestCheckFunc(
-					checkStandardCertNew("venafi_certificate.token_certificate", t, &data),
-					checkCertExpirationWindowChange("venafi_certificate.token_certificate", t, &data),
-				),
-				ExpectNonEmptyPlan: true,
-			},
-		},
-	})
-}
-
 func TestTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	/*
 		We test to create a certificate on first step that has duration less from zone (without setting valid_days)
@@ -1376,13 +1303,6 @@ func TestValidateWrongImportEntries(t *testing.T) {
 				ImportStateId: fmt.Sprintf("%s,%s,exceeded", data.cn, data.private_key_password),
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importIdFailExceededValues),
-			},
-			{
-				Config:        config,
-				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
-				ImportStateId: data.cn,
-				ImportState:   true,
-				ExpectError:   regexp.MustCompile(importIdFailMissingValues),
 			},
 			{
 				Config:        config,

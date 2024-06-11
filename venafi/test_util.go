@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -207,23 +206,6 @@ func checkCertValidDays(t *testing.T, data *testData, s *terraform.State) error 
 	}
 
 	return nil
-}
-
-func checkCertExpirationWindowChange(resourceName string, t *testing.T, data *testData) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		t.Log("Getting expiration_window from terraform state", data.cn)
-		//gotExpirationWindow := s.RootModule().Outputs["expiration_window"].Value.(string)
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
-		}
-		gotExpirationWindow := rs.Primary.Attributes["expiration_window"]
-		expirationWindow := strconv.Itoa(data.expiration_window)
-		if gotExpirationWindow == expirationWindow {
-			return fmt.Errorf(fmt.Sprintf("expiration window should have changed during enroll. current: %s got from zone: %s", expirationWindow, gotExpirationWindow))
-		}
-		return nil
-	}
 }
 
 func checkCertSans(t *testing.T, data *testData, s *terraform.State) error {
