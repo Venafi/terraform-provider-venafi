@@ -862,13 +862,15 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 
 	if len(parameters) >= 1 {
 		pickupID = parameters[0]
+		if pickupID == "" {
+			return nil, fmt.Errorf(importPickupIdFailEmpty)
+		}
 	}
 	if len(parameters) == 2 {
 		keyPassword = parameters[1]
-	}
-
-	if pickupID == "" {
-		return nil, fmt.Errorf(importPickupIdFailEmpty)
+		if keyPassword == "" {
+			return nil, fmt.Errorf(importKeyPasswordFailEmpty)
+		}
 	}
 
 	//casting meta interface to the expected *ProviderConfig

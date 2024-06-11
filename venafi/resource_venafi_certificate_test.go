@@ -1380,13 +1380,6 @@ func TestValidateWrongImportEntries(t *testing.T) {
 			{
 				Config:        config,
 				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
-				ImportStateId: data.cn,
-				ImportState:   true,
-				ExpectError:   regexp.MustCompile(importIdFailMissingValues),
-			},
-			{
-				Config:        config,
-				ResourceName:  "venafi_certificate.token_tpp_certificate_import",
 				ImportStateId: fmt.Sprintf("%s,", data.cn),
 				ImportState:   true,
 				ExpectError:   regexp.MustCompile(importKeyPasswordFailEmpty),
