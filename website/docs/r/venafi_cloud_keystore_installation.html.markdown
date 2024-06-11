@@ -39,8 +39,10 @@ resource "venafi_cloud_keystore_installation" "ck_installation_example" {
 
 ## Attribute Reference
 
-* `cloud_certificate_id` -
-* `cloud_certificate_metadata` - 
+This resource exports the following attributes in addition to the arguments above:
+
+* `cloud_certificate_id` - The ID of the provisioned certificate within the Cloud Keystore
+* `cloud_certificate_metadata` - Metadata of the provisioned certificate from the Cloud Keystore
 
 ## Import
 
