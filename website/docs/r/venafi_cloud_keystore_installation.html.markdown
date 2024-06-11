@@ -8,6 +8,10 @@ description: |-
 
 # Resource: venafi_cloud_keystore_installation
 
+Provisions a certificate from Venafi Control Plane's inventory to any of the supported Cloud Providers: Amazon 
+Certificate Manager, Azure KeyVault or Google Certificate Manager. Exports the ID of the provisioned certificate: 
+certificate name for AKV and GCM or ARN for ACM.
+
 ## Example Usage
 
 ```hcl
