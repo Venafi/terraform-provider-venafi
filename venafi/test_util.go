@@ -415,7 +415,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 			cf = strings.ReplaceAll(cf, "\"", "")
 			k, v, err := parseCustomField(cf)
 			if err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err)
 			}
 			list := strings.Split(v, "|")
 			for _, value := range list {

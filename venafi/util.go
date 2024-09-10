@@ -243,27 +243,27 @@ func validateSshCertValues(d *schema.ResourceData) error {
 func validateStringListFromSchemaAttribute(array interface{}, attr string) error {
 	values, ok := array.([]interface{})
 	if !ok {
-		return fmt.Errorf(fmt.Sprintf("\"%s\" is not a list", attr))
+		return fmt.Errorf("\"%s\" is not a list", attr)
 	}
 
 	if len(values) <= 0 {
-		return fmt.Errorf(fmt.Sprintf("\"%s\" is empty", attr))
+		return fmt.Errorf("\"%s\" is empty", attr)
 	}
 
 	for _, value := range values {
 		valueString, ok := value.(string)
 		if !ok {
-			return fmt.Errorf(fmt.Sprintf("value inside list of attribute \"%s\" is not a string", attr))
+			return fmt.Errorf("value inside list of attribute \"%s\" is not a string", attr)
 		}
 		if valueString == "" {
-			return fmt.Errorf(fmt.Sprintf("value inside list of attribute \"%s\" an empty string", attr))
+			return fmt.Errorf("value inside list of attribute \"%s\" an empty string", attr)
 		}
 	}
 	return nil
 }
 
 func buildStandardDiagError(msg string) diag.Diagnostics {
-	return diag.FromErr(fmt.Errorf(msg))
+	return diag.FromErr(errors.New(msg))
 }
 
 func stringArrayToIParray(arrayIPstring []string) []net.IP {

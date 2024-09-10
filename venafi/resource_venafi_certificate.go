@@ -623,7 +623,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		for i := 0; i < len(uriList); i += 1 {
 			uri, err := url.Parse(uriList[i])
 			if err != nil {
-				return fmt.Errorf("invalid URI: " + err.Error())
+				return fmt.Errorf("invalid URI: %s", err.Error())
 			}
 			req.URIs = append(req.URIs, uri)
 		}
@@ -735,7 +735,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	tflog.Info(ctx, "Creating certificate resource: Verifying certificate key-pair")
 	err = verifyCertKeyPair(pcc.Certificate, pcc.PrivateKey, keyPassword)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("Could not add certificate resource to state. Certificate and private key mismatch. Err: %s", err.Error()))
+		return fmt.Errorf("Could not add certificate resource to state. Certificate and private key mismatch. Err: %s", err.Error())
 	}
 
 	if err = d.Set("certificate", pcc.Certificate); err != nil {
@@ -847,7 +847,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	tflog.Info(ctx, "Importing Venafi certificate", logFields)
 
 	if id == "" {
-		return nil, fmt.Errorf(importIdFailEmpty)
+		return nil, errors.New(importIdFailEmpty)
 	}
 
 	parameters := strings.Split(id, ",")
@@ -856,19 +856,19 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	var keyPassword string
 
 	if len(parameters) > 2 {
-		return nil, fmt.Errorf(importIdFailExceededValues)
+		return nil, errors.New(importIdFailExceededValues)
 	}
 
 	if len(parameters) >= 1 {
 		pickupID = parameters[0]
 		if pickupID == "" {
-			return nil, fmt.Errorf(importPickupIdFailEmpty)
+			return nil, errors.New(importPickupIdFailEmpty)
 		}
 	}
 	if len(parameters) == 2 {
 		keyPassword = parameters[1]
 		if keyPassword == "" {
-			return nil, fmt.Errorf(importKeyPasswordFailEmpty)
+			return nil, errors.New(importKeyPasswordFailEmpty)
 		}
 	}
 
@@ -881,7 +881,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	vCertCfg := provConf.VCertConfig
 	zone := vCertCfg.Zone
 	if zone == "" {
-		return nil, fmt.Errorf(importZoneFailEmpty)
+		return nil, errors.New(importZoneFailEmpty)
 	}
 
 	cl, err := getConnection(ctx, meta)
