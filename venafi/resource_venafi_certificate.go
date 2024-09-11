@@ -580,13 +580,10 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	if org != "" {
 		req.Subject.Organization = []string{org}
 	}
-	orUnitsNum := d.Get("organizational_units.#").(int)
-	if orUnitsNum > 0 {
-		for i := 0; i < orUnitsNum; i++ {
-			key := fmt.Sprintf("organizational_units.%d", i)
-			val := d.Get(key).(string)
-			req.Subject.OrganizationalUnit = append(req.Subject.OrganizationalUnit, val)
-		}
+	orgUnits := d.Get("organizational_units").([]interface{})
+	for _, orgUnit := range orgUnits {
+		orgUnitStr := orgUnit.(string)
+		req.Subject.OrganizationalUnit = append(req.Subject.OrganizationalUnit, orgUnitStr)
 	}
 
 	//Configuring keys
