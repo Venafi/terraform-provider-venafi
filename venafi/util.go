@@ -77,6 +77,12 @@ type testData struct {
 	wrong_cert           string
 	wrong_pkey           string
 	cn                   string
+	org                  string
+	orgUnit1             string
+	orgUnit2             string
+	country              string
+	state                string
+	locality             string
 	dns_ns               string
 	dns_ip               string
 	dns_email            string

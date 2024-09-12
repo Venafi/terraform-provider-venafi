@@ -16,6 +16,11 @@ import (
 	"github.com/Venafi/vcert/v5/pkg/util"
 )
 
+const (
+	VcertErrorLocalCsrUnacceptableOu   = "Distinguished name component OU with value \"%s\" is invalid"
+	VcertErrorServiceCsrUnacceptableOu = "(.)+specified org unit  \\[%s\\], doesn't match with policy's specified org unit(.)+"
+)
+
 var (
 	environmentVariables = fmt.Sprintf(`
 variable "TPP_USER" {default = "%s"}
@@ -27,6 +32,7 @@ variable "TRUST_BUNDLE" {default = "%s"}
 variable "CLOUD_URL" {default = "%s"}
 variable "CLOUD_APIKEY" {default = "%s"}
 variable "CLOUD_ZONE" {default = "%s"}
+variable "CLOUD_ZONE_RESTRICTED_2" {default = "%s"}
 variable "TPP_ACCESS_TOKEN" {default = "%s"}
 `,
 		os.Getenv("TPP_USER"),
@@ -38,6 +44,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 		os.Getenv("CLOUD_URL"),
 		os.Getenv("CLOUD_APIKEY"),
 		os.Getenv("CLOUD_ZONE"),
+		os.Getenv("CLOUD_ZONE_RESTRICTED_2"),
 		os.Getenv("TPP_ACCESS_TOKEN"))
 
 	tppProvider = environmentVariables + `
@@ -109,6 +116,14 @@ provider "venafi" {
 	zone = "${var.CLOUD_ZONE}"
 }
 `
+	vaasProviderCITRestricted = environmentVariables + `
+provider "venafi" {
+	alias = "vaas"
+	url = "${var.CLOUD_URL}"
+	api_key = "${var.CLOUD_APIKEY}"
+	zone = "${var.CLOUD_ZONE_RESTRICTED_2}"
+}
+`
 
 	devConfig = `
 provider "venafi" {
@@ -147,6 +162,59 @@ resource "venafi_certificate" "vaas_certificate" {
 	%s
 	key_password = "%s"
 	expiration_window = %d
+}
+output "certificate" {
+	value = "${venafi_certificate.vaas_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.vaas_certificate.private_key_pem}"
+	sensitive = true
+}
+output "expiration_window" {
+	value = "${venafi_certificate.vaas_certificate.expiration_window}"
+}`
+	vaasConfigForDnCSRLocalGenerated = `
+%s
+resource "venafi_certificate" "vaas_certificate" {
+	provider = "venafi.vaas"
+	common_name = "%s"
+	organizational_units = [
+		"%s",
+		"%s"
+	]
+	country = "%s"
+	state = "%s"
+    locality = "%s"
+	%s
+	key_password = "%s"
+	expiration_window = %d
+}
+output "certificate" {
+	value = "${venafi_certificate.vaas_certificate.certificate}"
+}
+output "private_key" {
+	value = "${venafi_certificate.vaas_certificate.private_key_pem}"
+	sensitive = true
+}
+output "expiration_window" {
+	value = "${venafi_certificate.vaas_certificate.expiration_window}"
+}`
+	vaasConfigForDnCSRServiceGenerated = `
+%s
+resource "venafi_certificate" "vaas_certificate" {
+	provider = "venafi.vaas"
+	common_name = "%s"
+	organizational_units = [
+		"%s",
+		"%s"
+	]
+	country = "%s"
+	state = "%s"
+    locality = "%s"
+	%s
+	key_password = "%s"
+	expiration_window = %d
+    csr_origin = "service"
 }
 output "certificate" {
 	value = "${venafi_certificate.vaas_certificate.certificate}"
@@ -460,6 +528,204 @@ func TestVaasSignedCert(t *testing.T) {
 						}
 					}
 				},
+			},
+		},
+	})
+}
+
+// This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
+// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
+// the CSR Parameters values.
+// Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
+// for the O, OU, L, ST, C parameters
+// +==========================+===================================+====================================================+======================+===================================+
+// |                          | Terraform venafi_certificate      | CIT configuration                                  | Recommended Settings | Resulting Certificate             |
+// +==========================+===================================+====================================================+======================+===================================+
+// | Organization(O)          |                                   | Venafi Inc.                                        | Venafi Inc.          | Venafi Inc.                       |
+// | Organizational Units(OU) | Professional Services;Engineering | Customer Support;Professional Services;Engineering | Customer Support     | Professional Services;Engineering |
+// | Locality(L)              | Merida                            | Salt Lake,Merida                                   | Salt Lake            | Merida                            |
+// | State(ST)                | Yucatan                           | Utah; Yucatan                                      | Utah                 | Yucatan                           |
+// | Country(C)               | MX                                | US;MX                                              | US                   | MX                                |
+// +--------------------------+-----------------------------------+----------------------------------------------------+----------------------+-----------------------------------+
+// As it can be observed, it's expected that the DN values provided through by the venafi_certificate terraform resource
+// will be honored and the resulting Certificate will contain them but for the ones which were not provided, the corresponding
+// values in the Recommended Settings will be used, as it's happening in this case for Organization (O).
+func TestVaasSignedCertWithDN(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "vfidev.com"
+	data.cn = rand + "." + domain
+	data.orgUnit1 = "Professional Services"
+	data.orgUnit2 = "Engineering"
+	data.country = "MX"
+	data.state = "Yucatan"
+	data.locality = "Merida"
+
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 48
+	config := fmt.Sprintf(vaasConfigForDnCSRLocalGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
+		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertForRecommendedSettings(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+			},
+		},
+	})
+}
+
+// This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
+// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
+// the CSR Parameters values.
+// Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
+// for the O, OU, L, ST, C parameters
+// +==========================+===================================+====================================================+======================+===================================+
+// |                          | Terraform venafi_certificate      | CIT configuration                                  | Recommended Settings | Resulting Certificate             |
+// +==========================+===================================+====================================================+======================+===================================+
+// | Organization(O)          |                                   | Venafi Inc.                                        | Venafi Inc.          |                                   |
+// | Organizational Units(OU) | Professional Services;Sales       | Customer Support;Professional Services;Engineering | Customer Support     | *FAIL given Sales is not an       |
+// | Locality(L)              | Merida                            | Salt Lake,Merida                                   | Salt Lake            | accepted value by the CIT         |
+// | State(ST)                | Yucatan                           | Utah; Yucatan                                      | Utah                 |                                   |
+// | Country(C)               | MX                                | US;MX                                              | US                   |                                   |
+// +--------------------------+-----------------------------------+----------------------------------------------------+----------------------+-----------------------------------+
+// As it can be observed, it's expected that the Request Certificate operation fails given TLSPC will reject it due one
+// of the configured Organizational Units by the venafi_certificate terraform resource, specifically "Sales" is not accepted
+// by the CIT because the CIT have set Customer Support;Professional Services;Engineering as acceptable values for OU.
+func TestVaasSignedCertWithUnacceptableDN(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "vfidev.com"
+	data.cn = rand + "." + domain
+	data.orgUnit1 = "Professional Services"
+	data.orgUnit2 = "Sales" // This value is not an acceptable value due the OU in the CIT doesn't contain it
+	data.country = "MX"
+	data.state = "Yucatan"
+	data.locality = "Merida"
+
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 48
+	config := fmt.Sprintf(vaasConfigForDnCSRLocalGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
+		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(fmt.Sprintf(VcertErrorLocalCsrUnacceptableOu, data.orgUnit2)),
+			},
+		},
+	})
+}
+
+// This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
+// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
+// the CSR Parameters values.
+// Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
+// for the O, OU, L, ST, C parameters
+// +==========================+===================================+====================================================+======================+===================================+
+// |                          | Terraform venafi_certificate      | CIT configuration                                  | Recommended Settings | Resulting Certificate             |
+// +==========================+===================================+====================================================+======================+===================================+
+// | Organization(O)          |                                   | Venafi Inc.                                        | Venafi Inc.          | Venafi Inc.                       |
+// | Organizational Units(OU) | Professional Services;Engineering | Customer Support;Professional Services;Engineering | Customer Support     | Professional Services;Engineering |
+// | Locality(L)              | Merida                            | Salt Lake,Merida                                   | Salt Lake            | Merida                            |
+// | State(ST)                | Yucatan                           | Utah; Yucatan                                      | Utah                 | Yucatan                           |
+// | Country(C)               | MX                                | US;MX                                              | US                   | MX                                |
+// +--------------------------+-----------------------------------+----------------------------------------------------+----------------------+-----------------------------------+
+// As it can be observed, it's expected that the DN values provided through by the venafi_certificate terraform resource
+// will be honored and the resulting Certificate will contain them but for the ones which were not provided, the corresponding
+// values in the Recommended Settings will be used.
+func TestVaasSignedCertWithDNServiceGeneratedCSR(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "vfidev.com"
+	data.cn = rand + "." + domain
+	data.orgUnit1 = "Professional Services"
+	data.orgUnit2 = "Engineering"
+	data.country = "MX"
+	data.state = "Yucatan"
+	data.locality = "Merida"
+
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 48
+	config := fmt.Sprintf(vaasConfigForDnCSRServiceGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
+		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					err := checkStandardCertForRecommendedSettings(t, &data, s)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				},
+			},
+		},
+	})
+}
+
+// This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
+// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
+// the CSR Parameters values.
+// Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
+// for the O, OU, L, ST, C parameters
+// +==========================+===================================+====================================================+======================+===================================+
+// |                          | Terraform venafi_certificate      | CIT configuration                                  | Recommended Settings | Resulting Certificate             |
+// +==========================+===================================+====================================================+======================+===================================+
+// | Organization(O)          |                                   | Venafi Inc.                                        | Venafi Inc.          |                                   |
+// | Organizational Units(OU) | Professional Services;Sales       | Customer Support;Professional Services;Engineering | Customer Support     | *FAIL given Sales is not an       |
+// | Locality(L)              | Merida                            | Salt Lake,Merida                                   | Salt Lake            | accepted value by the CIT         |
+// | State(ST)                | Yucatan                           | Utah; Yucatan                                      | Utah                 |                                   |
+// | Country(C)               | MX                                | US;MX                                              | US                   |                                   |
+// +--------------------------+-----------------------------------+----------------------------------------------------+----------------------+-----------------------------------+
+// As it can be observed, it's expected that the Request Certificate operation fails given TLSPC will reject it due one
+// of the configured Organizational Units by the venafi_certificate terraform resource, specifically "Sales" is not accepted
+// // by the CIT because the CIT have set Customer Support;Professional Services;Engineering as acceptable values for OU.
+func TestVaasSignedCertWithUnacceptableDNServiceGeneratedCSR(t *testing.T) {
+	data := testData{}
+	rand := randSeq(9)
+	domain := "vfidev.com"
+	data.cn = rand + "." + domain
+	data.orgUnit1 = "Professional Services"
+	data.orgUnit2 = "Sales" // This value is not an acceptable value due the OU in the CIT doesn't contain it
+	data.country = "MX"
+	data.state = "Yucatan"
+	data.locality = "Merida"
+
+	data.private_key_password = "123xxx"
+	data.key_algo = rsa2048
+	data.expiration_window = 48
+	config := fmt.Sprintf(vaasConfigForDnCSRServiceGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
+		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
+	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(fmt.Sprintf(VcertErrorServiceCsrUnacceptableOu, "\""+data.orgUnit1+"\" \""+data.orgUnit2+"\"")),
 			},
 		},
 	})

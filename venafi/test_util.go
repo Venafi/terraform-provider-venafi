@@ -24,11 +24,16 @@ import (
 )
 
 const (
-	emptyPolicy       = "/test_files/empty_policy.json"
-	policySpecVaas    = "/test_files/policy_specification_vaas.json"
-	policySpecTpp     = "/test_files/policy_specification_tpp.json"
-	policyReadSpecTpp = "/test_files/policy_specification_tpp_management.json"
-	validDays         = 30
+	emptyPolicy                               = "/test_files/empty_policy.json"
+	policySpecVaas                            = "/test_files/policy_specification_vaas.json"
+	policySpecTpp                             = "/test_files/policy_specification_tpp.json"
+	policyReadSpecTpp                         = "/test_files/policy_specification_tpp_management.json"
+	validDays                                 = 30
+	orgRecommendedSettingVaaSRestricted2      = "Venafi Inc."
+	orgUnitsRecommendedSettingVaaSRestricted2 = "Customer Support"
+	localityRecommendedSettingVaaSRestricted2 = "Salt Lake"
+	stateRecommendedSettingVaaSRestricted2    = "Utah"
+	countryRecommendedSettingVaaSRestricted2  = "US"
 )
 
 var (
@@ -118,6 +123,87 @@ func checkStandardCert(t *testing.T, data *testData, s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func checkStandardCertForRecommendedSettings(t *testing.T, data *testData, s *terraform.State) error {
+	t.Log("Testing certificate with cn", data.cn)
+	certUntyped := s.RootModule().Outputs["certificate"].Value
+	cert, ok := certUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"certificate\" is not a string")
+	}
+
+	t.Logf("Testing certificate PEM:\n %s", cert)
+	if !strings.HasPrefix(cert, "-----BEGIN CERTIFICATE----") {
+		return fmt.Errorf("key is missing cert PEM preamble")
+	}
+	keyUntyped := s.RootModule().Outputs["private_key"].Value
+	privateKey, ok := keyUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"private_key\" is not a string")
+	}
+
+	err := checkStandardCertInfo(t, data, cert, privateKey)
+	if err != nil {
+		return err
+	}
+
+	//checking subject info
+	block, _ := pem.Decode([]byte(cert))
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("error parsing cert: %s", err)
+	}
+
+	org := data.org
+	if org == "" {
+		org = orgRecommendedSettingVaaSRestricted2
+	}
+	if expected, got := []string{org}, certificate.Subject.Organization; !sameStringSlice(got, expected) {
+		return fmt.Errorf("incorrect Organization: expected %v, certificate %v", expected, got)
+	}
+
+	orgUnit1 := data.orgUnit1
+	orgUnit2 := data.orgUnit2
+	if orgUnit1 == "" && orgUnit2 == "" {
+		orgUnit1 = orgUnitsRecommendedSettingVaaSRestricted2
+	}
+	var orgUnits []string
+	if orgUnit1 != "" {
+		orgUnits = append(orgUnits, orgUnit1)
+	}
+	if orgUnit2 != "" {
+		orgUnits = append(orgUnits, orgUnit2)
+	}
+	if expected, got := orgUnits, certificate.Subject.OrganizationalUnit; !sameStringSlice(got, expected) {
+		return fmt.Errorf("incorrect Organizational Units: expected %v, certificate %v", expected, got)
+	}
+
+	country := data.country
+	if country == "" {
+		country = countryRecommendedSettingVaaSRestricted2
+	}
+	if expected, got := []string{country}, certificate.Subject.Country; !sameStringSlice(got, expected) {
+		return fmt.Errorf("incorrect Country: expected %v, certificate %v", expected, got)
+	}
+
+	state := data.state
+	if state == "" {
+		state = stateRecommendedSettingVaaSRestricted2
+	}
+	if expected, got := []string{state}, certificate.Subject.Province; !sameStringSlice(got, expected) {
+		return fmt.Errorf("incorrect State: expected %v, certificate %v", expected, got)
+	}
+
+	locality := data.locality
+	if locality == "" {
+		locality = localityRecommendedSettingVaaSRestricted2
+	}
+	if expected, got := []string{locality}, certificate.Subject.Locality; !sameStringSlice(got, expected) {
+		return fmt.Errorf("incorrect Locality: expected %v, certificate %v", expected, got)
+	}
+
 	return nil
 }
 

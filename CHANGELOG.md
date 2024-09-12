@@ -1,3 +1,10 @@
+## 0.21.1 (September 10th, 2024)
+- Fixed linter errors.
+- Add missing documentation to configure an Venafi Provider for EU.
+
+## 0.21.0 (June 11th, 2024)
+- Added support for Cloud Provisioning in Venafi Control Plane.
+
 ## 0.20.0 (April 10th, 2024)
 - Changed attribute name from `idp_jwt` to `external_jwt`
 

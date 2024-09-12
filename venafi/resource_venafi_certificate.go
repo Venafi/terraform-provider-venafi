@@ -64,8 +64,39 @@ func resourceVenafiCertificate() *schema.Resource {
 			"common_name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Common name of certificate",
+				Description: "Common name of the certificate",
 				ForceNew:    true,
+			},
+			"country": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Country of the certificate (C)",
+				ForceNew:    true,
+			},
+			"state": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "State of the certificate (S)",
+				ForceNew:    true,
+			},
+			"locality": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Locality/City of the certificate (L)",
+				ForceNew:    true,
+			},
+			"organization": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Organization of the certificate (O)",
+				ForceNew:    true,
+			},
+			"organizational_units": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of Organizational Units of the certificate (OU)",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			venafiCertificateAttrNickname: {
 				Type:        schema.TypeString,
@@ -531,6 +562,30 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	if origin == csrService {
 		req.CsrOrigin = certificate.ServiceGeneratedCSR
 	}
+
+	//setting DN values Org, Organization Units, Country, State, Locality(City)
+	country := d.Get("country").(string)
+	if country != "" {
+		req.Subject.Country = []string{country}
+	}
+	state := d.Get("state").(string)
+	if state != "" {
+		req.Subject.Province = []string{state}
+	}
+	locality := d.Get("locality").(string)
+	if locality != "" {
+		req.Subject.Locality = []string{locality}
+	}
+	org := d.Get("organization").(string)
+	if org != "" {
+		req.Subject.Organization = []string{org}
+	}
+	orgUnits := d.Get("organizational_units").([]interface{})
+	for _, orgUnit := range orgUnits {
+		orgUnitStr := orgUnit.(string)
+		req.Subject.OrganizationalUnit = append(req.Subject.OrganizationalUnit, orgUnitStr)
+	}
+
 	//Configuring keys
 	keyType := d.Get("algorithm").(string)
 
