@@ -1,4 +1,4 @@
-## 0.21.1 (September 10th, 2024)
+## 0.21.1 (September 12th, 2024)
 - Fixed linter errors.
 - Add missing documentation to configure an Venafi Provider for EU.
 
