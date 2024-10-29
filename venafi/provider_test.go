@@ -1,12 +1,15 @@
 package venafi
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+const certPassword = "test123"
 
 var testAccProviderFactories map[string]func() (*schema.Provider, error)
 
@@ -47,6 +50,18 @@ func TestNormalizedZones(t *testing.T) {
 
 		if !re.MatchString(newZone) {
 			t.Fatal(fmt.Printf("Zone %s is not normalized", newZone))
+		}
+	}
+}
+
+func TestSetTLSConfig(t *testing.T) {
+	certs := []string{"cert.p12", "cert-legacy.p12"}
+	for _, v := range certs {
+		loc := GetAbsoluteFIlePath(fmt.Sprintf("/test_files/%s", v))
+		ctx := context.Background()
+		err := setTLSConfig(ctx, loc, certPassword)
+		if err != nil {
+			t.Fatalf("Failed set TLS Config: %s", err)
 		}
 	}
 }
