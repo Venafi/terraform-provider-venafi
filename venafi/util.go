@@ -1,3 +1,4 @@
+//nolint:unused // False positive, as actually all of these functions are used; it's just that they are used in other files
 package venafi
 
 import (
