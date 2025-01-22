@@ -1,3 +1,6 @@
+//go:build tpp
+// +build tpp
+
 package venafi
 
 import (
@@ -46,7 +49,8 @@ output "principals"{
 }`
 )
 
-func TestSshConfig(t *testing.T) {
+func TestTPPSshConfig(t *testing.T) {
+	t.Parallel()
 	t.Log("Testing getting ssh config that returns the CA Public Key and the principals from TPP")
 
 	data := getTestConfigData()

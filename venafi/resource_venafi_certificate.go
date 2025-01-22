@@ -547,6 +547,8 @@ func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired b
 	renewWindow := time.Duration(expirationWindow) * time.Hour
 	certDuration := getCertDuration(&cert)
 	validExpirationWindow(certDuration, renewWindow)
+	// time now + 90 will be after (date) cert After?
+	// if yes, renew is required
 	renewRequired = time.Now().Add(renewWindow).After(cert.NotAfter)
 	return renewRequired
 }

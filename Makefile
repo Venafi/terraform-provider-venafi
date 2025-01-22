@@ -141,6 +141,18 @@ dev: clean fmtcheck
 
 test: fmtcheck linter test_go testacc test_e2e
 
+test_internal: fmtcheck linter test_go test_e2e_dev test_e2e_dev_ecdsa
+
+test_tpp: test_tpp_tf_acc test_e2e_tpp test_e2e_tpp_token
+
+test_vaas: test_vaas_tf_acc test_e2e_vaas
+
+test_tpp_tf_acc:
+	TF_ACC=1 go test -tags=tpp -run ^TestTPP $(TEST) -v $(TESTARGS) -timeout 120m
+
+test_vaas_tf_acc:
+	TF_ACC=1 go test -tags=vaas -run ^TestVAAS $(TEST) -v $(TESTARGS) -timeout 120m
+
 test_go:
 	go test -v -coverprofile=cov1.out ./venafi
 	go tool cover -func=cov1.out

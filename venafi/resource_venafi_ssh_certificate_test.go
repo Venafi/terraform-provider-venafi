@@ -1,3 +1,6 @@
+//go:build tpp
+// +build tpp
+
 package venafi
 
 import (
@@ -66,8 +69,8 @@ resource "venafi_ssh_certificate" "test-new-principals" {
 }`
 )
 
-func TestSshCert(t *testing.T) {
-
+func TestTPPSshCert(t *testing.T) {
+	t.Parallel()
 	t.Log("Testing creating ssh certificate")
 
 	data := getTestData()
@@ -90,7 +93,8 @@ func TestSshCert(t *testing.T) {
 	})
 }
 
-func TestSshCertNewAttrPrincipals(t *testing.T) {
+func TestTPPSshCertNewAttrPrincipals(t *testing.T) {
+	t.Parallel()
 	t.Log("Testing creating ssh certificate with new attribute for principals")
 
 	data := getTestData()
@@ -112,7 +116,8 @@ func TestSshCertNewAttrPrincipals(t *testing.T) {
 	})
 }
 
-func TestSshCertLocalPublicKey(t *testing.T) {
+func TestTPPSshCertLocalPublicKey(t *testing.T) {
+	t.Parallel()
 	t.Log("Testing creating ssh certificate")
 
 	data := getTestData()
@@ -135,7 +140,8 @@ func TestSshCertLocalPublicKey(t *testing.T) {
 	})
 }
 
-func TestSshCertLocalPublicKeyNewAttrPrincipals(t *testing.T) {
+func TestTPPSshCertLocalPublicKeyNewAttrPrincipals(t *testing.T) {
+	t.Parallel()
 	t.Log("Testing creating ssh certificate with new attribute for principals")
 
 	data := getTestData()

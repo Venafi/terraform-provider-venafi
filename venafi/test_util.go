@@ -1,15 +1,20 @@
+//nolint:unused // False positive, as actually all of these variables and functions are used; it's just that they are used in other files
 package venafi
 
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/Venafi/vcert/v5/pkg/policy"
+	"io"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -602,4 +607,73 @@ func deleteEmptyString(s []string) []string {
 		}
 	}
 	return r
+}
+
+func checkCreatePolicy(t *testing.T, data *testData, s *terraform.State, validateAttr bool) error {
+	t.Log("Validate Creating empty policy", data.zone)
+
+	pstUntyped := s.RootModule().Outputs["policy_specification"].Value
+
+	ps, ok := pstUntyped.(string)
+	if !ok {
+		return fmt.Errorf("output for \"policy_specification\" is not a string")
+	}
+
+	bytes := []byte(ps)
+
+	var policySpecification policy.PolicySpecification
+	err := json.Unmarshal(bytes, &policySpecification)
+	if err != nil {
+		return fmt.Errorf("policy specification is nil")
+	}
+
+	if !validateAttr {
+		return nil
+	}
+
+	//get policy on directory.
+	file, err := os.Open(data.filePath)
+	if err != nil {
+		return err
+	}
+
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	var filePolicySpecification policy.PolicySpecification
+	err = json.Unmarshal(fileBytes, &filePolicySpecification)
+	if err != nil {
+		return err
+	}
+
+	equal := IsArrayStringEqual(filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	if !equal {
+		return fmt.Errorf("domains are different, expected %+q but get %+q", filePolicySpecification.Policy.Domains, policySpecification.Policy.Domains)
+	}
+
+	//compare some attributes.
+
+	if *(filePolicySpecification.Policy.MaxValidDays) != *(policySpecification.Policy.MaxValidDays) {
+		return fmt.Errorf("max valid period is different, expected %s but get %s", strconv.Itoa(*(filePolicySpecification.Policy.MaxValidDays)), strconv.Itoa(*(policySpecification.Policy.MaxValidDays)))
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+
+	if !equal {
+		return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+	}
+
+	equal = IsArrayStringEqual(filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+
+	if !equal {
+		return fmt.Errorf("countries are different, expected %+q but get %+q", filePolicySpecification.Policy.Subject.Countries, policySpecification.Policy.Subject.Countries)
+	}
+
+	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {
+		return fmt.Errorf("default locality is different, expected %s but get %s", *(filePolicySpecification.Default.Subject.Locality), *(policySpecification.Default.Subject.Locality))
+	}
+
+	return nil
 }
