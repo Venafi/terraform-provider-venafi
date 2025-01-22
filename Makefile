@@ -122,7 +122,7 @@ collect_artifacts:
 	cp -rv $(DIST_DIR)/* artifacts
 
 release:
-	go install github.com/tcnksm/ghr@latest
+	go install github.com/tcnksm/ghr@v0.16.2
 	ghr -prerelease -n $$RELEASE_VERSION $$RELEASE_VERSION artifacts/
 
 clean:
