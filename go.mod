@@ -2,8 +2,6 @@ module github.com/Venafi/terraform-provider-venafi
 
 go 1.22
 
-toolchain go1.23.4
-
 require (
 	github.com/Venafi/vcert/v5 v5.8.1
 	github.com/client9/misspell v0.3.4
