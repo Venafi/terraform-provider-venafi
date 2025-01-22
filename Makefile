@@ -121,8 +121,10 @@ collect_artifacts:
 	mkdir -p artifacts
 	cp -rv $(DIST_DIR)/* artifacts
 
+# We are making the Github release tool static to v0.16.2, since in v0.17.0 and above, we are required to use
+# Golang version 1.23. Thus we keep it with a compatible version for us, until we bump Golang to that version.
 release:
-	go install github.com/tcnksm/ghr@latest
+	go install github.com/tcnksm/ghr@v0.16.2
 	ghr -prerelease -n $$RELEASE_VERSION $$RELEASE_VERSION artifacts/
 
 clean:
