@@ -90,9 +90,10 @@ automation will not be disrupted by token expiration.
 
 If you are using Venafi Control Plane, verify the following:
 
-- The Venafi Control Plane REST API at [https://api.venafi.cloud](https://api.venafi.cloud/vaas) 
-or [https://api.venafi.eu](https://api.venafi.eu/vaas) (if you have an EU account) is accessible from the system where 
-Terraform will run.
+- The Venafi Control Plane REST API is accessible from the system where Terraform will run. Currently we support the following regions:
+  - [https://api.venafi.cloud](https://api.venafi.cloud/vaas) [US]
+  - [https://api.venafi.eu](https://api.venafi.eu/vaas) [EU]
+  - [https://api.au.venafi.cloud](https://api.au.venafi.cloud/vaas) [AU]
 - You have successfully registered for a Venafi Control Plane account, have been granted at least the
 `Resource Owner` role, and know your API key.
 - A CA Account and Issuing Template exist and have been configured with:
@@ -192,6 +193,15 @@ for the provider in the `provider` block using the
    ```text
    provider "venafi" {
      url     = "https://api.venafi.eu"
+     api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     zone    = "Business App\\Enterprise CIT"
+   }
+   ```
+   **Venafi Control Plane for AU**:
+
+   ```text
+   provider "venafi" {
+     url     = "https://api.au.venafi.cloud"
      api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      zone    = "Business App\\Enterprise CIT"
    }
