@@ -21,8 +21,6 @@ linters:
     - makezero
     - durationcheck
     - prealloc
-  disable:
-    - unused
   settings:
     staticcheck:
       checks: [ "S1002","S1004","S1007","S1009","S1010","S1012","S1019","S1020","S1021","S1024","S1030","SA2*","SA3*",
