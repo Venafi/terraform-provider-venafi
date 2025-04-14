@@ -434,7 +434,8 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	t.Log("Creating certificate for testing")
 
 	var auth = &endpoint.Authentication{}
-	if cfg.ConnectorType == endpoint.ConnectorTypeTPP {
+	switch cfg.ConnectorType {
+	case endpoint.ConnectorTypeTPP:
 		cfg.BaseUrl = os.Getenv("TPP_URL")
 		cfg.Zone = os.Getenv("TPP_ZONE")
 		if data.zone != "" {
@@ -447,12 +448,15 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		}
 		cfg.ConnectionTrust = string(trustBundleBytes)
 		auth.AccessToken = os.Getenv("TPP_ACCESS_TOKEN")
-	} else if cfg.ConnectorType == endpoint.ConnectorTypeCloud {
+	case endpoint.ConnectorTypeCloud:
 		cfg.BaseUrl = os.Getenv("CLOUD_URL")
 		cfg.Zone = os.Getenv("CLOUD_ZONE")
 		cfg.Zone = removingFirstDoubleBackslash(cfg.Zone)
 		auth.APIKey = os.Getenv("CLOUD_APIKEY")
+	default:
+		t.Fatalf("Unsupported connector type: %s", cfg.ConnectorType)
 	}
+
 	cfg.Credentials = auth
 	client, err := vcert.NewClient(cfg)
 	if err != nil {
@@ -490,7 +494,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	}
 	if data.valid_days != 0 {
 		days := time.Duration(data.valid_days)
-		d := time.Hour * 24 * days
+		d := 24 * days
 		req.ValidityDuration = &d
 	}
 	req.IssuerHint = util.IssuerHintMicrosoft
