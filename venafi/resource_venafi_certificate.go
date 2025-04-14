@@ -1154,9 +1154,10 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 		customFields := certMetadata.CustomFields
 		newCustomFields := make(map[string]interface{})
 		for _, customField := range customFields {
-			if customField.Type == "List" {
+			switch customField.Type {
+			case "List":
 				newCustomFields[customField.Name] = strings.Join(customField.Value, "|")
-			} else if customField.Type == "DateTime" {
+			case "DateTime":
 				dateFormatRFC3339 := customField.Value[0]
 				currentFormat, err := time.Parse(time.RFC3339, dateFormatRFC3339)
 				if err != nil {
@@ -1164,8 +1165,7 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 				}
 				// Our date field at TPP currently only supports until minutes: yyyy-mm-dd HH:mm
 				newCustomFields[customField.Name] = currentFormat.Format("2006-01-02 15:04")
-
-			} else {
+			default:
 				newCustomFields[customField.Name] = customField.Value[0]
 			}
 		}

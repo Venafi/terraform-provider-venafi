@@ -44,11 +44,11 @@ const (
 	envVenafiPassword       = "VENAFI_PASS"
 	envVenafiAccessToken    = "VENAFI_TOKEN"
 	envVenafiApiKey         = "VENAFI_API"
-	envVenafiTokenURL       = "VENAFI_TOKEN_URL"
+	envVenafiTokenURL       = "VENAFI_TOKEN_URL" // #nosec G101 // This is not a hardcoded credential
 	envVenafiExternalJWT    = "VENAFI_EXTERNAL_JWT"
 	envVenafiDevMode        = "VENAFI_DEVMODE"
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
-	envVenafiP12Password    = "VENAFI_P12_PASSWORD"
+	envVenafiP12Password    = "VENAFI_P12_PASSWORD" // #nosec G101 // This is not a hardcoded credential
 	envVenafiClientID       = "VENAFI_CLIENT_ID"
 	envVenafiSkipRetirement = "VENAFI_SKIP_RETIREMENT"
 
@@ -59,7 +59,7 @@ const (
 	providerUsername       = "tpp_username"
 	providerPassword       = "tpp_password"
 	providerP12Cert        = "p12_cert_filename"
-	providerP12Password    = "p12_cert_password"
+	providerP12Password    = "p12_cert_password" // #nosec G101 // This is not a hardcoded credential
 	providerAccessToken    = "access_token"
 	providerApiKey         = "api_key"
 	providerTokenURL       = "token_url"
@@ -388,6 +388,7 @@ func setTLSConfig(ctx context.Context, p12FileLocation string, p12Password strin
 	tflog.Info(ctx, "Setting up TLS Configuration")
 	tlsConfig := tls.Config{
 		Renegotiation: tls.RenegotiateFreelyAsClient,
+		MinVersion:    tls.VersionTLS12,
 	}
 
 	data, err := os.ReadFile(p12FileLocation)
