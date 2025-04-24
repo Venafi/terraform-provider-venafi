@@ -1,3 +1,11 @@
+## 0.22.0 (April 24th, 2025)
+- Support TPP v25.1 and higher
+- Upgrades Golang build up to v1.23.
+- Solves vulnerabilities issues found 
+
+## 0.21.2 (January 22nd, 2025)
+- Bumps dependency libraries
+
 ## 0.21.1 (September 12th, 2024)
 - Fixed linter errors.
 - Add missing documentation to configure an Venafi Provider for EU.
