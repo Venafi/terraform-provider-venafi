@@ -125,6 +125,13 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Default:     "P521",
 			},
+			"san_enabled": {
+				Type: schema.TypeBool,
+				Optional: true,
+				ForceNew: true,
+				Description: "Whether or not SANs are enabled on the CA."
+				Default: true
+			},
 			"san_dns": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -613,6 +620,9 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 
 	//Setting up Subject
 	commonName := d.Get("common_name").(string)
+
+	sanEnabled := d.Get("san_enabled").(bool)
+
 	//Adding alt names if exists
 	dnsNum := d.Get("san_dns.#").(int)
 	if dnsNum > 0 {
@@ -630,7 +640,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	if len(commonName) == 0 && len(req.DNSNames) > 0 {
 		commonName = req.DNSNames[0]
 	}
-	if !sliceContains(req.DNSNames, commonName) {
+	if sanEnabled && !sliceContains(req.DNSNames, commonName) {
 		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames))
 		req.DNSNames = append(req.DNSNames, commonName)
 	}
@@ -687,7 +697,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	}
 
 	//Appending common name to the DNS names if it is not there
-	if !sliceContains(req.DNSNames, commonName) {
+	if sanEnabled && !sliceContains(req.DNSNames, commonName) {
 		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN because it wasn't included.", commonName))
 		req.DNSNames = append(req.DNSNames, commonName)
 	}
