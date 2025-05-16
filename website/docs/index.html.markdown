@@ -97,6 +97,38 @@ resource "venafi_certificate" "webserver" {
 }
 ```
 
+### SG tenants
+
+```hcl
+# Configure the Venafi provider with UK api url
+provider "venafi" {
+  url     = "https://api.sg.venafi.cloud"
+  api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  zone    = "Business App\\Enterprise CIT"
+}
+
+# Generate a key pair and request a certificate
+resource "venafi_certificate" "webserver" {
+  # ...
+}
+```
+
+### CA tenants
+
+```hcl
+# Configure the Venafi provider with UK api url
+provider "venafi" {
+  url     = "https://api.ca.venafi.cloud"
+  api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  zone    = "Business App\\Enterprise CIT"
+}
+
+# Generate a key pair and request a certificate
+resource "venafi_certificate" "webserver" {
+  # ...
+}
+```
+
 ## Example Usage for Venafi Trust Protection Platform
 
 Your Venafi administrator can provide you with the URL for the Trust Protection Platform REST API and grant you 

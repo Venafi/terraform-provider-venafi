@@ -95,6 +95,8 @@ If you are using Venafi Control Plane, verify the following:
   - [https://api.venafi.eu](https://api.venafi.eu/vaas) [EU]
   - [https://api.au.venafi.cloud](https://api.au.venafi.cloud/vaas) [AU]
   - [https://api.uk.venafi.cloud](https://api.uk.venafi.cloud/vaas) [UK]
+  - [https://api.sg.venafi.cloud](https://api.sg.venafi.cloud/vaas) [SG]
+  - [https://api.ca.venafi.cloud](https://api.ca.venafi.cloud/vaas) [CA]
 - You have successfully registered for a Venafi Control Plane account, have been granted at least the
 `Resource Owner` role, and know your API key.
 - A CA Account and Issuing Template exist and have been configured with:
@@ -213,6 +215,26 @@ for the provider in the `provider` block using the
    ```text
    provider "venafi" {
      url     = "https://api.uk.venafi.cloud"
+     api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     zone    = "Business App\\Enterprise CIT"
+   }
+   ```
+
+   **Venafi Control Plane for SG**:
+
+   ```text
+   provider "venafi" {
+     url     = "https://api.sg.venafi.cloud"
+     api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     zone    = "Business App\\Enterprise CIT"
+   }
+   ```
+
+   **Venafi Control Plane for CA**:
+
+   ```text
+   provider "venafi" {
+     url     = "https://api.ca.venafi.cloud"
      api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      zone    = "Business App\\Enterprise CIT"
    }
