@@ -100,7 +100,7 @@ resource "venafi_certificate" "webserver" {
 ### SG tenants
 
 ```hcl
-# Configure the Venafi provider with UK api url
+# Configure the Venafi provider with SG api url
 provider "venafi" {
   url     = "https://api.sg.venafi.cloud"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -116,7 +116,7 @@ resource "venafi_certificate" "webserver" {
 ### CA tenants
 
 ```hcl
-# Configure the Venafi provider with UK api url
+# Configure the Venafi provider with CA api url
 provider "venafi" {
   url     = "https://api.ca.venafi.cloud"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
