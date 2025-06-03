@@ -327,6 +327,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			Summary:  messageVenafiClientInitFailed,
 			Detail:   messageVenafiClientInitFailed + ": " + err.Error(),
 		})
+		return nil, diags
 	}
 
 	err = client.Ping()
