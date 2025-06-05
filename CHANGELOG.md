@@ -1,3 +1,6 @@
+## 0.22.1 (June 4th, 2025)
+- Solve nil pointer issue [#171](https://github.com/Venafi/terraform-provider-venafi/issues/171)
+
 ## 0.22.0 (April 24th, 2025)
 - Support TPP v25.1 and higher
 - Upgrades Golang build up to v1.23.
