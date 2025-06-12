@@ -1,5 +1,8 @@
+## 0.22.2 (June 12th, 2025)
+- Add support to set GCM Certificate scope in [venafi_cloud_keystore_installation](./website/docs/r/venafi_cloud_keystore_installation.html.markdown) resource.
+
 ## 0.22.1 (June 4th, 2025)
-- Solve nil pointer issue [#171](https://github.com/Venafi/terraform-provider-venafi/issues/171)
+- Fixed nil pointer issue [#171](https://github.com/Venafi/terraform-provider-venafi/issues/171)
 
 ## 0.22.0 (April 24th, 2025)
 - Support TPP v25.1 and higher

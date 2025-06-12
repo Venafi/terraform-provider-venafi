@@ -22,6 +22,7 @@ const (
 	cloudKeystoreInstallationCertificateID            = "certificate_id"
 	cloudKeystoreInstallationCloudCertificateName     = "cloud_certificate_name"
 	cloudKeystoreInstallationARN                      = "arn"
+	cloudKeystoreInstallationGCMCertScope             = "gcm_cert_scope"
 	cloudKeystoreInstallationCloudCertificateID       = "cloud_certificate_id"
 	cloudKeystoreInstallationCloudCertificateMetadata = "cloud_certificate_metadata"
 )
@@ -60,6 +61,11 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 			},
+			cloudKeystoreInstallationGCMCertScope: {
+				Type:        schema.TypeString,
+				Description: "Certificate scope of the certificate in Google Cloud. Only used when provisioning for GCM keystore",
+				Optional:    true,
+			},
 			cloudKeystoreInstallationCloudCertificateID: {
 				Type:        schema.TypeString,
 				Description: "ID of the certificate after it has been provisioned to the cloud keystore",
@@ -81,6 +87,7 @@ func resourceCloudKeystoreInstallation() *schema.Resource {
 func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keystoreID := d.Get(cloudKeystoreInstallationKeystoreID).(string)
 	certificateID := d.Get(cloudKeystoreInstallationCertificateID).(string)
+	provisionOptionsMap := map[string]string{}
 	logFieldsMap := map[string]interface{}{
 		cloudKeystoreInstallationKeystoreID:    keystoreID,
 		cloudKeystoreInstallationCertificateID: certificateID,
@@ -90,12 +97,21 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 	if cerNameOk {
 		cloudCertificateName = cloudCertificateNameInterface.(string)
 		logFieldsMap[cloudKeystoreInstallationCloudCertificateName] = cloudCertificateName
+		provisionOptionsMap[cloudKeystoreInstallationCloudCertificateName] = cloudCertificateName
 	}
 	certificateARNInterface, arnOk := d.GetOk(cloudKeystoreInstallationARN)
 	certificateARN := ""
 	if arnOk {
 		certificateARN = certificateARNInterface.(string)
 		logFieldsMap[cloudKeystoreInstallationARN] = certificateARN
+		provisionOptionsMap[cloudKeystoreInstallationARN] = certificateARN
+	}
+	certificateGCMCertScopeInterface, gcmCertScopeOk := d.GetOk(cloudKeystoreInstallationGCMCertScope)
+	certificateGCMCertScope := ""
+	if gcmCertScopeOk {
+		certificateGCMCertScope = certificateGCMCertScopeInterface.(string)
+		logFieldsMap[cloudKeystoreInstallationGCMCertScope] = certificateGCMCertScope
+		provisionOptionsMap[cloudKeystoreInstallationGCMCertScope] = certificateGCMCertScope
 	}
 	tflog.Info(ctx, "creating cloud keystore installation", logFieldsMap)
 
@@ -134,7 +150,7 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 	tflog.Info(ctx, "successfully retrieved cloud keystore installation from VCP", logFieldsMap)
 
 	// Provision certificate to keystore
-	options := getProvisioningOptions(ctx, cloudKeystore.Type, cloudCertificateName, certificateARN)
+	options := getProvisioningOptions(ctx, cloudKeystore.Type, provisionOptionsMap)
 	request := &domain.ProvisioningRequest{
 		CertificateID: &certificateID,
 		KeystoreID:    &keystoreID,
@@ -290,9 +306,10 @@ func resourceCloudKeystoreInstallationImport(ctx context.Context, d *schema.Reso
 	return []*schema.ResourceData{d}, nil
 }
 
-func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudKeystoreType, certificateName string, arn string) *domain.ProvisioningOptions {
+func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudKeystoreType, provisionOptionsMap map[string]string) *domain.ProvisioningOptions {
 	if cloudKeystoreType == domain.CloudKeystoreTypeACM {
-		if arn == "" {
+		arn, ok := provisionOptionsMap[cloudKeystoreInstallationARN]
+		if !ok || arn == "" {
 			return nil
 		}
 		tflog.Info(ctx, "using provisioning options", map[string]interface{}{
@@ -303,7 +320,8 @@ func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudK
 		}
 	}
 
-	if certificateName == "" {
+	certificateName, ok := provisionOptionsMap[cloudKeystoreInstallationCloudCertificateName]
+	if !ok || certificateName == "" {
 		return nil
 	}
 
@@ -311,9 +329,23 @@ func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudK
 	tflog.Info(ctx, "using provisioning options", map[string]interface{}{
 		cloudKeystoreInstallationCloudCertificateName: normalizedCertName,
 	})
-	return &domain.ProvisioningOptions{
+
+	provisioningOptions := &domain.ProvisioningOptions{
 		CloudCertificateName: normalizedCertName,
 	}
+
+	if cloudKeystoreType == domain.CloudKeystoreTypeGCM {
+		gcmCertScope, ok := provisionOptionsMap[cloudKeystoreInstallationGCMCertScope]
+		if !ok || gcmCertScope == "" {
+			return nil
+		}
+		tflog.Info(ctx, "using provisioning options", map[string]interface{}{
+			cloudKeystoreInstallationGCMCertScope: gcmCertScope,
+		})
+		provisioningOptions.GCMCertificateScope = domain.GetScopeFromString(gcmCertScope)
+	}
+
+	return provisioningOptions
 }
 
 func getMachineIdentity(ctx context.Context, machineIdentityID string, meta interface{}) (*domain.CloudMachineIdentity, error) {

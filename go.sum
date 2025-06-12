@@ -68,8 +68,8 @@ github.com/OpenPeeDeeP/depguard/v2 v2.1.0 h1:aQl70G173h/GZYhWf36aE5H0KaujXfVMnn/
 github.com/OpenPeeDeeP/depguard/v2 v2.1.0/go.mod h1:PUBgk35fX4i7JDmwzlJwJ+GMe6NfO1723wmJMgPThNQ=
 github.com/ProtonMail/go-crypto v1.1.0-alpha.2 h1:bkyFVUP+ROOARdgCiJzNQo2V2kiB97LyUpzH9P6Hrlg=
 github.com/ProtonMail/go-crypto v1.1.0-alpha.2/go.mod h1:rA3QumHc/FZ8pAHreoekgiAbzpNsfQAosU5td4SnOrE=
-github.com/Venafi/vcert/v5 v5.9.0 h1:HXQl7YI8WnhC4C+IJYfI+ZYzKLffcukqhPq/H2uTfKQ=
-github.com/Venafi/vcert/v5 v5.9.0/go.mod h1:2IBZ4iPWVVoo7y+6x+QxeyDL2jwl9g6C7wb1icAW4DM=
+github.com/Venafi/vcert/v5 v5.10.1 h1:6LHBMfDvHq+Ope9awAuaLIR2yPZbJUH1BtLQ/t5pyRk=
+github.com/Venafi/vcert/v5 v5.10.1/go.mod h1:2IBZ4iPWVVoo7y+6x+QxeyDL2jwl9g6C7wb1icAW4DM=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
