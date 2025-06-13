@@ -336,13 +336,15 @@ func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudK
 
 	if cloudKeystoreType == domain.CloudKeystoreTypeGCM {
 		gcmCertScope, ok := provisionOptionsMap[cloudKeystoreInstallationGCMCertScope]
-		if !ok || gcmCertScope == "" {
-			return nil
+		if ok {
+			if gcmCertScope == "" {
+				return nil
+			}
+			tflog.Info(ctx, "using provisioning options", map[string]interface{}{
+				cloudKeystoreInstallationGCMCertScope: gcmCertScope,
+			})
+			provisioningOptions.GCMCertificateScope = domain.GetScopeFromString(gcmCertScope)
 		}
-		tflog.Info(ctx, "using provisioning options", map[string]interface{}{
-			cloudKeystoreInstallationGCMCertScope: gcmCertScope,
-		})
-		provisioningOptions.GCMCertificateScope = domain.GetScopeFromString(gcmCertScope)
 	}
 
 	return provisioningOptions
