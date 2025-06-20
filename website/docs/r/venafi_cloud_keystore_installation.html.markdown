@@ -36,7 +36,7 @@ resource "venafi_cloud_keystore_installation" "ck_installation_example" {
 * `certificate_id` - (Required, string) ID of the certificate to be provisioned to the given `keystore_id`.
 * `cloud_certificate_name` - (Optional, string) Name for the provisioned certificate in the keystore. If the name already exists, the provisioning will replace the previous certificate with the one from `certificate_id`. Only valid for AKV and GCM keystores.
 * `arn` - (Optional, string) ARN of the AWS certificate. Use it to provision the VCP certificate to an existing ACM certificate, instead of a new one. Only valid for ACM keystores.
-* `gcm_cert_scope` - (Optional, string) The GCM certificate scope of the certificate. Only valid for GCM keystores. Supported values from GCM API documentation: DEFAULT, EDGE_CACHE, ALL_REGIONS. Only it's taken into account if the `cloud_certificate_name` argument is provided.
+* `gcm_cert_scope` - (Optional, string) The GCM certificate scope of the certificate. Only valid for GCM keystores. Supported values from GCM API documentation: DEFAULT, EDGE_CACHE, ALL_REGIONS.
 
 ## Attribute Reference
 
