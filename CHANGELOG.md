@@ -1,3 +1,6 @@
+## 0.22.3 (June 21st, 2025)
+- Previous version required to set the `cloud_certificate_name` argument in order to set the `gcm_cert_scope` in [venafi_cloud_keystore_installation](./website/docs/r/venafi_cloud_keystore_installation.html.markdown) resource. Now this restriction doesn't exist.
+
 ## 0.22.2 (June 12th, 2025)
 - Add support to set GCM Certificate scope in [venafi_cloud_keystore_installation](./website/docs/r/venafi_cloud_keystore_installation.html.markdown) resource.
 
