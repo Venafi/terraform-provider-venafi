@@ -307,47 +307,56 @@ func resourceCloudKeystoreInstallationImport(ctx context.Context, d *schema.Reso
 }
 
 func getProvisioningOptions(ctx context.Context, cloudKeystoreType domain.CloudKeystoreType, provisionOptionsMap map[string]string) *domain.ProvisioningOptions {
-	if cloudKeystoreType == domain.CloudKeystoreTypeACM {
+	provisioningOptions := &domain.ProvisioningOptions{}
+	var optionsProvided bool
+	switch cloudKeystoreType {
+	case domain.CloudKeystoreTypeACM:
 		arn, ok := provisionOptionsMap[cloudKeystoreInstallationARN]
-		if !ok || arn == "" {
-			return nil
+		if ok && arn != "" {
+			tflog.Info(ctx, "using provisioning options", map[string]interface{}{
+				cloudKeystoreInstallationARN: arn,
+			})
+			provisioningOptions.ARN = arn
+			optionsProvided = true
 		}
-		tflog.Info(ctx, "using provisioning options", map[string]interface{}{
-			cloudKeystoreInstallationARN: arn,
-		})
-		return &domain.ProvisioningOptions{
-			ARN: arn,
+	case domain.CloudKeystoreTypeAKV:
+		certificateName, ok := provisionOptionsMap[cloudKeystoreInstallationCloudCertificateName]
+		if ok && certificateName != "" {
+			normalizedCertName := normalizeCloudCertificateName(certificateName)
+			tflog.Info(ctx, "using provisioning options", map[string]interface{}{
+				cloudKeystoreInstallationCloudCertificateName: normalizedCertName,
+			})
+			provisioningOptions.CloudCertificateName = normalizedCertName
+			optionsProvided = true
 		}
-	}
+	case domain.CloudKeystoreTypeGCM:
+		certificateName, ok := provisionOptionsMap[cloudKeystoreInstallationCloudCertificateName]
+		if ok && certificateName != "" {
+			normalizedCertName := normalizeCloudCertificateName(certificateName)
+			tflog.Info(ctx, "using provisioning options", map[string]interface{}{
+				cloudKeystoreInstallationCloudCertificateName: normalizedCertName,
+			})
+			provisioningOptions.CloudCertificateName = normalizedCertName
+			optionsProvided = true
+		}
 
-	certificateName, ok := provisionOptionsMap[cloudKeystoreInstallationCloudCertificateName]
-	if !ok || certificateName == "" {
-		return nil
-	}
-
-	normalizedCertName := normalizeCloudCertificateName(certificateName)
-	tflog.Info(ctx, "using provisioning options", map[string]interface{}{
-		cloudKeystoreInstallationCloudCertificateName: normalizedCertName,
-	})
-
-	provisioningOptions := &domain.ProvisioningOptions{
-		CloudCertificateName: normalizedCertName,
-	}
-
-	if cloudKeystoreType == domain.CloudKeystoreTypeGCM {
 		gcmCertScope, ok := provisionOptionsMap[cloudKeystoreInstallationGCMCertScope]
-		if ok {
-			if gcmCertScope == "" {
-				return nil
-			}
+		if ok && gcmCertScope != "" {
 			tflog.Info(ctx, "using provisioning options", map[string]interface{}{
 				cloudKeystoreInstallationGCMCertScope: gcmCertScope,
 			})
 			provisioningOptions.GCMCertificateScope = domain.GetScopeFromString(gcmCertScope)
+			optionsProvided = true
 		}
+	default:
+		optionsProvided = false
 	}
 
-	return provisioningOptions
+	if optionsProvided {
+		return provisioningOptions
+	}
+
+	return nil
 }
 
 func getMachineIdentity(ctx context.Context, machineIdentityID string, meta interface{}) (*domain.CloudMachineIdentity, error) {
