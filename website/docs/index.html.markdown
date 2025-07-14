@@ -171,6 +171,7 @@ Applies only to Venafi Trust Protection Platform.
 * `external_jwt` - (Optional, string) JWT of the Identity Provider associated to a service account for authentication. 
 Applies only to Venafi Control Plane. 
 * `p12_cert_filename` - (Optional, string) Filename of PKCS#12 keystore containing a client certificate, private key,
+* `p12_cert_data` - (Optional, string) Base64 encoded PKCS#12 keystore containing a client certificate, private key,
   and chain certificates to authenticate to Venafi Trust Protection Platform.
 * `p12_cert_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert_filename`. Applies 
 only to Venafi Trust Protection Platform.
@@ -196,7 +197,7 @@ argument values:
 * `VENAFI_DEVMODE` - for `dev_mode` argument
 * `VENAFI_EXTERNAL_JWT` - for `external_jwt` argument
 * `VENAFI_PASS` - for `tpp_password` argument
-* `VENAFI_P12_CERTIFICATE` - for `p12_cert` argument
+* `VENAFI_P12_CERTIFICATE` - for `p12_cert_filename` argument
 * `VENAFI_P12_PASSWORD` - for `p12_password` argument
 * `VENAFI_SKIP_RETIREMENT` - for `skip_retirement` argument
 * `VENAFI_TOKEN` - for `access_token` argument

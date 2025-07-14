@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net/http"
@@ -59,6 +60,7 @@ const (
 	providerUsername       = "tpp_username"
 	providerPassword       = "tpp_password"
 	providerP12Cert        = "p12_cert_filename"
+	providerP12CertData    = "p12_cert_data"
 	providerP12Password    = "p12_cert_password" // #nosec G101 // This is not a hardcoded credential
 	providerAccessToken    = "access_token"
 	providerApiKey         = "api_key"
@@ -133,11 +135,16 @@ Example for Venafi as a Service: myApp\\Default`,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiP12Certificate, nil),
 				Description: "Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
 			},
+			providerP12CertData: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Base64 encoded PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
+			},
 			providerP12Password: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiP12Password, nil),
-				Description: "Password for the PKCS#12 keystore declared in p12_cert",
+				Description: "Password for the PKCS#12 keystore declared in p12_cert / p12_cert_data",
 				Sensitive:   true,
 			},
 			providerTrustBundle: {
@@ -220,6 +227,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	zone := d.Get(providerZone).(string)
 	trustBundle := d.Get(providerTrustBundle).(string)
 	p12Certificate := d.Get(providerP12Cert).(string)
+	p12CertData := d.Get(providerP12CertData).(string)
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
@@ -233,7 +241,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	devMode := d.Get(providerDevMode).(bool)
 	// TLSPDC auth methods
 	userPassMethod := tppUser != "" && tppPassword != ""
-	clientCertMethod := p12Certificate != "" && p12Password != ""
+	clientCertMethod := (p12Certificate != "" || p12CertData != "") && p12Password != ""
 	accessTokenMethod := accessToken != ""
 	// TLSPC auth methods
 	apiKeyMethod := apiKey != ""
@@ -272,11 +280,44 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		cfg.Credentials.AccessToken = accessToken
 
 	} else if clientCertMethod {
+		if p12CertData != "" && p12Certificate != "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  messageVenafiClientInitFailed,
+				Detail:   fmt.Sprintf("%s: Only one of p12_cert_data and p12_cert_filename should be provided", messageVenafiConfigFailed),
+			})
+			return nil, diags
+		}
+		var cert []byte
+		if p12CertData != "" {
+			data, err := base64.StdEncoding.DecodeString(p12CertData)
+			if err != nil {
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  messageVenafiClientInitFailed,
+					Detail:   fmt.Sprintf("%s: Failed to decode p12 Certificate Data", messageVenafiConfigFailed),
+				})
+				return nil, diags
+			}
+			cert = data
+		}
+		if p12Certificate != "" {
+			data, err := os.ReadFile(p12Certificate)
+			if err != nil {
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  messageVenafiClientInitFailed,
+					Detail:   fmt.Sprintf("%s: Failed to read p12 Certificate file", messageVenafiConfigFailed),
+				})
+				return nil, diags
+			}
+			cert = data
+		}
 		tflog.Info(ctx, fmt.Sprintf(messageUseTLSPDC, url))
 		cfg.ConnectorType = endpoint.ConnectorTypeTPP
 		cfg.Credentials.ClientPKCS12 = true
 
-		err := setTLSConfig(ctx, p12Certificate, p12Password)
+		err := setTLSConfig(ctx, cert, p12Password)
 		if err != nil {
 			tflog.Error(ctx, err.Error())
 			diags = append(diags, diag.Diagnostic{
@@ -385,19 +426,15 @@ func normalizeZone(zone string) string {
 	return newZone
 }
 
-func setTLSConfig(ctx context.Context, p12FileLocation string, p12Password string) error {
+func setTLSConfig(ctx context.Context, p12data []byte, p12Password string) error {
 	tflog.Info(ctx, "Setting up TLS Configuration")
 	tlsConfig := tls.Config{
 		Renegotiation: tls.RenegotiateFreelyAsClient,
 		MinVersion:    tls.VersionTLS12,
 	}
 
-	data, err := os.ReadFile(p12FileLocation)
-	if err != nil {
-		return fmt.Errorf("unable to read PKCS#12 file at [%s]: %w", p12FileLocation, err)
-	}
 	// We have a PKCS12 file to use, set it up for cert authentication
-	blocks, err := pkcs12.ToPEM(data, p12Password)
+	blocks, err := pkcs12.ToPEM(p12data, p12Password)
 	if err != nil {
 		return fmt.Errorf("failed converting PKCS#12 archive file to PEM blocks: %w", err)
 	}
