@@ -295,7 +295,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 				diags = append(diags, diag.Diagnostic{
 					Severity: diag.Error,
 					Summary:  messageVenafiClientInitFailed,
-					Detail:   fmt.Sprintf("%s: Failed to decode p12 Certificate Data", messageVenafiConfigFailed),
+					Detail:   fmt.Sprintf("%s: unable to decode PKCS#12 data: %w", messageVenafiConfigFailed, err),
 				})
 				return nil, diags
 			}
@@ -307,7 +307,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 				diags = append(diags, diag.Diagnostic{
 					Severity: diag.Error,
 					Summary:  messageVenafiClientInitFailed,
-					Detail:   fmt.Sprintf("%s: Failed to read p12 Certificate file", messageVenafiConfigFailed),
+					Detail:   fmt.Sprintf("%s: unable to read PKCS#12 file at [%s]: %w", messageVenafiConfigFailed, p12Certificate, err),
 				})
 				return nil, diags
 			}
