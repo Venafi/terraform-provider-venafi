@@ -159,6 +159,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Description: "Password for the private key",
 				Sensitive:   true,
+                                WriteOnly:   true,
 			},
 			"expiration_window": {
 				Type:        schema.TypeInt,
