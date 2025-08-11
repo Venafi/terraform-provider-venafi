@@ -3,6 +3,7 @@ package venafi
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -59,7 +60,11 @@ func TestSetTLSConfig(t *testing.T) {
 	for _, v := range certs {
 		loc := GetAbsoluteFIlePath(fmt.Sprintf("/test_files/%s", v))
 		ctx := context.Background()
-		err := setTLSConfig(ctx, loc, certPassword)
+		cert, err := os.ReadFile(loc)
+		if err != nil {
+			t.Fatalf("Failed to read file: %s - %s", loc, err)
+		}
+		err = setTLSConfig(ctx, cert, certPassword)
 		if err != nil {
 			t.Fatalf("Failed set TLS Config: %s", err)
 		}
