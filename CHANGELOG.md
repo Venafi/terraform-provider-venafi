@@ -1,3 +1,6 @@
+## 0.22.4 (August 11th, 2025)
+- Add support to provide a client certificate in PKCS#12 Base64 format.
+ 
 ## 0.22.3 (June 21st, 2025)
 - Previous version required to set the `cloud_certificate_name` argument in order to set the `gcm_cert_scope` in [venafi_cloud_keystore_installation](./website/docs/r/venafi_cloud_keystore_installation.html.markdown) resource. Now this restriction doesn't exist.
 
@@ -17,7 +20,7 @@
 
 ## 0.21.1 (September 12th, 2024)
 - Fixed linter errors.
-- Add missing documentation to configure an Venafi Provider for EU.
+- Add missing documentation to configure a Venafi Provider for EU.
 
 ## 0.21.0 (June 11th, 2024)
 - Added support for Cloud Provisioning in Venafi Control Plane.
