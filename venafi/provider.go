@@ -301,6 +301,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			}
 			cert = data
 		}
+
 		if p12Certificate != "" {
 			data, err := os.ReadFile(p12Certificate)
 			if err != nil {
