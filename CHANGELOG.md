@@ -1,4 +1,4 @@
-## 0.22.4 (August 11th, 2025)
+## 0.22.4 (August 12th, 2025)
 - Add support to provide a client certificate in PKCS#12 Base64 format.
  
 ## 0.22.3 (June 21st, 2025)
