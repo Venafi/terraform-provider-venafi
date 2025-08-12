@@ -173,7 +173,7 @@ Applies only to Venafi Control Plane.
 * `p12_cert_filename` - (Optional, string) Filename of PKCS#12 keystore containing a client certificate, private key,
 * `p12_cert_data` - (Optional, string) Base64 encoded PKCS#12 keystore containing a client certificate, private key,
   and chain certificates to authenticate to Venafi Trust Protection Platform.
-* `p12_cert_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert_filename`. Applies 
+* `p12_cert_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert_filename` or in `p12_cert_data`. Applies 
 only to Venafi Trust Protection Platform.
 * `skip_retirement` - (Optional, boolean) If it's specified with value `true` then the certificate retirement on the
   related Venafi Platform (TLSPDC or TLSPC) will be skipped. A value of `false` is equivalent to omit this argument.
