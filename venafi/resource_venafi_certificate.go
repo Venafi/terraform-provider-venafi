@@ -216,6 +216,13 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Description: "Indicate the target issuer to enable valid days with Venafi Platform. Supported values are DigiCert, Entrust, and Microsoft",
 			},
+			"tags": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of Certificate Tags defined in Venafi Platform.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
 			venafiCertificateAttrCertificateID: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -734,6 +741,12 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		req.ValidityHours = validity //nolint:staticcheck
 		issuerHint := d.Get("issuer_hint").(string)
 		req.IssuerHint = getIssuerHint(issuerHint)
+	}
+
+	tags := d.Get("tags").([]interface{})
+	for _, tag := range tags {
+		tagStr := tag.(string)
+		req.Tags = append(req.Tags, tagStr)
 	}
 
 	tflog.Info(ctx, "Making certificate request")
