@@ -219,7 +219,6 @@ func resourceVenafiCertificate() *schema.Resource {
 			"tags": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "List of Certificate Tags defined in Venafi Platform.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
