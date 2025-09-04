@@ -78,7 +78,7 @@ Defaults to `168`.
 * `csr_origin` - (Optional, string) Whether key-pair generation will be `local` or `service` generated. Default is 
 `local`.
 
-* `tags` - (Optional, set of strings) List of Certificate Tags defined in Venafi Platform.
+* `tags` - (Optional, set of strings) List of Certificate Tags defined in Venafi Control Plane.
 
 ## Attributes Reference
 
