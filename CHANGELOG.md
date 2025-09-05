@@ -1,3 +1,6 @@
+## 0.23.0 (September 5th, 2025)
+- Add support to provide certificate tags for Venafi Control Plane.
+
 ## 0.22.4 (August 12th, 2025)
 - Add support to provide a client certificate in PKCS#12 Base64 format.
  
