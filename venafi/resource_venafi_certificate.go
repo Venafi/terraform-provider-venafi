@@ -415,7 +415,7 @@ func resourceVenafiCertificateUpdate(_ context.Context, d *schema.ResourceData, 
 		}
 		certPEM := certUntyped.(string)
 		// validating expiration_window
-		_, _, err := validExpirationWindowCert(certPEM, expirationWindow)
+		_, err := validExpirationWindowCert(certPEM, expirationWindow)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -521,16 +521,17 @@ func verifyCertKeyPair(certPEM string, privateKeyPEM string, keyPassword string)
 
 // validExpirationWindowCert checks if the expiration_window the expiration_window is greater than the validity_period
 // receives the certificate in PEM format as a string type and expiration window in time.Duration type (converted to hours)
-// returns a boolean value of true if expiration_window is greater and logs it in a message, else returns false and doesn't log a message, and any error encountered
-func validExpirationWindowCert(certPem string, expirationWindow int) (boolean bool, duration *time.Duration, err error) {
+// logs a message if the configured expiration_window is invalid (i.e. it's greater than the certificate validity period)
+// returns the validity_period and any error encountered
+func validExpirationWindowCert(certPem string, expirationWindow int) (duration *time.Duration, err error) {
 	cert, err := parseCertificate(certPem)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 	certDuration := getCertDuration(cert)
 	expirationWindowDuration := time.Duration(expirationWindow) * time.Hour
-	ok := validExpirationWindow(certDuration, expirationWindowDuration)
-	return ok, &certDuration, nil
+	validExpirationWindow(certDuration, expirationWindowDuration)
+	return &certDuration, nil
 }
 
 func getCertDuration(cert *x509.Certificate) (duration time.Duration) {
@@ -540,13 +541,11 @@ func getCertDuration(cert *x509.Certificate) (duration time.Duration) {
 
 // validExpirationWindow checks if the expiration_window is greater than the validity_period
 // receives the certificate duration in time.Duration type (converted to hours) type and expiration window in time.Duration type (converted to hours)
-// returns a boolean value of true if expiration_window is greater and logs it in a message, else returns false and doesn't log a message
-func validExpirationWindow(certDuration time.Duration, expirationWindowHours time.Duration) (boolean bool) {
+// logs a message if the configured expiration_window is invalid (i.e. it's greater than the certificate validity_period)
+func validExpirationWindow(certDuration time.Duration, expirationWindowHours time.Duration) {
 	if certDuration < expirationWindowHours {
 		log.Printf("[INFO] certificate validity duration %s is less than configured expiration window %s", certDuration, expirationWindowHours)
-		return true
 	}
-	return false
 }
 
 func checkForRenew(cert x509.Certificate, expirationWindow int) (renewRequired bool) {
