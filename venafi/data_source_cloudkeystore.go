@@ -64,7 +64,7 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if connector.GetType() != endpoint.ConnectorTypeCloud {
-		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Keystore data source is only available for VCP", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Keystore data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
 	}
 
 	keystore, err := connector.(*cloud.Connector).GetCloudKeystore(domain.GetCloudKeystoreRequest{
@@ -74,7 +74,7 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud keystore from VCP API", map[string]interface{}{
+	tflog.Info(ctx, "successfully retrieved cloud keystore from CyberArk Certificate Manager, SaaS API", map[string]interface{}{
 		cloudKeystoreProviderID: providerID,
 		cloudKeystoreName:       keystoreName,
 	})

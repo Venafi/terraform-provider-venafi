@@ -488,7 +488,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 	if data.dns_ip != "" {
 		req.IPAddresses = stringArrayToIParray(strings.Split(data.dns_ip, ","))
 	}
-	// this is the name that will show up on VaaS UI
+	// this is the name that will show up on CyberArk Certificate Manager, SaaS UI
 	if data.nickname != "" {
 		req.FriendlyName = data.nickname
 	}

@@ -290,17 +290,17 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	// we have two checks: not_after - not_before >= expiration window [should raise error and exit] and now + expiration windows < not_after [should update cert]
-	// tpp signs certificates on 8 years. so we make windows the same size.
+	// CyberArk Certificate Manager, Self-Hosted signs certificates on 8 years. so we make windows the same size.
 	data.expiration_window = 70080
 	config := fmt.Sprintf(tppConfig, tppProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
@@ -308,7 +308,7 @@ func TestTPPSignedCertUpdate(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate update")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate update")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -342,21 +342,21 @@ func TestTPPSignedCert(t *testing.T) {
 	data.key_algo = rsa2048
 	data.expiration_window = 168
 	config := fmt.Sprintf(tppConfig, tppProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -390,7 +390,7 @@ func TestTPPSignedCertWithNickname(t *testing.T) {
 	data.key_algo = rsa2048
 	data.expiration_window = 168
 	config := fmt.Sprintf(tppConfigWithNickname, tppProvider, data.cn, data.nickname, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -418,21 +418,21 @@ func TestTPPECDSASignedCert(t *testing.T) {
 	data.key_algo = ecdsa521
 	data.expiration_window = 168
 	config := fmt.Sprintf(tppConfig, tppProviderECDSA, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP certificate with ECDSA key  with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted certificate with ECDSA key  with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -462,7 +462,7 @@ func TestTPPTokenSignedCertUpdateRenew(t *testing.T) {
 
 		We have two checks: not_after - not_before >= expiration window [should raise error and exit] and
 		now + expiration windows < not_after [should update cert]
-		TPP zone creates certificates with duration of 8 years. so we make expiration_window the same size.
+		CyberArk Certificate Manager, Self-Hosted zone creates certificates with duration of 8 years. so we make expiration_window the same size.
 	*/
 	t.Parallel()
 	data := testData{}
@@ -476,14 +476,14 @@ func TestTPPTokenSignedCertUpdateRenew(t *testing.T) {
 	data.key_algo = rsa2048
 	data.expiration_window = 70080
 	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP Token certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 				ExpectNonEmptyPlan: true,
@@ -491,7 +491,7 @@ func TestTPPTokenSignedCertUpdateRenew(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP Token certificate update")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted Token certificate update")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -525,21 +525,21 @@ func TestTPPTokenSignedCert(t *testing.T) {
 	data.key_algo = rsa2048
 	data.expiration_window = 168
 	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP Token certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -572,21 +572,21 @@ func TestTPPTokenECDSASignedCert(t *testing.T) {
 	data.key_algo = ecdsa521
 	data.expiration_window = 168
 	config := fmt.Sprintf(tokenConfig, tokenProviderECDSA, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP Token certificate with ECDSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with ECDSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -621,21 +621,21 @@ func TestTPPSignedCertCustomFields(t *testing.T) {
 	cfEnvVarName := "TPP_CUSTOM_FIELDS"
 	data.custom_fields = getCustomFields(cfEnvVarName)
 	config := fmt.Sprintf(tokenConfigWithCustomFields, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.custom_fields)
-	t.Logf("Testing TPP Token certificate with Custom Fields with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with Custom Fields with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -672,21 +672,21 @@ func TestTPPTokenSignedCertValidDays(t *testing.T) {
 	data.valid_days = validDays
 
 	config := fmt.Sprintf(tokenValidDaysConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window, data.issuer_hint, data.valid_days)
-	t.Logf("Testing TPP Token certificate's valid days with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate's valid days with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN and valid days", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN and valid days", data.cn)
 					return checkCertValidDays(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					err := checkCertValidDays(t, &data, s)
 					if err != nil {
 						return err
@@ -720,7 +720,7 @@ func TestTPPTokenSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	config := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
 	data.expiration_window = 70080
 	configUpdate := fmt.Sprintf(tokenConfig, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP Token certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -753,14 +753,14 @@ func TestTPPTppCsrService(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 
 	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
-	t.Logf("Testing TPP Token certificate with Service CSR generated and config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with Service CSR generated and config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CSR Service Generated", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CSR Service Generated", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
@@ -774,7 +774,7 @@ func TestTPPValidateWrongImportEntries(t *testing.T) {
 	data := getCertTppImportConfig(name)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	configWithoutZone := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImportEmptyZone)
-	t.Logf("Testing importing TPP cert:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, Self-Hosted cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -830,7 +830,7 @@ func TestTPPImportCertificate(t *testing.T) {
 				ImportStateId: importId,
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					t.Log("Importing CyberArk Certificate Manager, Self-Hosted certificate with CSR Service Generated", data.cn)
 					return checkStandardImportCert(t, data, states)
 				},
 			},
@@ -858,7 +858,7 @@ func TestTPPImportCertificateWithNickname(t *testing.T) {
 
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.nickname, data.private_key_password)
-	t.Logf("Testing importing TPP cert:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, Self-Hosted cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -868,7 +868,7 @@ func TestTPPImportCertificateWithNickname(t *testing.T) {
 				ImportStateId: importId,
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					t.Log("Importing CyberArk Certificate Manager, Self-Hosted certificate with CSR Service Generated", data.cn)
 					return checkImportWithObjectName(t, &data, states)
 				},
 			},
@@ -887,7 +887,7 @@ func TestTPPImportCertificateWithCustomFields(t *testing.T) {
 	createCertificate(t, cfg, data, true)
 	config := fmt.Sprintf(tppCsrServiceConfigImport, tppTokenProviderImport)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
-	t.Logf("Testing importing TPP cert with custom fields:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, Self-Hosted cert with custom fields:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -897,7 +897,7 @@ func TestTPPImportCertificateWithCustomFields(t *testing.T) {
 				ImportStateId: importId,
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					t.Log("Importing CyberArk Certificate Manager, Self-Hosted certificate with CSR Service Generated", data.cn)
 					return checkImportTppCertWithCustomFields(t, data, states)
 				},
 			},
@@ -916,7 +916,7 @@ func TestTPPImportCertificateECDSA(t *testing.T) {
 	data.zone = os.Getenv("TPP_ZONE_ECDSA")
 	createCertificate(t, cfg, data, true)
 	importId := fmt.Sprintf("%s,%s", data.cn, data.private_key_password)
-	t.Logf("Testing importing TPP cert:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, Self-Hosted cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -926,7 +926,7 @@ func TestTPPImportCertificateECDSA(t *testing.T) {
 				ImportStateId: importId,
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					t.Log("Importing TPP certificate with CSR Service Generated", data.cn)
+					t.Log("Importing CyberArk Certificate Manager, Self-Hosted certificate with CSR Service Generated", data.cn)
 					return checkStandardImportCert(t, data, states)
 				},
 			},
@@ -937,7 +937,7 @@ func TestTPPImportCertificateECDSA(t *testing.T) {
 func TestTPPManyCerts(t *testing.T) {
 	t.Parallel()
 	// test for removing workaround of VEN-46960
-	t.Log("Testing stressing TPP with many certs with same certificate object (same common name)")
+	t.Log("Testing stressing CyberArk Certificate Manager, Self-Hosted with many certs with same certificate object (same common name)")
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.many.example.com"
@@ -948,21 +948,21 @@ func TestTPPManyCerts(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 	data.key_algo = rsa2048
 	config := fmt.Sprintf(tppConfig, tppProvider, data.cn, data.dns_ns, data.dns_ip, data.dns_email, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -981,7 +981,7 @@ func TestTPPManyCerts(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate third run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate third run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1000,7 +1000,7 @@ func TestTPPManyCerts(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate fourth run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate fourth run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1019,7 +1019,7 @@ func TestTPPManyCerts(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate fifth run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate fifth run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1042,7 +1042,7 @@ func TestTPPManyCerts(t *testing.T) {
 func TestTPPManyCertsCsrService(t *testing.T) {
 	t.Parallel()
 	// test for removing workaround of VEN-46960
-	t.Log("Testing stressing TPP with many certificates with CSR Service Generated and same certificate object (same common name)")
+	t.Log("Testing stressing CyberArk Certificate Manager, Self-Hosted with many certificates with CSR Service Generated and same certificate object (same common name)")
 	data := testData{}
 	rand := randSeq(9)
 	domain := "venafi.many.example.com"
@@ -1051,21 +1051,21 @@ func TestTPPManyCertsCsrService(t *testing.T) {
 	data.private_key_password = "FooB4rNew4$x"
 
 	config := fmt.Sprintf(tppCsrServiceConfig, tokenProvider, data.cn, data.dns_ns, data.private_key_password)
-	t.Logf("Testing TPP certificate with RSA key with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted certificate with RSA key with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					return checkStandardCert(t, &data, s)
 				},
 			},
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1084,7 +1084,7 @@ func TestTPPManyCertsCsrService(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate third run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate third run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1103,7 +1103,7 @@ func TestTPPManyCertsCsrService(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate fourth run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate fourth run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1122,7 +1122,7 @@ func TestTPPManyCertsCsrService(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate fifth run")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate fifth run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -1156,14 +1156,14 @@ func TestTPPSansCsrService(t *testing.T) {
 	data.key_algo = rsa2048
 	data.expiration_window = 168
 	config := fmt.Sprintf(tppCsrServiceConfigWithSans, tokenProvider, data.cn, data.dns_ns, data.dns_ip, data.san_uri, data.private_key_password)
-	t.Logf("Testing TPP Token certificate with Custom Fields with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, Self-Hosted Token certificate with Custom Fields with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Issuing TPP certificate with CN", data.cn)
+					t.Log("Issuing CyberArk Certificate Manager, Self-Hosted certificate with CN", data.cn)
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
 						return err

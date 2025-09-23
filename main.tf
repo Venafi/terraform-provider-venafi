@@ -56,7 +56,7 @@ provider "venafi" {
 }
 
 /*
-VaaS provider configuration (alias = "vaas")
+CyberArk Certificate Manager, SaaS provider configuration (alias = "vaas")
 Here we are getting credentials from variables TF_VAR_CLOUDAPIKEY and TF_VAR_CLOUDZONE
 */
 provider "venafi" {

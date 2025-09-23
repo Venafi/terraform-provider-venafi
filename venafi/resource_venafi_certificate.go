@@ -34,7 +34,7 @@ import (
 const (
 	importIdFailEmpty          = "the id for import method is empty"
 	importIdFailExceededValues = "there are more attributes than expected in the import id being passed"
-	importPickupIdFailEmpty    = "empty pickupID for VaaS or common_name for TPP during import method"
+	importPickupIdFailEmpty    = "empty pickupID for CyberArk Certificate Manager, SaaS or common_name for CyberArk Certificate Manager, Self-Hosted during import method"
 	importKeyPasswordFailEmpty = "empty key_password for import method" //#nosec
 	importZoneFailEmpty        = "zone cannot be empty when importing certificate"
 	terraformStateTainted      = "terraform state was modified by another party"
@@ -57,7 +57,7 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: "Origin of the CSR. One of local or service. Local: The CSR will be generated locally and " +
-					"sent over for certificate issuance. Service: The CSR will be generated and managed by the Venafi platform. Default is local",
+					"sent over for certificate issuance. Service: The CSR will be generated and managed by the CyberArk platform. Default is local",
 				ForceNew: true,
 				Default:  "local",
 			},
@@ -101,7 +101,7 @@ func resourceVenafiCertificate() *schema.Resource {
 			venafiCertificateAttrNickname: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for TPP",
+				Description: "Use to specify a name for the new certificate object that will be created and placed in a policy. Only valid for CyberArk Certificate Manager, Self-Hosted",
 				ForceNew:    true,
 			},
 			"algorithm": {
@@ -214,12 +214,12 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "Indicate the target issuer to enable valid days with Venafi Platform. Supported values are DigiCert, Entrust, and Microsoft",
+				Description: "Indicate the target issuer to enable valid days with CyberArk Platform. Supported values are DigiCert, Entrust, and Microsoft",
 			},
 			"tags": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of Certificate Tags defined in Venafi Control Plane.",
+				Description: "List of Certificate Tags defined in CyberArk Certificate Manager, SaaS.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			venafiCertificateAttrCertificateID: {
@@ -340,7 +340,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 		if cl.GetType() == endpoint.ConnectorTypeCloud {
 			notFoundMsg = "Not Found"
 		} else {
-			// For TPP
+			// For CyberArk Certificate Manager, Self-Hosted
 			// "Certificate \\VED\\Policy\\test\\cert_id does not exist."
 			notFoundMsg = "does not exist"
 		}
@@ -647,7 +647,7 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		}
 	}
 
-	//Obtain a certificate from the Venafi server
+	//Obtain a certificate from the CyberArk server
 	tflog.Info(ctx, fmt.Sprintf("Using CN %s and SAN %s", commonName, req.DNSNames))
 	req.Subject.CommonName = commonName
 
@@ -913,7 +913,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	logFields := map[string]interface{}{
 		"id": id,
 	}
-	tflog.Info(ctx, "Importing Venafi certificate", logFields)
+	tflog.Info(ctx, "Importing CyberArk certificate", logFields)
 
 	if id == "" {
 		return nil, errors.New(importIdFailEmpty)
@@ -968,7 +968,7 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 	data, err := cl.RetrieveCertificate(pickupReq)
 	if err != nil {
 		strErr := (err).Error()
-		if strErr == "unable to retrieve: Unexpected status code on TPP Certificate Retrieval. Status: 400 Failed to lookup private key, error: Failed to lookup private key vault id" {
+		if strErr == "unable to retrieve: Unexpected status code on CyberArk Certificate Manager, Self-Hosted Certificate Retrieval. Status: 400 Failed to lookup private key, error: Failed to lookup private key vault id" {
 			return nil, fmt.Errorf("%s - private key was service generated? Import method does not support importing of local generated private keys", err)
 		}
 		return nil, err
@@ -1114,7 +1114,7 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 			pemType = "RSA PRIVATE KEY"
 		case *ecdsa.PrivateKey:
 			if connectorType == endpoint.ConnectorTypeCloud {
-				return fmt.Errorf("ecdsa private key import operation currently is not supported for VaaS")
+				return fmt.Errorf("ecdsa private key import operation currently is not supported for CyberArk Certificate Manager, SaaS")
 			}
 			keySize := strconv.Itoa(keyValue.Curve.Params().BitSize)
 			err = d.Set("ecdsa_curve", fmt.Sprintf("P%s", keySize))
@@ -1154,7 +1154,7 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 	}
 
 	if connectorType == endpoint.ConnectorTypeTPP {
-		// only TPP handle the concept of object name so only then we set it
+		// only CyberArk Certificate Manager, Self-Hosted handle the concept of object name so only then we set it
 		// we are expecting "id" have something like \\VED\\Policy\\MyPolicy\\my-object-name
 		certificateDNsplit := strings.Split(id, "\\")
 		nickname := certificateDNsplit[len(certificateDNsplit)-1]
@@ -1175,7 +1175,7 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 				if err != nil {
 					return err
 				}
-				// Our date field at TPP currently only supports until minutes: yyyy-mm-dd HH:mm
+				// Our date field at CyberArk Certificate Manager, Self-Hosted currently only supports until minutes: yyyy-mm-dd HH:mm
 				newCustomFields[customField.Name] = currentFormat.Format("2006-01-02 15:04")
 			default:
 				newCustomFields[customField.Name] = customField.Value[0]
