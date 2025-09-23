@@ -73,7 +73,7 @@ func TestTPPCreateEmptyPolicy(t *testing.T) {
 	data.filePath = GetAbsoluteFIlePath(emptyPolicy)
 
 	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
-	t.Logf("Testing creating TPP empty Zone:\n %s", config)
+	t.Logf("Testing creating CyberArk Certificate Manager, Self-Hosted empty Zone:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -98,14 +98,14 @@ func TestTPPCreatePolicy(t *testing.T) {
 	data.filePath = GetAbsoluteFIlePath(policySpecTpp)
 
 	config := fmt.Sprintf(tppPolicyResourceTest, tokenProv, data.zone, data.filePath)
-	t.Logf("Testing creating TPP Zone:\n %s", config)
+	t.Logf("Testing creating CyberArk Certificate Manager, Self-Hosted Zone:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Creating TPP zone: ", data.zone)
+					t.Log("Creating CyberArk Certificate Manager, Self-Hosted zone: ", data.zone)
 					return checkCreatePolicy(t, &data, s, false)
 				},
 			},
@@ -116,7 +116,7 @@ func TestTPPCreatePolicy(t *testing.T) {
 func TestTPPImportPolicy(t *testing.T) {
 	t.Parallel()
 	config := getPolicyImportTppConfig()
-	t.Logf("Testing importing TPP Zone:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, Self-Hosted Zone:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -135,7 +135,7 @@ func TestTPPImportPolicy(t *testing.T) {
 }
 
 func checkCreateTppPolicy(t *testing.T, data *testData, s *terraform.State, validateAttr bool) error {
-	t.Log("Validate Creating TPP empty policy", data.zone)
+	t.Log("Validate Creating CyberArk Certificate Manager, Self-Hosted empty policy", data.zone)
 
 	pstUntyped := s.RootModule().Outputs["policy_specification"].Value
 

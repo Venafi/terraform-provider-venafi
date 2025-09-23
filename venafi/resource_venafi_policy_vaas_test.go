@@ -71,7 +71,7 @@ func TestVAASCreateEmptyPolicy(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Creating VaaS empty zone: ", data.zone)
+					t.Log("Creating CyberArk Certificate Manager, SaaS empty zone: ", data.zone)
 					return checkCreatePolicy(t, &data, s, false)
 				},
 			},
@@ -87,14 +87,14 @@ func TestVAASCreatePolicy(t *testing.T) {
 	data.filePath = GetAbsoluteFIlePath(policySpecVaas)
 
 	config := fmt.Sprintf(vaasPolicyResourceTest, vaasProv, data.zone, data.filePath)
-	t.Logf("Testing creating VaaS Zone:\n %s", config)
+	t.Logf("Testing creating CyberArk Certificate Manager, SaaS Zone:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Creating VaaS zone: ", data.zone)
+					t.Log("Creating CyberArk Certificate Manager, SaaS zone: ", data.zone)
 					return checkCreatePolicy(t, &data, s, false)
 				},
 			},
@@ -105,7 +105,7 @@ func TestVAASCreatePolicy(t *testing.T) {
 func TestVAASImportPolicy(t *testing.T) {
 	t.Parallel()
 	config := getImportVaasConfig()
-	t.Logf("Testing importing VaaS Zone:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, SaaS Zone:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{

@@ -164,7 +164,7 @@ func TestVAASSignedCert(t *testing.T) {
 	data.key_algo = rsa2048
 	data.expiration_window = 48
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -182,7 +182,7 @@ func TestVAASSignedCert(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing VaaS certificate second run")
+					t.Log("Testing CyberArk Certificate Manager, SaaS certificate second run")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -203,7 +203,7 @@ func TestVAASSignedCert(t *testing.T) {
 }
 
 // This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
-// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// The used CyberArk Certificate Manager, SaaS zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
 // (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
 // the CSR Parameters values.
 // Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
@@ -237,7 +237,7 @@ func TestVAASSignedCertWithDN(t *testing.T) {
 	data.expiration_window = 48
 	config := fmt.Sprintf(vaasConfigForDnCSRLocalGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
 		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -257,7 +257,7 @@ func TestVAASSignedCertWithDN(t *testing.T) {
 }
 
 // This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
-// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// The used CyberArk Certificate Manager, SaaS zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
 // (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
 // the CSR Parameters values.
 // Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
@@ -271,7 +271,7 @@ func TestVAASSignedCertWithDN(t *testing.T) {
 // | State(ST)                | Yucatan                           | Utah; Yucatan                                      | Utah                 |                                   |
 // | Country(C)               | MX                                | US;MX                                              | US                   |                                   |
 // +--------------------------+-----------------------------------+----------------------------------------------------+----------------------+-----------------------------------+
-// As it can be observed, it's expected that the Request Certificate operation fails given TLSPC will reject it due one
+// As it can be observed, it's expected that the Request Certificate operation fails given CyberArk Certificate Manager, SaaS will reject it due one
 // of the configured Organizational Units by the venafi_certificate terraform resource, specifically "Sales" is not accepted
 // by the CIT because the CIT have set Customer Support;Professional Services;Engineering as acceptable values for OU.
 func TestVAASSignedCertWithUnacceptableDN(t *testing.T) {
@@ -291,7 +291,7 @@ func TestVAASSignedCertWithUnacceptableDN(t *testing.T) {
 	data.expiration_window = 48
 	config := fmt.Sprintf(vaasConfigForDnCSRLocalGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
 		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -304,7 +304,7 @@ func TestVAASSignedCertWithUnacceptableDN(t *testing.T) {
 }
 
 // This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
-// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// The used CyberArk Certificate Manager, SaaS zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
 // (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
 // the CSR Parameters values.
 // Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
@@ -338,7 +338,7 @@ func TestVAASSignedCertWithDNServiceGeneratedCSR(t *testing.T) {
 	data.expiration_window = 48
 	config := fmt.Sprintf(vaasConfigForDnCSRServiceGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
 		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -358,7 +358,7 @@ func TestVAASSignedCertWithDNServiceGeneratedCSR(t *testing.T) {
 }
 
 // This test is to confirm the added support for the Certificate Signing Request DN(Distinguished Name).
-// The used TLSPC zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
+// The used CyberArk Certificate Manager, SaaS zone (certificate issuing template) is configured with a set of specific values for the CSR Parameters
 // (Organization, Organizational Units, City, State and Country) and with Recommended Settings values being a subset of
 // the CSR Parameters values.
 // Following a table showing the expected behaviour and the expected values that the resulting certificate will contain
@@ -372,7 +372,7 @@ func TestVAASSignedCertWithDNServiceGeneratedCSR(t *testing.T) {
 // | State(ST)                | Yucatan                           | Utah; Yucatan                                      | Utah                 |                                   |
 // | Country(C)               | MX                                | US;MX                                              | US                   |                                   |
 // +--------------------------+-----------------------------------+----------------------------------------------------+----------------------+-----------------------------------+
-// As it can be observed, it's expected that the Request Certificate operation fails given TLSPC will reject it due one
+// As it can be observed, it's expected that the Request Certificate operation fails given CyberArk Certificate Manager, SaaS will reject it due one
 // of the configured Organizational Units by the venafi_certificate terraform resource, specifically "Sales" is not accepted
 // // by the CIT because the CIT have set Customer Support;Professional Services;Engineering as acceptable values for OU.
 func TestVAASSignedCertWithUnacceptableDNServiceGeneratedCSR(t *testing.T) {
@@ -392,7 +392,7 @@ func TestVAASSignedCertWithUnacceptableDNServiceGeneratedCSR(t *testing.T) {
 	data.expiration_window = 48
 	config := fmt.Sprintf(vaasConfigForDnCSRServiceGenerated, vaasProviderCITRestricted, data.cn, data.orgUnit1,
 		data.orgUnit2, data.country, data.state, data.locality, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing Vaas certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -414,7 +414,7 @@ func TestVAASSignedCertUpdateRenew(t *testing.T) {
 
 		We have two checks: not_after - not_before >= expiration window [should raise error and exit] and
 		now + expiration windows < not_after [should update cert]
-		VaaS zone creates certificates with duration of 1 week, so we make expiration_window the same size.
+		CyberArk Certificate Manager, SaaS zone creates certificates with duration of 1 week, so we make expiration_window the same size.
 	*/
 	t.Parallel()
 	data := testData{}
@@ -446,7 +446,7 @@ func TestVAASSignedCertUpdateRenew(t *testing.T) {
 			{
 				Config: config,
 				Check: func(s *terraform.State) error {
-					t.Log("Testing TPP certificate update")
+					t.Log("Testing CyberArk Certificate Manager, Self-Hosted certificate update")
 					gotSerial := data.serial
 					err := checkStandardCert(t, &data, s)
 					if err != nil {
@@ -485,7 +485,7 @@ func TestVAASSignedCertUpdateSetGreaterExpWindow(t *testing.T) {
 	config := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
 	data.expiration_window = 90*24 + 12 // 90 days + 12 hours
 	configUpdate := fmt.Sprintf(vaasConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing VaaS certificate with config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -517,7 +517,7 @@ func TestVAASImportCertificate(t *testing.T) {
 	pickupId := createCertificate(t, cfg, data, true)
 	config := fmt.Sprintf(vaasCsrServiceConfigImport, vaasProviderImport)
 	importId := fmt.Sprintf("%s,%s", pickupId, data.private_key_password)
-	t.Logf("Testing importing VaaS cert:\n %s", config)
+	t.Logf("Testing importing CyberArk Certificate Manager, SaaS cert:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
@@ -527,7 +527,7 @@ func TestVAASImportCertificate(t *testing.T) {
 				ImportStateId: importId,
 				ImportState:   true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					t.Log("Importing VaaS certificate with CSR Service Generated", data.cn)
+					t.Log("Importing CyberArk Certificate Manager, SaaS certificate with CSR Service Generated", data.cn)
 					return checkStandardImportCert(t, data, states)
 				},
 			},
@@ -546,7 +546,7 @@ func TestVAASCsrService(t *testing.T) {
 	data.key_algo = rsa2048
 
 	config := fmt.Sprintf(vaasCsrServiceConfig, vaasProvider, data.cn, data.key_algo, data.private_key_password, data.expiration_window)
-	t.Logf("Testing VaaS certificate with CSR service and config:\n %s", config)
+	t.Logf("Testing CyberArk Certificate Manager, SaaS certificate with CSR service and config:\n %s", config)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{

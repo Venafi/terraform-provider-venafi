@@ -51,7 +51,7 @@ output "principals"{
 
 func TestTPPSshConfig(t *testing.T) {
 	t.Parallel()
-	t.Log("Testing getting ssh config that returns the CA Public Key and the principals from TPP")
+	t.Log("Testing getting ssh config that returns the CA Public Key and the principals from CyberArk Certificate Manager, Self-Hosted")
 
 	data := getTestConfigData()
 
