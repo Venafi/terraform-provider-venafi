@@ -1,5 +1,5 @@
-# --- Venafi Cloud ---
-# Uncomment for Venafi Cloud
+# --- CyberArk Certificate Manager, SaaS ---
+# Uncomment for CyberArk Certificate Manager, SaaS
 
 # provider "venafi" {
 #   api_key = var.venafi_api_key

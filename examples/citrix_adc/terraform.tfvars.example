@@ -1,11 +1,11 @@
-# -- Venafi Cloud ---
-# Uncomment for Venafi Cloud
+# -- CyberArk Certificate Manager, SaaS ---
+# Uncomment for CyberArk Certificate Manager, SaaS
 
 # venafi_api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 # venafi_zone = "DevOps\\Terraform"
 
-# ------ TPP -------
-# Uncomment for Venafi Trust Protection Platform
+# ------ CyberArk Certificate Manager, Self-Hosted -------
+# Uncomment for CyberArk Certificate Manager, Self-Hosted
 
 # bundle_path = "/path/to/bundle.pem"
 # access_token = "p0WTt3sDPbzm2BDIkoJROQ=="

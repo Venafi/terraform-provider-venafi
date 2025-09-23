@@ -12,7 +12,7 @@ terraform {
   required_version = ">= 0.13"
 }
 
-// Uncomment for Venafi Cloud
+// Uncomment for CyberArk Certificate Manager, SaaS
 /*
 variable "venafi_api_key" {
   type = string
@@ -20,7 +20,7 @@ variable "venafi_api_key" {
 }
 */
 
-// Uncomment for TPP
+// Uncomment for CyberArk Certificate Manager, Self-Hosted
 /*
 variable "tpp_url" {
     type = string
