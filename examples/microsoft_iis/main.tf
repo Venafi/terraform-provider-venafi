@@ -34,7 +34,7 @@ locals {
   execute_destroy = "${coalesce(local.destroyNoHostHeader, local.destroyHostHeaderAndSSLoff, local.destroyHostHeaderAndSSLon)}"
 }
 
-#  --- TPP ---
+#  --- CyberArk Certificate Manager, Self-Hosted ---
 
 variable "tpp_url" {
   type = string
@@ -51,7 +51,7 @@ variable "access_token" {
   default = ""
 }
 
-# --- Venafi as a Service ---
+# --- CyberArk Certificate Manager, SaaS ---
 
 variable "vaas_api_key" {
   type = string
