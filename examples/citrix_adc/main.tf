@@ -12,8 +12,8 @@ terraform {
   required_version = ">= 0.13"
 }
 
-#  --- TPP ---
-# Uncomment for Veni Protection Platform
+#  --- CyberArk Certificate Manager, Self-Hosted ---
+# Uncomment for CyberArk Certificate Manager, Self-Hosted
 
 # variable "tpp_url" {
 #   type = string
@@ -27,8 +27,8 @@ terraform {
 #   type = string
 # }
 
-# --- Venafi Cloud ---
-# Uncomment for Venafi Cloud
+# --- CyberArk Certificate Manager, SaaS ---
+# Uncomment for CyberArk Certificate Manager, SaaS
 
 # variable "venafi_api_key" {
 #   type = string

@@ -1,24 +1,24 @@
-# Configuring secure application delivery using F5 BIG-IP and the _Venafi Provider for HashiCorp Terraform_
+# Configuring secure application delivery using F5 BIG-IP and the _CyberArk Certificate Manager Provider for HashiCorp Terraform_
 
-In this example, we'll show you how to better secure application delivery using _Venafi Provider for HashiCorp Terraform_ with your F5 BIG-IP instance. Adding Venafi enables you to manage certificates more securely as part of the TLS termination process on your load balancer.
+In this example, we'll show you how to better secure application delivery using _CyberArk Certificate Manager Provider for HashiCorp Terraform_ with your F5 BIG-IP instance. That will enable you to manage certificates more securely as part of the TLS termination process on your load balancer.
 
 ## Who should use this example?<!-- Suggest not using "Persona" as this is an UX term used more internally in software dev than a term that users would typically understand; while more techy people will use your example and might understand UX notion of personas, they are in this context a user. -->
 
-The steps described in this example are typically performed by _DevOps engineers_ or _system administrators_. Generally, you'll need a basic understanding of F5 BIG-IP, Venafi Trust Protection Platform or Venafi as a Service, and the required permissions for completing the tasks described in the example.
+The steps described in this example are typically performed by _DevOps engineers_ or _system administrators_. Generally, you'll need a basic understanding of F5 BIG-IP, CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS, and the required permissions for completing the tasks described in the example.
 
 ## About this example 
 
-In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates as part of SSL termination on a Application Delevery Controller for F5 BIG-IP. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic that's being managed by F5 BIG-IP.
+In this example, we use Terraform's _infrastructure as code_ automation process with the _CyberArk Certificate Manager Provider_ to generate and install certificates as part of SSL termination on a Application Delevery Controller for F5 BIG-IP. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic that's being managed by F5 BIG-IP.
 
 > **TIP** Having at least some basic knowledge of the Bash command language is helpful, such as when you need to set your provider locally.
 
-Later in this example, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using the _Venafi Provider for Hashicorp Terraform_ with either Venafi Trust Protection Platform (TPP) or Venafi as a Service. Then after adding them to your F5 BIG-IP resources, you'll use them in the ADC node. And finally, you'll configure the "pool" for your ADC nodes.
+Later in this example, you'll generate a certificate for ``demo-f5-bigip.venafi.example`` using the _CyberArk Certificate Manager Provider for Hashicorp Terraform_ with either CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS. Then after adding them to your F5 BIG-IP resources, you'll use them in the ADC node. And finally, you'll configure the "pool" for your ADC nodes.
 
 > **NOTE** While we'll be using a ``Round robin`` balancing method in our ADC configuration, keep in mind that there are [other methods](https://www.f5.com/services/resources/glossary/load-balancer) that might be more suitable for your specific use case.
 
 ![scenario](scenario.png "Scenario")
 
-## About retrieving a certificate using the _Venafi Provider for Terraform_
+## About retrieving a certificate using the _CyberArk Certificate Manager Provider for Terraform_
 
 > **BEST PRACTICE** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.
 
@@ -32,15 +32,15 @@ We'll be managing the following file structure:
 └── terraform.tfvars
 ```
 
-We provided the needed files in this folder, except for _terraform.tfvars_. The configuration of the file is customized by each user, which is why we provided _terraform.tfvars.example_ for each Venafi Platform that you could use to set up your own configuration.
+We provided the needed files in this folder, except for _terraform.tfvars_. The configuration of the file is customized by each user, which is why we provided _terraform.tfvars.example_ for each CyberArk Platform that you could use to set up your own configuration.
 
 ## Prerequisites
 
 Before you continue, carefully review these prerequisites first:
 
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
-- Verify that you have administrator access to either Venafi Trust Protection Platform or Venafi as a Service        
-- If you're using Trust Protection Platform and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and Trust Protection Platform](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
+- Verify that you have administrator access to either CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS        
+- If you're using CyberArk Certificate Manager, Self-Hosted and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and CyberArk Certificate Manager, Self-Hosted](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _CyberArk Certificate Manager Provider for HashiCorp Terraform_ README.
 - Verify that you have administrator access to your F5 BIG-IP instance
 - Verify that you have three (3) web servers that are running your application; for this example, we'll use NGINX servers.
 
@@ -50,7 +50,7 @@ Here are the steps we'll take as we go through this example:
 
 1. Create your Terraform variables file
 2. Set you main Terraform config file
-3. Set your Venafi Terraform config file
+3. Set your CyberArk Terraform config file
 4. Set your F5 BIG IP Terraform config file
 5. Apply your setup
 
@@ -60,7 +60,7 @@ Here are the steps we'll take as we go through this example:
 
 The _terraform.tfvars_ configuration for F5 is divided by the following:
 
-- Platform configuration (Venafi as a Service or TPP)
+- Platform configuration (CyberArk Certificate Manager, SaaS or CyberArk Certificate Manager, Self-Hosted)
 - Your F5 floating managment access
 - The configuration for your site
 - The F5 partition where your data is stored
@@ -71,14 +71,14 @@ First, we have to set the following variables depending on your platform that yo
 
 > **NOTE** [Learn how to set these variables and the `venafi_zone`](https://github.com/Venafi/terraform-provider-venafi#usage).
 
-**TPP**:
+**CyberArk Certificate Manager, Self-Hosted**:
 ```JSON
 tpp_url = "https://tpp.example"
 bundle_path = "<bundle_path>"
 access_token = "<access_token>"
 ```
 
-**Venafi as a Service**:
+**CyberArk Certificate Manager, SaaS**:
 ```JSON
 venafi_api_key = "<venafi_api_key>"
 ```
@@ -105,7 +105,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 ### Step 2: Set up your main Terraform config file
 
-1. Declare that the Venafi and F5 BIG-IP providers are required:
+1. Declare that the CyberArk and F5 BIG-IP providers are required:
     ```
     terraform {
         required_providers {
@@ -124,7 +124,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
 
 2. Define your variables from _terraforms.vars_:
 
-    **TPP**:
+    **CyberArk Certificate Manager, Self-Hosted**:
     ```
     variable "tpp_url" {
         type = string
@@ -139,7 +139,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-    **Venafi as a Service**:
+    **CyberArk Certificate Manager, SaaS**:
     ```
     variable "venafi_api_key" {
         type = string
@@ -190,11 +190,11 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
         type = list(string)
     }
     ```
-### Step 3: Set up your Venafi Terraform config file
+### Step 3: Set up your CyberArk Terraform config file
 
-1. Specify the connection and authentication settings for your Venafi provider:
+1. Specify the connection and authentication settings for your CyberArk Certificate Manager Provider:
 
-    **TPP**:
+    **CyberArk Certificate Manager, Self-Hosted**:
     ```
     provider "venafi" {
         url          = var.tpp_url
@@ -204,7 +204,7 @@ f5_pool_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "192.168.6.201:8
     }
     ```
 
-    **Venafi as a Service**:
+    **CyberArk Certificate Manager, SaaS**:
     ```
     provider "venafi" {
         api_key = var.venafi_api_key

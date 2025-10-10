@@ -1,6 +1,6 @@
 /*
 This is an example Terraform file to show capabilities of the VCert integration.
-This file uses a service account access token to authenticate to TLS Protection Cloud.
+This file uses a service account access token to authenticate to CyberArk Certificate Manager, SaaS.
 */
 variable "CLOUD_ZONE" {
   type = string
