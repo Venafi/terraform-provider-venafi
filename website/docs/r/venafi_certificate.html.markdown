@@ -1,9 +1,9 @@
 ---
 subcategory: "Certificate Issuance"
 layout: "venafi"
-page_title: "Venafi: venafi_certificate"
+page_title: "CyberArk: venafi_certificate"
 description: |-
-  Provides access to TLS key and certificate data in Venafi. This can be used to define a Venafi certificate.
+  Provides access to TLS key and certificate data in CyberArk Machine Identity Service. This can be used to define a CyberArk certificate.
 ---
 
 # venafi_certificate
@@ -44,7 +44,7 @@ certificate is within the expiration window.
 * `common_name` - (Required, string) The common name of the certificate.
 
 * `nickname` - (Optional, string) Use to specify a name for the new certificate object that will be created and placed 
-in a policy. Only valid for Trust Protection Platform.
+in a policy. Only valid for CyberArk Certificate Manager, Self-Hosted.
 
 * `algorithm` - (Optional, string) Key encryption algorithm, either RSA or ECDSA. Defaults to `RSA`.
 
@@ -69,8 +69,8 @@ the certificate.
 
 * `valid_days` - (Optional, integer) Desired number of days for which the new certificate will be valid.
 
-* `issuer_hint` - (Optional, string) Used with `valid_days` to indicate the target issuer when using Trust Protection 
-Platform. Relevant values are: `DigiCert`, `Entrust`, and `Microsoft`.
+* `issuer_hint` - (Optional, string) Used with `valid_days` to indicate the target issuer when using CyberArk Certificate Manager, Self-Hosted.
+Relevant values are: `DigiCert`, `Entrust`, and `Microsoft`.
 
 * `expiration_window` - (Optional, integer) Number of hours before certificate expiry to request a new certificate. 
 Defaults to `168`.
@@ -78,7 +78,7 @@ Defaults to `168`.
 * `csr_origin` - (Optional, string) Whether key-pair generation will be `local` or `service` generated. Default is 
 `local`.
 
-* `tags` - (Optional, set of strings) List of Certificate Tags defined in Venafi Control Plane.
+* `tags` - (Optional, set of strings) List of Certificate Tags defined in CyberArk Certificate Manager, SaaS.
 
 ## Attributes Reference
 
@@ -114,24 +114,24 @@ The `import_id` is composed by an `id` which is different for each platform, a c
 
 The `id` for each platform is:
 
-**Trust Protection Platform:**
+**CyberArk Certificate Manager, Self-Hosted:**
 
-The `nickname` of the certificate, which represents the name of the certificate object in Trust Protection Platform. 
+The `nickname` of the certificate, which represents the name of the certificate object in CyberArk Certificate Manager, Self-Hosted. 
 Internally we built the `pickup_id` using the `zone` defined at the provider block.
 
-~>**Note:** The certificate object name at Trust Protection Platform, usually, should be the same as the `common_name` 
+~>**Note:** The certificate object name at CyberArk Certificate Manager, Self-Hosted, usually, should be the same as the `common_name` 
 provided as it is considered good practice, but the `nickname` actually could differ from the common name, as there are 
 some use cases whenever you want to handle certificates with different nicknames. For example, you could have 
 certificates with same common name and different SANs, then, you could manage many certificate resources that share the 
 same common name using `for_each` and `count` meta arguments.
 
-**Venafi Control Plane:**
+**CyberArk Certificate Manager, SaaS:**
 
 The `pickup-id`.
 
-->**Note:** You can learn more about the `pickup-id` and pickup actions for Trust Protection Platform, 
+->**Note:** You can learn more about the `pickup-id` and pickup actions for CyberArk Certificate Manager, Self-Hosted, 
 [here](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#certificate-retrieval-parameters), and for 
-Venafi Control Plane, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-CLOUD.md)
+CyberArk Certificate Manager, SaaS, [here](https://github.com/Venafi/vcert/blob/master/README-CLI-CLOUD.md)
 ```sh
 terraform import "venafi_certificate.<resource_name>" "<id>,<key-password>"
 ```

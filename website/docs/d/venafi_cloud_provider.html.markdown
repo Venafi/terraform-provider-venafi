@@ -1,14 +1,14 @@
 ---
 subcategory: "Cloud Provisioning"
 layout: "venafi"
-page_title: "Venafi: venafi_cloud_provider"
+page_title: "CyberArk: venafi_cloud_provider"
 description: |-
-  Get information on a Venafi Control Plane (VCP) Cloud Provider 
+  Get information on a CyberArk Certificate Manager, SaaS Cloud Provider 
 ---
 
 # Data Source: venafi_cloud_provider
 
-Use this data source to get the `ID` of a cloud provider in Venafi Control Plane, referenced by its name.
+Use this data source to get the `ID` of a cloud provider in CyberArk Certificate Manager, SaaS, referenced by its name.
 
 ## Example Usage
 

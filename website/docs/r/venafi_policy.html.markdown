@@ -1,15 +1,15 @@
 ---
 subcategory: "Policy Management"
 layout: "venafi"
-page_title: "Venafi: venafi_policy"
+page_title: "CyberArk: venafi_policy"
 description: |-
-  Provides access to read and write certificate policy in Venafi. This can be used to define a new policy.
+  Provides access to read and write certificate policy in CyberArk Machine Identity Service. This can be used to define a new policy.
 ---
 
 # venafi_policy
 
-Provides access to read and write certificate policy in Venafi. This can be used to define a new policy (folder in 
-*Trust Protection Platform*; application and issuing template in *Venafi Control Plane*).
+Provides access to read and write certificate policy in CyberArk Machine Identity Service. This can be used to define a new policy (folder in 
+*CyberArk Certificate Manager, Self-Hosted*; application and issuing template in *CyberArk Certificate Manager, SaaS*).
 
 ## Example Usage
 
@@ -24,7 +24,7 @@ resource "venafi_policy" "internal_policy" {
 
 The following arguments are supported:
 
-* `zone` - (Required, string) The *Trust Protection Plaform* policy folder or *Venafi Control Plane* application and 
+* `zone` - (Required, string) The *CyberArk Certificate Manager, Self-Hosted* policy folder or *CyberArk Certificate Manager, SaaS* application and 
 issuing template.
 
 * `policy_specification` - (Required, string) The JSON-formatted certificate policy specification as documented 
