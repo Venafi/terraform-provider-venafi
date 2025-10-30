@@ -1,7 +1,7 @@
 ---
 subcategory: "Cloud Provisioning"
 layout: "venafi"
-page_title: "CyberArk: venafi_cloud_provider"
+page_title: "Venafi: venafi_cloud_provider"
 description: |-
   Get information on a CyberArk Certificate Manager, SaaS Cloud Provider 
 ---

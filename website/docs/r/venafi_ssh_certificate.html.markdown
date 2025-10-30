@@ -1,7 +1,7 @@
 ---
 subcategory: "Certificate Issuance"
 layout: "venafi"
-page_title: "CyberArk: venafi_ssh_certificate"
+page_title: "Venafi: venafi_ssh_certificate"
 description: |-
   Provides access to request and retrieve SSH certificates from CyberArk Certificate Manager, Self-Hosted.
 ---

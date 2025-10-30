@@ -1,7 +1,7 @@
 ---
 subcategory: "Certificate Issuance"
 layout: "venafi"
-page_title: "CyberArk: venafi_certificate"
+page_title: "Venafi: venafi_certificate"
 description: |-
   Provides access to TLS key and certificate data in CyberArk Machine Identity Service. This can be used to define a CyberArk certificate.
 ---

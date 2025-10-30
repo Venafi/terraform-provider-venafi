@@ -1,7 +1,7 @@
 ---
 subcategory: "Cloud Provisioning"
 layout: "venafi"
-page_title: "CyberArk: venafi_cloud_keystore_installation"
+page_title: "Venafi: venafi_cloud_keystore_installation"
 description: |-
   Provisions a CyberArk Machine Identity Service managed certificate to an existing Cloud Keystore in CyberArk Certificate Manager, SaaS 
 ---

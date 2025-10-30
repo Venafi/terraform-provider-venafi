@@ -1,7 +1,7 @@
 ---
 subcategory: "Certificate Issuance"
 layout: "venafi"
-page_title: "CyberArk: venafi_ssh_config"
+page_title: "Venafi: venafi_ssh_config"
 description: |-
   Provides access to retrieve configuration from SSH certificate issuance template from CyberArk Certificate Manager, Self-Hosted.
 ---

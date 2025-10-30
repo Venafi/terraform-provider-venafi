@@ -1,7 +1,7 @@
 ---
 subcategory: "Policy Management"
 layout: "venafi"
-page_title: "CyberArk: venafi_policy"
+page_title: "Venafi: venafi_policy"
 description: |-
   Provides access to read and write certificate policy in CyberArk Machine Identity Service. This can be used to define a new policy.
 ---
