@@ -36,6 +36,7 @@ const (
 
 	utilityName           = "HashiCorp Terraform"
 	defaultClientID       = "hashicorp-terraform-by-venafi"
+	defaultScope          = "configuration:manage,delete;certificate:manage"
 	defaultSkipRetirement = false
 
 	// Environment variables for Provider attributes
@@ -51,6 +52,7 @@ const (
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD" // #nosec G101 // This is not a hardcoded credential
 	envVenafiClientID       = "VENAFI_CLIENT_ID"
+	envVenafiScope          = "VENAFI_SCOPE"
 	envVenafiSkipRetirement = "VENAFI_SKIP_RETIREMENT"
 
 	// Attributes of the provider
@@ -68,6 +70,7 @@ const (
 	providerExternalJWT    = "external_jwt"
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
+	providerScope          = "scope"
 	providerSkipRetirement = "skip_retirement"
 
 	// Resource names
@@ -187,6 +190,12 @@ Example:
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiClientID, defaultClientID),
 				Description: "application that will be using the token",
 			},
+			providerScope: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiScope, defaultScope),
+				Description: "Set application scopes less than or equal to that of the application itself",
+			},
 			providerSkipRetirement: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -230,6 +239,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	p12CertData := d.Get(providerP12CertData).(string)
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
+	scope := d.Get(providerScope).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
 	tokenURL := d.Get(providerTokenURL).(string)
 	externalJWT := d.Get(providerExternalJWT).(string)
@@ -267,6 +277,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		UserAgent:  &userAgent,
 		Credentials: &endpoint.Authentication{
 			ClientId: clientID,
+			Scope:    scope,
 		},
 	}
 
