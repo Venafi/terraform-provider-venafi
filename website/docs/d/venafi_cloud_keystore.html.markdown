@@ -3,12 +3,12 @@ subcategory: "Cloud Provisioning"
 layout: "venafi"
 page_title: "Venafi: venafi_cloud_keystore"
 description: |-
-  Get information on a Venafi Control Plane (VCP) Cloud Keystore 
+  Get information on a CyberArk Certificate Manager, SaaS Cloud Keystore 
 ---
 
 # Data source: venafi_cloud_keystore
 
-Use this data source to get the `ID` of a cloud keystore in Venafi Control Plane, referenced by its name and parent 
+Use this data source to get the `ID` of a cloud keystore in CyberArk Certificate Manager, SaaS, referenced by its name and parent 
 cloud provider ID. You can use `venafi_cloud_provider` data source to obtain the ID of the parent cloud provider.
 
 ## Example Usage
