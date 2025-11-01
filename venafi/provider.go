@@ -26,7 +26,7 @@ const (
 	messageVenafiPingFailed                  = "Failed to ping CyberArk endpoint"
 	messageVenafiPingSuccessful              = "CyberArk ping successful"
 	messageVenafiClientInitFailed            = "Failed to initialize CyberArk client"
-	messageVenafiProviderConfigCastingFailed = "Failed to retrieve CyberArk Provider Configuration from context/meta"
+	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
 	messageVenafiClientNil                   = "CyberArk connector is nil"
 	messageVenafiConfigFailed                = "Failed to build config for CyberArk issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
@@ -217,7 +217,7 @@ type ProviderConfig struct {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
-	tflog.Info(ctx, "Configuring CyberArk provider")
+	tflog.Info(ctx, "Configuring Venafi provider")
 	tflog.Info(ctx, fmt.Sprintf("User-Agent: %s", userAgent))
 	apiKey := d.Get(providerApiKey).(string)
 	url := d.Get(providerURL).(string)
