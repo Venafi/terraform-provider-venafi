@@ -23,16 +23,16 @@ import (
 )
 
 const (
-	messageVenafiPingFailed                  = "Failed to ping Venafi endpoint"
-	messageVenafiPingSuccessful              = "Venafi ping successful"
-	messageVenafiClientInitFailed            = "Failed to initialize Venafi client"
+	messageVenafiPingFailed                  = "Failed to ping CyberArk endpoint"
+	messageVenafiPingSuccessful              = "CyberArk ping successful"
+	messageVenafiClientInitFailed            = "Failed to initialize CyberArk client"
 	messageVenafiProviderConfigCastingFailed = "Failed to retrieve Venafi Provider Configuration from context/meta"
-	messageVenafiClientNil                   = "Venafi connector is nil"
-	messageVenafiConfigFailed                = "Failed to build config for Venafi issuer"
+	messageVenafiClientNil                   = "CyberArk connector is nil"
+	messageVenafiConfigFailed                = "Failed to build config for CyberArk issuer"
 	messageUseDevMode                        = "Using dev mode to issue certificate"
-	messageUseVaas                           = "Using `Venafi Control Plane to issue certificate"
-	messageUseTLSPDC                         = "Using `Venafi Trust Protection Platform` with url %s to issue certificate"
-	messageVenafiAuthFailed                  = "Failed to authenticate to Venafi platform"
+	messageUseVaas                           = "Using `CyberArk Certificate Manager, SaaS` to issue certificate"
+	messageUseTLSPDC                         = "Using `CyberArk Certificate Manager, Self-Hosted` with url %s to issue certificate"
+	messageVenafiAuthFailed                  = "Failed to authenticate to CyberArk platform"
 
 	utilityName           = "HashiCorp Terraform"
 	defaultClientID       = "hashicorp-terraform-by-venafi"
@@ -97,21 +97,21 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiURL, nil),
-				Description: "The Venafi Platform URL. Example: https://tpp.venafi.example/vedsdk",
+				Description: "The CyberArk Platform URL. Example: https://cmsh.cyberark.example/vedsdk",
 			},
 			providerZone: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiZone, "Default"),
-				Description: `DN of the Venafi TLSPDC policy folder or name of the Venafi as a Service application plus issuing template alias. 
-Example for Platform: testPolicy\\vault
-Example for Venafi as a Service: myApp\\Default`,
+				Description: `DN of the CyberArk Certificate Manager, Self-Hosted policy folder or name of the CyberArk Certificate Manager, SaaS application plus issuing template alias. 
+Example for CyberArk Certificate Manager, Self-Hosted: testPolicy\\vault
+Example for CyberArk Certificate Manager, SaaS: myApp\\Default`,
 			},
 			providerUsername: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiUsername, nil),
-				Description: "WebSDK user for Venafi TLSPDC. Example: admin",
+				Description: "WebSDK user for CyberArk Certificate Manager, Self-Hosted. Example: admin",
 				Deprecated:  ", please use access_token instead",
 			},
 			providerPassword: {
@@ -126,19 +126,19 @@ Example for Venafi as a Service: myApp\\Default`,
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiAccessToken, nil),
-				Description: "Access token for Venafi TLSPDC, user should use this for authentication",
+				Description: "Access token for CyberArk Certificate Manager, Self-Hosted, user should use this for authentication",
 				Sensitive:   true,
 			},
 			providerP12Cert: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiP12Certificate, nil),
-				Description: "Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
+				Description: "Filename of PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to CyberArk Certificate Manager, Self-Hosted",
 			},
 			providerP12CertData: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Base64 encoded PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to TLSPDC",
+				Description: "Base64 encoded PKCS#12 keystore containing a client certificate, private key, and chain certificates to authenticate to CyberArk Certificate Manager, Self-Hosted",
 			},
 			providerP12Password: {
 				Type:        schema.TypeString,
@@ -150,7 +150,7 @@ Example for Venafi as a Service: myApp\\Default`,
 			providerTrustBundle: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: `Use to specify a PEM-formatted file that contains certificates to be trust anchors for all communications with the Venafi Web Service.
+				Description: `Use to specify a PEM-formatted file that contains certificates to be trust anchors for all communications with the CyberArk Web Service.
 Example:
   trust_bundle = "${file("chain.pem")}"`,
 			},
@@ -158,28 +158,28 @@ Example:
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiApiKey, nil),
-				Description: `API key for Venafi Control Plane. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				Description: `API key for CyberArk Certificate Manager, SaaS. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
 				Sensitive:   true,
 			},
 			providerTokenURL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiTokenURL, nil),
-				Description: `Endpoint URL to request new Venafi Control Plane access tokens`,
+				Description: `Endpoint URL to request new CyberArk Certificate Manager, SaaS access tokens`,
 				Sensitive:   true,
 			},
 			providerExternalJWT: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiExternalJWT, nil),
-				Description: `JWT of the identity provider associated to the Venafi Control Plane service account that is granting the access token`,
+				Description: `JWT of the identity provider associated to the CyberArk Certificate Manager, SaaS service account that is granting the access token`,
 				Sensitive:   true,
 			},
 			providerDevMode: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiDevMode, nil),
-				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using Venafi as a Service or Trust Protection Platform. Useful for development and testing`,
+				Description: `When set to true, the resulting certificate will be issued by an ephemeral, no trust CA rather than enrolling using CyberArk Certificate Manager, SaaS or CyberArk Certificate Manager, Self-Hosted. Useful for development and testing`,
 			},
 			providerClientID: {
 				Type:        schema.TypeString,
@@ -191,7 +191,7 @@ Example:
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
-				Description: `When true, certificates will not be retired on Venafi platforms when terraform destroy is run. Default is false`,
+				Description: `When true, certificates will not be retired on CyberArk platforms when terraform destroy is run. Default is false`,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -217,7 +217,7 @@ type ProviderConfig struct {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
-	tflog.Info(ctx, "Configuring venafi provider")
+	tflog.Info(ctx, "Configuring Venafi provider")
 	tflog.Info(ctx, fmt.Sprintf("User-Agent: %s", userAgent))
 	apiKey := d.Get(providerApiKey).(string)
 	url := d.Get(providerURL).(string)
@@ -239,11 +239,11 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	//Dev Mode
 	devMode := d.Get(providerDevMode).(bool)
-	// TLSPDC auth methods
+	// CyberArk Certificate Manager, Self-Hosted auth methods
 	userPassMethod := tppUser != "" && tppPassword != ""
 	clientCertMethod := (p12Certificate != "" || p12CertData != "") && p12Password != ""
 	accessTokenMethod := accessToken != ""
-	// TLSPC auth methods
+	// CyberArk Certificate Manager, SaaS auth methods
 	apiKeyMethod := apiKey != ""
 	svcAccountMethod := tokenURL != "" && externalJWT != ""
 

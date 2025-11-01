@@ -219,6 +219,15 @@ test_e2e_dev_ecdsa:
 	terraform output cert_private_key_dev_ecdsa > /tmp/cert_private_key_dev_ecdsa.pem
 	cat /tmp/cert_private_key_dev_ecdsa.pem
 
+test_e2e_vc_43631:
+	echo yes|terraform apply -target=venafi_certificate.VC-43631 -auto-approve
+	terraform state show venafi_certificate.VC-43631
+	terraform output cert_certificate_VC-43631 > /tmp/cert_certificate_VC-43631.pem
+	cat /tmp/cert_certificate_VC-43631.pem
+	cat /tmp/cert_certificate_dev_ecdsa.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
+	terraform output cert_private_key_VC-43631 > /tmp/cert_private_key_VC-43631.pem
+	cat /tmp/cert_private_key_VC-43631.pem
+
 linter:
 	@golangci-lint --version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin
 	golangci-lint run --timeout 10m0s

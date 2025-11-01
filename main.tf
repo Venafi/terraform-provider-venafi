@@ -11,6 +11,10 @@ variable "CLOUD_ZONE" {
   default = ""
 }
 
+variable "CLOUD_ZONE_VC_43631" {
+  default = ""
+}
+
 variable "CLOUD_URL" {
   default = ""
 }
@@ -56,7 +60,7 @@ provider "venafi" {
 }
 
 /*
-VaaS provider configuration (alias = "vaas")
+CyberArk Certificate Manager, SaaS provider configuration (alias = "vaas")
 Here we are getting credentials from variables TF_VAR_CLOUDAPIKEY and TF_VAR_CLOUDZONE
 */
 provider "venafi" {
@@ -250,4 +254,31 @@ output "cert_chain_tpp_token" {
 output "cert_private_key_token" {
   sensitive = true
   value = venafi_certificate.token_certificate.private_key_pem
+}
+
+provider venafi {
+  alias = "vc-43631"
+  api_key = var.CLOUD_APIKEY
+  zone    = var.CLOUD_ZONE_VC_43631
+  url     = var.CLOUD_URL
+}
+
+resource "venafi_certificate" "VC-43631" {
+  provider = venafi.vc-43631
+  csr_origin = "service"
+  common_name = "VC-43631-${random_string.cn.result}.example.com"
+  san_dns = ["VC-43631-${random_string.cn.result}.example.com"]
+}
+
+output "cert_certificate_VC-43631" {
+  value = venafi_certificate.VC-43631.certificate
+}
+
+output "cert_chain_VC-43631" {
+  value = venafi_certificate.VC-43631.chain
+}
+
+output "cert_private_key_VC-43631" {
+  sensitive = true
+  value = venafi_certificate.VC-43631.private_key_pem
 }

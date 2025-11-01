@@ -11,3 +11,5 @@ chain.pem
 terraform.d
 .DS_Store
 vendor
+.terraform.lock.hcl
+*.tfvars
