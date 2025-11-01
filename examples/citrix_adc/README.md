@@ -1,6 +1,6 @@
-# Configuring secure application delivery using Citrix ADC and the _CyberArk Certificate Manager Provider for HashiCorp Terraform_
+# Configuring secure application delivery using Citrix ADC and the _Venafi Provider for HashiCorp Terraform_
 
-In this example, we'll show you how to better secure application delivery using _CyberArk Certificate Manager Provider for HashiCorp Terraform_ with your Citrix ADC instance. That will enable you to manage certificates more securely as part of the TLS termination process on your load balancer.
+In this example, we'll show you how to better secure application delivery using _Venafi Provider for HashiCorp Terraform_ with your Citrix ADC instance. That will enable you to manage certificates more securely as part of the TLS termination process on your load balancer.
 
 ## Who should use this example? 
 
@@ -8,15 +8,15 @@ The steps described in this example are typically performed by _DevOps engineers
 
 ## About this example 
 
-In this example, we use Terraform's _infrastructure as code_ automation process with the _CyberArk Certificate Manager Provider_  to generate and install certificates as part of SSL termination on an ADC (specifically, Citrix ADC) for load balancing web traffic. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic and being managed by Citrix ADC.
+In this example, we use Terraform's _infrastructure as code_ automation process with the _Venafi Provider_  to generate and install certificates as part of SSL termination on an ADC (specifically, Citrix ADC) for load balancing web traffic. We'll also utilize three HTTP servers contained in a cluster as the endpoints that are sending and receiving web traffic and being managed by Citrix ADC.
 
-Later in this example, you'll generate a certificate for ``demo-citrix.venafi.example`` using the _CyberArk Certificate Manager Provider for Hashicorp Terraform_ with either CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS. Then after adding them to your Citrix ADC resources, you'll use them in the ADC node. And finally, you'll configure the service group members and [bind them](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-manage-large-scale-deployment/configure-service-groups.html#bind-a-service-group-to-a-virtual-server) to your ADC node.
+Later in this example, you'll generate a certificate for ``demo-citrix.venafi.example`` using the _Venafi Provider for Hashicorp Terraform_ with either CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS. Then after adding them to your Citrix ADC resources, you'll use them in the ADC node. And finally, you'll configure the service group members and [bind them](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-manage-large-scale-deployment/configure-service-groups.html#bind-a-service-group-to-a-virtual-server) to your ADC node.
 
 > **NOTE** While we'll be using a ``Round robin`` balancing method in our ADC configuration, keep in mind that there are other [methods](https://docs.citrix.com/en-us/citrix-adc/current-release/load-balancing/load-balancing-customizing/assign-weight-services.html) that might be more suitable for your specific use case.
 
 ![scenario](scenario.png "Scenario")
 
-### About retrieving a certificate using the _CyberArk Certificate Manager Provider for Terraform_
+### About retrieving a certificate using the _Venafi Provider for Terraform_
 
 > **BEST PRACTICES** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.
 
@@ -40,7 +40,7 @@ Before you continue, carefully review these prerequisites:
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
 - Verify that you have administrator access to your Citrix ADC instance.
 - Verify that you have administrator access to either CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS.      
-- If you're using CyberArk Certificate Manager, Self-Hosted and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and CyberArk Certificate Manager, Self-Hosted](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _CyberArk Certificate Manager Provider for HashiCorp Terraform_ README.
+- If you're using CyberArk Certificate Manager, Self-Hosted and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and CyberArk Certificate Manager, Self-Hosted](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
 - Verify that you have three (3) web servers that are running your application; for this example, we'll use NGINX servers.
 
 ## Getting started 
@@ -187,7 +187,7 @@ citrix_service_group_members = [ "192.168.6.201:8001", "192.168.6.201:8002", "19
     ```
 ### Step 3: Set up your CyberArk Terraform config file
 
-1. Specify the connection and authentication settings for your CyberArk Certificate Manager Provider:
+1. Specify the connection and authentication settings for your Venafi Provider:
 
     **CyberArk Certificate Manager, Self-Hosted**:
     ```

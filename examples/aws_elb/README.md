@@ -1,12 +1,12 @@
-# Configuring secure application delivery using AWS ACM and the _CyberArk Certificate Manager Provider for Hashicorp Terraform_
+# Configuring secure application delivery using AWS ACM and the _Venafi Provider for Hashicorp Terraform_
 
-In this example, we'll show you how to better secure application deliver using _CyberArk Certificate Manager Provider for Hashicorp Terraform_ with AWS ACM and ALBs. That will enable you to manage certificates more securely as part of the TLS termination process on your load balancer.
+In this example, we'll show you how to better secure application deliver using _Venafi Provider for Hashicorp Terraform_ with AWS ACM and ALBs. That will enable you to manage certificates more securely as part of the TLS termination process on your load balancer.
 
 ## About this example
 
-In this example, we use Terraform's _intrastructure as code_ automation process with the _CyberArk Certificate Manager Provider_ to generate and install certificates within AWS ACM as part of SSL Termination on AWS ALB for load balancing web traffic. 
+In this example, we use Terraform's _intrastructure as code_ automation process with the _Venafi Provider_ to generate and install certificates within AWS ACM as part of SSL Termination on AWS ALB for load balancing web traffic. 
 
-### About retrieving a certificate using the _CyberArk Certificate Manager Provider for Terraform_
+### About retrieving a certificate using the _Venafi Provider for Terraform_
 
 > **BEST PRACTICES** In general, be careful when using self-signed certificates because of the inherent risks of no identity verification or trust control. The public and private keys are both held by the same entity. Also, self-signed certificates cannot be revoked; they can only be replaced. If an attacker has already gained access to a system, the attacker can spoof the identity of the subject. Of course, CAs can revoke a certificate only when they discover the compromise.
 
@@ -30,7 +30,7 @@ Before you continue, carefully review these prerequisites:
 - Verify that Terraform is installed correctly. [Look here for installation details.](https://learn.hashicorp.com/tutorials/terraform/install-cli).
 - Verify you have permission and access to create specific AWS resources such as EC2 instances and Load Balancers.
 - Verify that you have administrator access to either CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS.  
-- If you're using CyberArk Certificate Manager, Self-Hosted and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and CyberArk Certificate Manager, Self-Hosted](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _CyberArk Certificate Manager Provider for HashiCorp Terraform_ README.
+- If you're using CyberArk Certificate Manager, Self-Hosted and you do NOT have administrator access, you'll need to generate an access token from the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md), as described in [Trust between Terraform and CyberArk Certificate Manager, Self-Hosted](https://github.com/Venafi/terraform-provider-venafi#trust-between-terraform-and-trust-protection-platform)) in the _Venafi Provider for HashiCorp Terraform_ README.
 
 ## Getting started
 
@@ -160,7 +160,7 @@ aws_vpc_public_subnets = [ "10.0.36.0/24", "10.0.48.0/24" ]
 
 ### Step 3: Set up your CyberArk Terraform config file
 
-1. Specify the connection and authentication settings for your CyberArk Certificate Manager Provider:
+1. Specify the connection and authentication settings for your Venafi Provider:
 
     **CyberArk Certificate Manager, Self-Hosted**:
     ```

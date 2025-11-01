@@ -1,17 +1,17 @@
 [![MPL 2.0 License](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
 ![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
-![Compatible with Trust Protection Platform 17.3+ & Venafi Control Plane](https://img.shields.io/badge/Compatibility-TPP%2017.3+%20%26%20VaaS-f9a90c)  
+![Compatible with CyberArk Certificate Manager, Self-Hosted+ & CyberArk Certificate Manager, SaaS](https://img.shields.io/badge/Compatibility-Certificate%20Manager%2C%20Self--Hosted_17.3%2B_%26Certificate%20Manager%2C%20SaaS-f9a90c)  
 _**This open source project is community-supported.** To report a problem or share an idea, use
 **[Issues](../../issues)**; and if you have a suggestion for fixing the issue, please include those details, too.
 In addition, use **[Pull Requests](../../pulls)** to contribute actual bug fixes or proposed enhancements.
 We welcome and appreciate all contributions. Got questions or want to discuss something with our team?
 **[Join us on Slack](https://join.slack.com/t/venafi-integrations/shared_invite/zt-i8fwc379-kDJlmzU8OiIQOJFSwiA~dg)**!_
 
-# CyberArk Certificate Manager Provider for HashiCorp Terraform
+# Venafi Provider for HashiCorp Terraform
 
 This solution adds certificate enrollment capabilities to [HashiCorp Terraform](https://terraform.io/) by seamlessly 
-integrating with the [CyberArk Certificate Manager, Self-Hosted](https://www.venafi.com/platform/trust-protection-platform) or 
-[CyberArk Certificate Manager, SaaS](https://www.venafi.com/venaficloud) in a manner that ensures compliance with corporate security 
+integrating with the [CyberArk Certificate Manager, Self-Hosted](https://www.cyberark.com/products/certificate-manager/) or 
+[CyberArk Certificate Manager, SaaS](https://www.cyberark.com/products/certificate-manager/) in a manner that ensures compliance with corporate security 
 policy and provides visibility into certificate issuance enterprise wide.
 
 >:red_car: **Test drive our integration examples today**
@@ -19,11 +19,11 @@ policy and provides visibility into certificate issuance enterprise wide.
 >Let us show you _step-by-step_ how to add certificates to your _Infrastucture as Code_ automation using Terraform.
 > 
 >
-> | Products                                                                                                                         | Available integration examples...                                                                                                                                    |
-> |----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-> | [<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="40" height="40" />](examples/f5_bigip/README.md)           | [How to configure secure application delivery using F5 BIG-IP and the CyberArk Certificate Manager Provider for HashiCorp Terraform](examples/f5_bigip/README.md)    |
-> | [<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="40" height="40" />](examples/citrix_adc/README.md)    | [How to configure secure application delivery using Citrix ADC and the CyberArk Certificate Manager Provider for HashiCorp Terraform](examples/citrix_adc/README.md) |
-> | [<img src="examples/logo_tile_iis.png?raw=true" alt="Microsoft IIS" width="40" height="40" />](examples/microsoft_iis/README.md) | [How to secure and configure Microsoft IIS using the CyberArk Certificate Manager Provider for HashiCorp Terraform](examples/microsoft_iis/README.md)                |
+> | Products                                                                                                                         | Available integration examples...                                                                                                              |
+> |----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+> | [<img src="examples/logo_tile_f5.png?raw=true" alt="F5 BIG-IP" width="40" height="40" />](examples/f5_bigip/README.md)           | [How to configure secure application delivery using F5 BIG-IP and the Venafi Provider for HashiCorp Terraform](examples/f5_bigip/README.md)    |
+> | [<img src="examples/logo_tile_citrix.png?raw=true" alt="Citrix ADC" width="40" height="40" />](examples/citrix_adc/README.md)    | [How to configure secure application delivery using Citrix ADC and the Venafi Provider for HashiCorp Terraform](examples/citrix_adc/README.md) |
+> | [<img src="examples/logo_tile_iis.png?raw=true" alt="Microsoft IIS" width="40" height="40" />](examples/microsoft_iis/README.md) | [How to secure and configure Microsoft IIS using the Venafi Provider for HashiCorp Terraform](examples/microsoft_iis/README.md)                |
 >
 >**NOTE** If you don't see an example for a product you use, check back later. We're working hard to add more integration examples.
 
@@ -43,7 +43,7 @@ Certificate Services (ADCS) is a popular choice. Other CA choices may have sligh
 
 Within CyberArk Certificate Manager, Self-Hosted, configure these settings.
 
-- A user account that has an authentication token for the `CyberArk Certificate Manager Provider for HashiCorp Terraform` (ID 
+- A user account that has an authentication token for the `Venafi Provider for HashiCorp Terraform` (ID 
 `hashicorp-terraform-by-venafi`) API Application as of 20.1 (or scope `certificate:manage` for 19.2 through 19.4) or 
 has been granted WebSDK Access (deprecated).
 - A Policy folder where the user has the following permissions: `View`, `Read`, `Write`, `Create`.
@@ -73,16 +73,16 @@ Two methods can be used to establish trust. Both require the trust anchor (root 
 certificate. If you have administrative access, you can import the root certificate into the trust store for your 
 operating system. If you don't have administrative access, or prefer not to make changes to your system configuration, 
 save the root certificate to a file in `PEM` format (e.g. /opt/cyberark/bundle.pem) and include it using the `trust_bundle` 
-parameter of your CyberArk Certificate Manager Provider.
+parameter of your Venafi Provider.
 
 ### CyberArk Certificate Manager, Self-Hosted Token Management
 
-The CyberArk Certificate Manager Provider offers several authentication methods to CyberArk Certificate Manager, Self-Hosted. All of them work by requesting 
+The Venafi Provider offers several authentication methods to CyberArk Certificate Manager, Self-Hosted. All of them work by requesting 
 an access token that will grant access to the REST API. Automation becomes complex to manage when access tokens are 
 introduced as they have an expiration date. When that date is met, the token is no longer valid. 
 
 A new [Venafi-token provider](https://registry.terraform.io/providers/Venafi/venafi-token/latest) has been released that 
-allows customers to manage their access tokens. This way the CyberArk Certificate Manager Provider will always have a valid token to use, and 
+allows customers to manage their access tokens. This way the Venafi Provider will always have a valid token to use, and 
 automation will not be disrupted by token expiration.
 
 ### CyberArk Certificate Manager, SaaS
@@ -114,7 +114,7 @@ If you are using CyberArk Certificate Manager, SaaS, verify the following:
 
 ## Setup
 
-The CyberArk Certificate Manager Provider for HashiCorp Terraform is an officially verified integration. As such, releases are published to 
+The Venafi Provider for HashiCorp Terraform is an officially verified integration. As such, releases are published to 
 the [Terraform Registry](https://registry.terraform.io/providers/Venafi/venafi/latest) where they are available for 
 `terraform init` to automatically download whenever the provider is referenced by a configuration file.  No setup steps 
 are required to use an official release of this provider other than to download and install Terraform itself.
@@ -127,7 +127,7 @@ that must align with how the provider is referenced in the `required_providers` 
 ## Usage
 
 A Terraform module is a container for multiple resources that are used together and the steps that follow illustrate the 
-resources required to enroll certificates using the CyberArk Certificate Manager Provider with HashiCorp Terraform 0.13 or higher.  
+resources required to enroll certificates using the Venafi Provider with HashiCorp Terraform 0.13 or higher.  
 
 > :pushpin: **NOTE**: For Terraform 0.12, omit the `required_providers` block and specify any desired version constraints 
 for the provider in the `provider` block using the
@@ -141,10 +141,10 @@ for the provider in the `provider` block using the
 > below.
 
 > :warning: With the introduction of version [0.18.0](https://github.com/Venafi/terraform-provider-venafi/releases/tag/v0.18.0) 
-> the CyberArk Certificate Manager Provider now incorporates a new feature related to certificate retirement. When an infrastructure 
+> the Venafi Provider now incorporates a new feature related to certificate retirement. When an infrastructure 
 > is decommissioned, the associated certificate will be automatically retired from the CyberArk Platform (CyberArk Certificate Manager, Self-Hosted and CyberArk Certificate Manager, SaaS).
 
-1. Declare that the CyberArk Certificate Manager Provider is required:
+1. Declare that the Venafi Provider is required:
 
    ```text
    terraform {
@@ -393,7 +393,7 @@ terraform import "venafi_certificate.imported_certificate" "xxxxxxxx-xxxx-xxxx-x
 
 ## Certificate Policy Management
 
-1. Declare that the CyberArk Certificate Manager Provider and specify the connection and authentication settings as described in the previous 
+1. Declare that the Venafi Provider and specify the connection and authentication settings as described in the previous 
 section.
 
    >:pushpin: **NOTE**: For CyberArk Certificate Manager, Self-Hosted, the `access_token` assigned to the `venafi` provider must have 
@@ -423,10 +423,10 @@ section.
 
 ## SSH Certificate Management
 
-1. Declare the CyberArk Certificate Manager Provider and specify the connection and authentication settings as described in the previous 
+1. Declare the Venafi Provider and specify the connection and authentication settings as described in the previous 
 sections.
 
-   >:pushpin: **NOTE**: For CyberArk Certificate Manager, Self-Hosted, the access_token assigned to the CyberArk Certificate Manager Provider must have the 
+   >:pushpin: **NOTE**: For CyberArk Certificate Manager, Self-Hosted, the access_token assigned to the Venafi Provider must have the 
    > *ssh:manage* scope in order to create SSH certificates.
 
    **CyberArk Certificate Manager, Self-Hosted**:
@@ -501,8 +501,8 @@ a remote host:
 
 ## License
 
-Copyright &copy; Venafi, Inc. All rights reserved.
+Copyright &copy; Venafi, Inc. and CyberArk Software Ltd. ("CyberArk")
 
 This solution is licensed under the Mozilla Public License, Version 2.0. See `LICENSE` for the full license text.
 
-Please direct questions/comments to opensource@venafi.com.
+Please direct questions/comments to mis-opensource@cyberark.com.

@@ -1,6 +1,6 @@
-# Configuring secure web applications using Microsoft IIS and the CyberArk Certificate Manager Provider for HashiCorp Terraform
+# Configuring secure web applications using Microsoft IIS and the Venafi Provider for HashiCorp Terraform
 
-In this example, we'll show you how to better secure communication between your [Microsoft Internet Information Services](https://www.iis.net) (IIS) application and its users using the *CyberArk Certificate Manager Provider for HashiCorp Terraform*. That will allow you to automate certificate management and enable the TLS protocol on your web server.
+In this example, we'll show you how to better secure communication between your [Microsoft Internet Information Services](https://www.iis.net) (IIS) application and its users using the *Venafi Provider for HashiCorp Terraform*. That will allow you to automate certificate management and enable the TLS protocol on your web server.
 
 ## Who should use this example?
 
@@ -8,7 +8,7 @@ The steps described in this document are typically performed by _DevOps engineer
 
 ## About this example
 
-In this Infrastructure as Code example we use [HashiCorp Terraform](https://terraform.io/) with the _CyberArk Certificate Manager Provider for Terraform_  to automate the process of requesting, retrieving and installing a certificate as part of enabling the TLS protocol for an IIS server.
+In this Infrastructure as Code example we use [HashiCorp Terraform](https://terraform.io/) with the _Venafi Provider for Terraform_  to automate the process of requesting, retrieving and installing a certificate as part of enabling the TLS protocol for an IIS server.
 
 Later in this example, you'll generate a certificate for `demo-iis.venafi.example` using Terraform and the `venafi_certificate` resource to request and retrieve it from either *CyberArk Certificate Manager, Self-Hosted* or *CyberArk Certificate Manager, SaaS*. Then, using PowerShell scripting, you'll import the certificate with its private key into the certificate store on the target Windows server and configure IIS to use the certificate for HTTPS. You'll be able to set a Server Name Indication (SNI) and enable HTTP Strict-Transport-Security (HSTS) if supported by the version of Windows to which you are provisioning (i.e. Windows Server 2019 or higher).
 
@@ -56,7 +56,7 @@ To perform the tasks described in this example, you'll need:
 Here are the steps we'll take as we go trough this example:
 
 1. Create your Terraform variables file, `terraform.tfvars`
-2. Create a `main.tf` file to declare variables and the CyberArk Certificate Manager Provider for Terraform
+2. Create a `main.tf` file to declare variables and the Venafi Provider for Terraform
 3. Create a `venafi.tf` file to specify how to connect to CyberArk and the details of the certificate to request
 4. Create an `iis.tf` file to define the operations Terraform will perform and a `plan.ps1` (PowerShell) script that will make the changes to Windows and IIS
 5. Apply the Terraform configuration
@@ -250,7 +250,7 @@ After you've successfully implemented this example, consider the following tips:
 
 **IMPORTANT!** When your certificate expires, users of your application will be advised they should no longer trust it.  We refer to this as an "outage" because machines will not proceed with connections when this occurs. For example, if you are using an ADC to manage traffic between clients and your application, the ADC may stop sending traffic to them if their certificates have expired (see https://www.ibm.com/support/pages/one-expired-certificate-brings-down-all-certificates-datapower-validation-credential).
 
-The CyberArk Certificate Manager Provider for Terraform has renewal intelligence built-in.  Unfortunately, most Terraform providers do not and that's especially true for the IIS use case since there is no IIS provider.  To renew a certificate using Terraform, you'll first need to execute `terraform destroy` and then `terraform apply` again to request and install a new certificate.
+The Venafi Provider for Terraform has renewal intelligence built-in.  Unfortunately, most Terraform providers do not and that's especially true for the IIS use case since there is no IIS provider.  To renew a certificate using Terraform, you'll first need to execute `terraform destroy` and then `terraform apply` again to request and install a new certificate.
 </details>
 
 <details>
