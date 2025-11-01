@@ -67,7 +67,7 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if connector.GetType() != endpoint.ConnectorTypeCloud {
-		return buildStandardDiagError(fmt.Sprintf("venafi platform detected as [%s]. Cloud Provider data source is only available for VCP", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Provider data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
 	}
 
 	cloudProvider, err := connector.(*cloud.Connector).GetCloudProvider(domain.GetCloudProviderRequest{
@@ -76,7 +76,7 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud provider from VCP API", map[string]interface{}{
+	tflog.Info(ctx, "successfully retrieved cloud provider from CyberArk Certificate Manager, SaaS API", map[string]interface{}{
 		cloudProviderName: cpName,
 	})
 
