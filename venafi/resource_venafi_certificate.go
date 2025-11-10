@@ -172,6 +172,13 @@ func resourceVenafiCertificate() *schema.Resource {
 				Computed:  true,
 				Sensitive: true,
 			},
+			"certificate_authority_dn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The Distinguished Name (DN) of the Certificate Authority Template. This value is not required if it is defined by policy. Applies only to Venafi Trust Protection Platform.",
+				ForceNew:    true,
+			},
 			"chain": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -401,6 +408,14 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		certMetadata, err := cl.RetrieveCertificateMetaData(pickupID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		d.Set("certificate_authority_dn", certMetadata.CertificateAuthorityDN)
+	}
 	return diags
 }
 
@@ -564,6 +579,9 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 		CsrOrigin:    certificate.LocalGeneratedCSR,
 		CustomFields: []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: utilityName}},
 	}
+
+	cadn := d.Get("certificate_authority_dn").(string)
+	req.CADN = cadn
 
 	origin := d.Get("csr_origin").(string)
 	if origin == csrService {
@@ -836,6 +854,14 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 
 	if err = d.Set("private_key_pem", pcc.PrivateKey); err != nil {
 		return fmt.Errorf("error setting private key: %s", err)
+	}
+
+	if cl.GetType() == endpoint.ConnectorTypeTPP {
+		certMetadata, err := cl.RetrieveCertificateMetaData(pickupReq.PickupID)
+		if err != nil {
+			return err
+		}
+		d.Set("certificate_authority_dn", certMetadata.CertificateAuthorityDN)
 	}
 
 	return nil
