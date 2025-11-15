@@ -1,14 +1,14 @@
 ---
 layout: "venafi"
-page_title: "Provider: CyberArk Certificate Manager Provider"
+page_title: "Provider: Venafi"
 sidebar_current: "docs-venafi-index"
 description: |-
-  CyberArk is the enterprise platform for Machine Identity Protection. The CyberArk Certificate Manager Provider streamlines
+  CyberArk is the enterprise platform for Machine Identity Protection. The Venafi provider streamlines
   the process of acquiring SSL/TLS keys and certificates from CyberArk services giving assurance of compliance with Information
   Security policies. It provides resources that allow private keys and certificates to be created as part of a Terraform deployment.
 ---
 
-# CyberArk Certificate Manager Provider
+# Venafi Provider
 
 !> We dropped support for RSA PKCS#1 formatted keys for TLS certificates in version 15.0 and also for EC Keys in version
 0.15.4 (you can find out more about this transition in [here](https://github.com/Venafi/vcert/releases/tag/v4.17.0)).
@@ -16,12 +16,11 @@ For backward compatibility during Terraform state refresh please update to versi
 
 !> As a part for upgrading our provider to SDK version 2, we dropped support for Terraform version 0.11 and below.
 
-~> With the introduction of version [0.18.0](https://registry.terraform.io/providers/Venafi/venafi/0.18.0) the CyberArk 
-Certificate Manager Provider now incorporates a new feature related to certificate retirement. When an infrastructure is
-decommissioned, the associated certificate will be automatically retired from the CyberArk Certificate Manager.
+~> With the introduction of version [0.18.0](https://registry.terraform.io/providers/Venafi/venafi/0.18.0) the Venafi
+Terraform Provider now incorporates a new feature related to certificate retirement. When an infrastructure is
+decommissioned, the associated certificate will be automatically retired from the CyberArk Certificate Manager(SaaS and Self-Hosted).
 
-[CyberArk](https://www.cyberark.com) is the enterprise platform for Machine Identity Protection. The CyberArk Certificate
-Manager Provider streamlines the process of acquiring SSL/TLS keys and certificates from CyberArk Machine Identity Service
+[CyberArk](https://www.cyberark.com) is the enterprise platform for Machine Identity Protection. The Venafi Provider streamlines the process of acquiring SSL/TLS keys and certificates from CyberArk Machine Identity Service
 giving assurance of compliance with Information Security policies. It provides resources that allow private keys and certificates
 to be created as part of a Terraform deployment.
 
@@ -37,7 +36,7 @@ Template API Alias (e.g. "Business App\Enterprise CIT").
 ### US tenants
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider. US api url is set by default
+# Configure the Venafi Provider. US api url is set by default
 provider "venafi" {
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   zone    = "Business App\\Enterprise CIT"
@@ -52,7 +51,7 @@ resource "venafi_certificate" "webserver" {
 ### EU tenants
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider with EU api url
+# Configure the Venafi Provider with EU api url
 provider "venafi" {
   url     = "https://api.venafi.eu"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -68,7 +67,7 @@ resource "venafi_certificate" "webserver" {
 ### AU tenants
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider with AU api url
+# Configure the Venafi Provider with AU api url
 provider "venafi" {
   url     = "https://api.au.venafi.cloud"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -84,7 +83,7 @@ resource "venafi_certificate" "webserver" {
 ### UK tenants
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider with UK api url
+# Configure the Venafi Provider with UK api url
 provider "venafi" {
   url     = "https://api.uk.venafi.cloud"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -100,7 +99,7 @@ resource "venafi_certificate" "webserver" {
 ### SG tenants
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider with SG api url
+# Configure the Venafi Provider with SG api url
 provider "venafi" {
   url     = "https://api.sg.venafi.cloud"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -116,7 +115,7 @@ resource "venafi_certificate" "webserver" {
 ### CA tenants
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider with CA api url
+# Configure the Venafi Provider with CA api url
 provider "venafi" {
   url     = "https://api.ca.venafi.cloud"
   api_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -143,7 +142,7 @@ CyberArk Certificate Manager, Self-Hosted Platform's Authorize REST API method. 
 `venafi_policy` resource.
 
 ```hcl
-# Configure the CyberArk Certificate Manager Provider
+# Configure the Venafi Provider
 provider "venafi" {
   url          = "https://tpp.venafi.example"
   trust_bundle = "${file("/opt/venafi/bundle.pem")}"
