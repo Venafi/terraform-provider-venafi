@@ -50,7 +50,11 @@ else
 			ifneq ($(filter %86,$(UNAME_P)),)
 				CPU_STR := 386
 			else
-				CPU_STR := amd64
+				ifeq ($(UNAME_P),aarch64)
+					CPU_STR := arm64
+				else
+					CPU_STR := amd64
+				endif
 			endif
 		endif
 	endif
@@ -92,6 +96,7 @@ build_dev:
 build:
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_$(VERSION) || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/linux_arm/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/darwin_arm/$(PLUGIN_NAME)_$(VERSION) || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(GO_LDFLAGS) -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_$(VERSION).exe || exit 1
@@ -103,12 +108,13 @@ debug:
 	dlv exec --listen=:$(DEBUG_PORT) --accept-multiclient --continue --headless $(PLUGIN_DIR)/$(PLUGIN_NAME) -- -debug
 
 compress:
-	$(foreach var,linux linux86 darwin darwin_arm windows windows86,cp LICENSE $(PLUGIN_DIR)/$(var);)
-	$(foreach var,linux linux86 darwin darwin_arm windows windows86,cp README.md $(PLUGIN_DIR)/$(var);)
+	$(foreach var,linux linux86 linux_arm darwin darwin_arm windows windows86,cp LICENSE $(PLUGIN_DIR)/$(var);)
+	$(foreach var,linux linux86 linux_arm darwin darwin_arm windows windows86,cp README.md $(PLUGIN_DIR)/$(var);)
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_linux_amd64.zip" $(PLUGIN_DIR)/linux/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_linux_386.zip" $(PLUGIN_DIR)/linux86/* || exit 1
+	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_linux_arm64.zip" $(PLUGIN_DIR)/linux_arm/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_darwin_amd64.zip" $(PLUGIN_DIR)/darwin/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_darwin_arm64.zip" $(PLUGIN_DIR)/darwin_arm/* || exit 1
 	zip -j "$(DIST_DIR)/${PLUGIN_NAME}_$(ZIP_VERSION)_windows_amd64.zip" $(PLUGIN_DIR)/windows/* || exit 1
