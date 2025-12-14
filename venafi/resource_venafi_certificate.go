@@ -56,8 +56,9 @@ func resourceVenafiCertificate() *schema.Resource {
 			"csr_origin": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: "Origin of the CSR. One of local or service. Local: The CSR will be generated locally and " +
-					"sent over for certificate issuance. Service: The CSR will be generated and managed by the CyberArk platform. Default is local",
+				Description: "Origin of the CSR. One of local, service, or file. Local: The CSR will be generated locally and " +
+					"sent over for certificate issuance. Service: The CSR will be generated and managed by the CyberArk platform. " +
+					"File: The CSR will be provided via the csr_pem attribute. Default is local",
 				ForceNew: true,
 				Default:  "local",
 			},
@@ -184,6 +185,10 @@ func resourceVenafiCertificate() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
+				Description: "Certificate Signing Request (CSR) in PEM format. " +
+					"When csr_origin is 'file', this should contain the user-provided CSR PEM data. " +
+					"For 'local' or 'service' origins, this is a computed output containing the generated CSR.",
+				ForceNew: true,
 			},
 			"pkcs12": {
 				Type:     schema.TypeString,
@@ -264,6 +269,12 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 	//Add warning message when no password for private key was set and CSR origin is service.
 	if origin == csrService && !passOk {
 		detailMsg := "No key password provided for service generated CSR. Certificate contents (certificate, chain, private key) not stored in terraform state"
+		tflog.Info(ctx, detailMsg)
+	}
+
+	//Add info message when CSR origin is file
+	if origin == csrFile {
+		detailMsg := "User-provided CSR via csr_pem attribute. Private key is managed externally and not stored in terraform state"
 		tflog.Info(ctx, detailMsg)
 	}
 
@@ -568,77 +579,179 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 	origin := d.Get("csr_origin").(string)
 	if origin == csrService {
 		req.CsrOrigin = certificate.ServiceGeneratedCSR
+	} else if origin == csrFile {
+		req.CsrOrigin = certificate.UserProvidedCSR
+	}
+
+	// Handle user-provided CSR from csr_pem
+	if origin == csrFile {
+		csrPem, ok := d.GetOk("csr_pem")
+		if !ok || csrPem.(string) == "" {
+			return fmt.Errorf("csr_pem must be specified when csr_origin is set to 'file'")
+		}
+
+		csrBytes := []byte(csrPem.(string))
+		tflog.Info(ctx, "Processing user-provided CSR from csr_pem attribute")
+
+		// Parse the CSR to validate it and extract information
+		block, rest := pem.Decode(csrBytes)
+		if block == nil || block.Type != "CERTIFICATE REQUEST" {
+			return fmt.Errorf("failed to decode PEM block containing CSR")
+		}
+		if len(rest) > 0 {
+			tflog.Warn(ctx, "CSR data contains extra data after the PEM block, which will be ignored")
+		}
+
+		csr, err := x509.ParseCertificateRequest(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("error parsing CSR: %s", err)
+		}
+
+		// Verify the CSR signature
+		if err = csr.CheckSignature(); err != nil {
+			return fmt.Errorf("CSR signature verification failed: %s", err)
+		}
+
+		// Set the CSR in the request
+		if err = req.SetCSR(csrBytes); err != nil {
+			return fmt.Errorf("error setting CSR: %s", err)
+		}
+
+		tflog.Info(ctx, fmt.Sprintf("Successfully loaded CSR with CN: %s", csr.Subject.CommonName))
 	}
 
 	//setting DN values Org, Organization Units, Country, State, Locality(City)
-	country := d.Get("country").(string)
-	if country != "" {
-		req.Subject.Country = []string{country}
-	}
-	state := d.Get("state").(string)
-	if state != "" {
-		req.Subject.Province = []string{state}
-	}
-	locality := d.Get("locality").(string)
-	if locality != "" {
-		req.Subject.Locality = []string{locality}
-	}
-	org := d.Get("organization").(string)
-	if org != "" {
-		req.Subject.Organization = []string{org}
-	}
-	orgUnits := d.Get("organizational_units").([]interface{})
-	for _, orgUnit := range orgUnits {
-		orgUnitStr := orgUnit.(string)
-		req.Subject.OrganizationalUnit = append(req.Subject.OrganizationalUnit, orgUnitStr)
+	// Skip these when using a user-provided CSR as the information comes from the CSR
+	if origin != csrFile {
+		country := d.Get("country").(string)
+		if country != "" {
+			req.Subject.Country = []string{country}
+		}
+		state := d.Get("state").(string)
+		if state != "" {
+			req.Subject.Province = []string{state}
+		}
+		locality := d.Get("locality").(string)
+		if locality != "" {
+			req.Subject.Locality = []string{locality}
+		}
+		org := d.Get("organization").(string)
+		if org != "" {
+			req.Subject.Organization = []string{org}
+		}
+		orgUnits := d.Get("organizational_units").([]interface{})
+		for _, orgUnit := range orgUnits {
+			orgUnitStr := orgUnit.(string)
+			req.Subject.OrganizationalUnit = append(req.Subject.OrganizationalUnit, orgUnitStr)
+		}
 	}
 
 	//Configuring keys
-	keyType := d.Get("algorithm").(string)
-
+	// Skip key configuration when using a user-provided CSR
 	var keyPassword string
-	if pass, ok := d.GetOk("key_password"); ok {
-		keyPassword = pass.(string)
-		req.KeyPassword = keyPassword
-	}
+	if origin != csrFile {
+		keyType := d.Get("algorithm").(string)
 
-	if keyType == "RSA" || len(keyType) == 0 {
-		req.KeyLength = d.Get("rsa_bits").(int)
-		req.KeyType = certificate.KeyTypeRSA
-	} else if keyType == "ECDSA" {
-		keyCurve := d.Get("ecdsa_curve").(string)
-		req.KeyType = certificate.KeyTypeECDSA
-		err := req.KeyCurve.Set(keyCurve)
-		if err != nil {
-			return err
+		if pass, ok := d.GetOk("key_password"); ok {
+			keyPassword = pass.(string)
+			req.KeyPassword = keyPassword
 		}
-	} else {
-		return fmt.Errorf("can't determine key algorithm %s", keyType)
+
+		if keyType == "RSA" || len(keyType) == 0 {
+			req.KeyLength = d.Get("rsa_bits").(int)
+			req.KeyType = certificate.KeyTypeRSA
+		} else if keyType == "ECDSA" {
+			keyCurve := d.Get("ecdsa_curve").(string)
+			req.KeyType = certificate.KeyTypeECDSA
+			err := req.KeyCurve.Set(keyCurve)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("can't determine key algorithm %s", keyType)
+		}
 	}
 
 	//Setting up Subject
+	// Common name is required for tracking purposes even when using a user-provided CSR
 	commonName := d.Get("common_name").(string)
+	if origin == csrFile && commonName == "" {
+		return fmt.Errorf("common_name is required even when using a CSR file")
+	}
 	//Adding alt names if exists
-	dnsNum := d.Get("san_dns.#").(int)
-	if dnsNum > 0 {
-		for i := 0; i < dnsNum; i++ {
-			key := fmt.Sprintf("san_dns.%d", i)
-			val := d.Get(key).(string)
-			tflog.Info(ctx, fmt.Sprintf("Adding SAN %s.", val))
-			req.DNSNames = append(req.DNSNames, val)
+	// Skip SANs when using a user-provided CSR as they come from the CSR
+	if origin != csrFile {
+		dnsNum := d.Get("san_dns.#").(int)
+		if dnsNum > 0 {
+			for i := 0; i < dnsNum; i++ {
+				key := fmt.Sprintf("san_dns.%d", i)
+				val := d.Get(key).(string)
+				tflog.Info(ctx, fmt.Sprintf("Adding SAN %s.", val))
+				req.DNSNames = append(req.DNSNames, val)
+			}
 		}
+
+		if len(commonName) == 0 && len(req.DNSNames) == 0 {
+			return fmt.Errorf("no domains specified on certificate")
+		}
+		if len(commonName) == 0 && len(req.DNSNames) > 0 {
+			commonName = req.DNSNames[0]
+		}
+		if !sliceContains(req.DNSNames, commonName) {
+			tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames))
+			req.DNSNames = append(req.DNSNames, commonName)
+		}
+
+		emailNum := d.Get("san_email.#").(int)
+		if emailNum > 0 {
+			for i := 0; i < emailNum; i++ {
+				key := fmt.Sprintf("san_email.%d", i)
+				val := d.Get(key).(string)
+				req.EmailAddresses = append(req.EmailAddresses, val)
+			}
+		}
+		ipNum := d.Get("san_ip.#").(int)
+		if ipNum > 0 {
+			ipList := make([]string, 0, ipNum)
+			for i := 0; i < ipNum; i++ {
+				key := fmt.Sprintf("san_ip.%d", i)
+				val := d.Get(key).(string)
+				ipList = append(ipList, val)
+			}
+			for i := 0; i < len(ipList); i += 1 {
+				ip := net.ParseIP(ipList[i])
+				if ip == nil {
+					return fmt.Errorf("invalid IP address %#v", ipList[i])
+				}
+				req.IPAddresses = append(req.IPAddresses, ip)
+			}
+		}
+		sanUriLen := d.Get("san_uri.#").(int)
+		if sanUriLen > 0 {
+			uriList := make([]string, 0, sanUriLen)
+			for i := 0; i < sanUriLen; i++ {
+				key := fmt.Sprintf("san_uri.%d", i)
+				val := d.Get(key).(string)
+				uriList = append(uriList, val)
+			}
+			for i := 0; i < len(uriList); i += 1 {
+				uri, err := url.Parse(uriList[i])
+				if err != nil {
+					return fmt.Errorf("invalid URI: %s", err.Error())
+				}
+				req.URIs = append(req.URIs, uri)
+			}
+		}
+
+		//Appending common name to the DNS names if it is not there
+		if !sliceContains(req.DNSNames, commonName) {
+			tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN because it wasn't included.", commonName))
+			req.DNSNames = append(req.DNSNames, commonName)
+		}
+
+		tflog.Info(ctx, fmt.Sprintf("Requested SAN: %s", req.DNSNames))
 	}
 
-	if len(commonName) == 0 && len(req.DNSNames) == 0 {
-		return fmt.Errorf("no domains specified on certificate")
-	}
-	if len(commonName) == 0 && len(req.DNSNames) > 0 {
-		commonName = req.DNSNames[0]
-	}
-	if !sliceContains(req.DNSNames, commonName) {
-		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN %s because it wasn't included.", commonName, req.DNSNames))
-		req.DNSNames = append(req.DNSNames, commonName)
-	}
 	if cl.GetType() == endpoint.ConnectorTypeTPP {
 		friendlyName := d.Get(venafiCertificateAttrNickname).(string)
 		if friendlyName != "" {
@@ -648,58 +761,11 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 
 	//Obtain a certificate from the CyberArk server
 	tflog.Info(ctx, fmt.Sprintf("Using CN %s and SAN %s", commonName, req.DNSNames))
-	req.Subject.CommonName = commonName
-
-	emailNum := d.Get("san_email.#").(int)
-	if emailNum > 0 {
-		for i := 0; i < emailNum; i++ {
-			key := fmt.Sprintf("san_email.%d", i)
-			val := d.Get(key).(string)
-			req.EmailAddresses = append(req.EmailAddresses, val)
-		}
-	}
-	ipNum := d.Get("san_ip.#").(int)
-	if ipNum > 0 {
-		ipList := make([]string, 0, ipNum)
-		for i := 0; i < ipNum; i++ {
-			key := fmt.Sprintf("san_ip.%d", i)
-			val := d.Get(key).(string)
-			ipList = append(ipList, val)
-		}
-		for i := 0; i < len(ipList); i += 1 {
-			ip := net.ParseIP(ipList[i])
-			if ip == nil {
-				return fmt.Errorf("invalid IP address %#v", ipList[i])
-			}
-			req.IPAddresses = append(req.IPAddresses, ip)
-		}
-	}
-	sanUriLen := d.Get("san_uri.#").(int)
-	if sanUriLen > 0 {
-		uriList := make([]string, 0, sanUriLen)
-		for i := 0; i < sanUriLen; i++ {
-			key := fmt.Sprintf("san_uri.%d", i)
-			val := d.Get(key).(string)
-			uriList = append(uriList, val)
-		}
-		for i := 0; i < len(uriList); i += 1 {
-			uri, err := url.Parse(uriList[i])
-			if err != nil {
-				return fmt.Errorf("invalid URI: %s", err.Error())
-			}
-			req.URIs = append(req.URIs, uri)
-		}
+	if origin != csrFile {
+		req.Subject.CommonName = commonName
 	}
 
-	//Appending common name to the DNS names if it is not there
-	if !sliceContains(req.DNSNames, commonName) {
-		tflog.Info(ctx, fmt.Sprintf("Adding CN %s to SAN because it wasn't included.", commonName))
-		req.DNSNames = append(req.DNSNames, commonName)
-	}
-
-	tflog.Info(ctx, fmt.Sprintf("Requested SAN: %s", req.DNSNames))
-
-	if origin != csrService {
+	if origin != csrService && origin != csrFile {
 		var err error
 		switch req.KeyType {
 		case certificate.KeyTypeECDSA:
@@ -786,6 +852,23 @@ func enrollVenafiCertificate(ctx context.Context, d *schema.ResourceData, cl end
 
 	if origin == csrService && keyPassword == "" {
 		// Nothing else to do here. Send warning message, certificate contents not stored in state
+		return nil
+	}
+
+	if origin == csrFile {
+		// For user-provided CSR, we only store the certificate and chain
+		// The private key is managed externally by the user
+		if err = d.Set("certificate", pcc.Certificate); err != nil {
+			return fmt.Errorf("error setting certificate: %s", err)
+		}
+		tflog.Info(ctx, fmt.Sprintf("Certificate set to %s", pcc.Certificate))
+
+		if err = d.Set("chain", strings.Join(pcc.Chain, "")); err != nil {
+			return fmt.Errorf("error setting chain: %s", err)
+		}
+		tflog.Info(ctx, fmt.Sprintf("Certificate chain set to %s", pcc.Chain))
+
+		tflog.Info(ctx, "User-provided CSR: Private key not stored in state")
 		return nil
 	}
 

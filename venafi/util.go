@@ -23,6 +23,7 @@ import (
 
 const (
 	csrService              = "service"
+	csrFile                 = "file"
 	expirationWindowDefault = 168 // hours
 )
 

@@ -13,3 +13,4 @@ terraform.d
 vendor
 .terraform.lock.hcl
 *.tfvars
+test_files/test-key.pem
