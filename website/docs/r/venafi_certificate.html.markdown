@@ -16,6 +16,8 @@ Provides access to TLS key and certificate data enrolled using Venafi. This can 
 
 ## Example Usage
 
+### Standard Certificate Enrollment
+
 ```hcl
 resource "venafi_certificate" "webserver" {
     common_name = "web.venafi.example"
@@ -32,6 +34,24 @@ resource "venafi_certificate" "webserver" {
     }
 }
 ```
+
+### Using a User-Provided CSR (Bring Your Own CSR)
+
+```hcl
+resource "venafi_certificate" "hsm_certificate" {
+    common_name = "hsm.venafi.example"
+    csr_origin  = "file"
+    csr_pem     = file("/path/to/your/certificate.csr")
+}
+```
+
+This is particularly useful when:
+- Using Hardware Security Modules (HSM) where private keys cannot be exported
+- Private keys are managed externally to Terraform
+- Compliance requirements mandate key generation outside of Terraform
+- Migrating from other certificate management systems
+
+~>**Note:** When using `csr_origin = "file"`, the private key is not stored in Terraform state. You must manage the private key separately.
 
 ## Argument Reference
 
@@ -75,14 +95,21 @@ Relevant values are: `DigiCert`, `Entrust`, and `Microsoft`.
 * `expiration_window` - (Optional, integer) Number of hours before certificate expiry to request a new certificate. 
 Defaults to `168`.
 
-* `csr_origin` - (Optional, string) Whether key-pair generation will be `local` or `service` generated. Default is 
-`local`.
+* `csr_origin` - (Optional, string) Origin of the CSR. One of `local`, `service`, or `file`. 
+  - `local`: The CSR will be generated locally and sent over for certificate issuance (default).
+  - `service`: The CSR will be generated and managed by the CyberArk platform.
+  - `file`: The CSR will be provided via the `csr_pem` attribute.
 
 * `tags` - (Optional, set of strings) List of Certificate Tags defined in CyberArk Certificate Manager, SaaS.
 
 ## Attributes Reference
 
 The following attributes are exported:
+
+* `csr_pem` - The Certificate Signing Request (CSR) in PEM format. When `csr_origin` is `file`, this is an input attribute 
+containing the user-provided CSR (e.g., `csr_pem = file("path/to/csr.pem")`). For `local` or `service` origins, this is a 
+computed output containing the generated CSR. This enables "Bring Your Own CSR" workflows, particularly useful for 
+HSM-generated private keys where the private key cannot leave the secure hardware.
 
 * `private_key_pem` - The private key in PEM format.
 
