@@ -98,6 +98,7 @@ func resourceVenafiSshCertificate() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "Private key",
 				Computed:    true,
+				Sensitive:   true,
 			},
 			"principal": {
 				Type:          schema.TypeList,
