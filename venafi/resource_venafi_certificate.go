@@ -186,9 +186,10 @@ func resourceVenafiCertificate() *schema.Resource {
 				Computed: true,
 			},
 			"pkcs12": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"certificate_dn": {
 				Type:     schema.TypeString,
