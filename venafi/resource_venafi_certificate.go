@@ -909,10 +909,6 @@ func AsPKCS12(certificate string, privateKey string, chain []string, keyPassword
 
 func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	id := d.Id()
-	logFields := map[string]interface{}{
-		"id": id,
-	}
-	tflog.Info(ctx, "Importing CyberArk certificate", logFields)
 
 	if id == "" {
 		return nil, errors.New(importIdFailEmpty)
@@ -939,6 +935,11 @@ func resourceVenafiCertificateImport(ctx context.Context, d *schema.ResourceData
 			return nil, errors.New(importKeyPasswordFailEmpty)
 		}
 	}
+
+	logFields := map[string]interface{}{
+		"pickup_id": pickupID,
+	}
+	tflog.Info(ctx, "Importing CyberArk certificate", logFields)
 
 	//casting meta interface to the expected *ProviderConfig
 	provConf, ok := meta.(*ProviderConfig)
