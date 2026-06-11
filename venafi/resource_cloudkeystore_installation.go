@@ -2,10 +2,12 @@ package venafi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/Venafi/vcert/v5/pkg/verror"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -189,18 +191,25 @@ func resourceCloudKeystoreInstallationRead(ctx context.Context, d *schema.Resour
 	// Get machine identity from CyberArk Certificate Manager, SaaS
 	machineIdentity, err := getMachineIdentity(ctx, id, meta)
 	if err != nil {
-		return diag.FromErr(err)
-	}
-	tflog.Info(ctx, "successfully retrieved machine identity from CyberArk Certificate Manager, SaaS", logFieldsMap)
+		if errors.Is(err, verror.CloudMachineIdentityNotFoundError) {
+			tflog.Info(ctx, "machine identity not found in CyberArk Certificate Manager, SaaS. Removing from terraform state", logFieldsMap)
+			d.SetId("")
+		} else {
+			return diag.FromErr(err)
+		}
+	} else {
+		tflog.Info(ctx, "successfully retrieved machine identity from CyberArk Certificate Manager, SaaS", logFieldsMap)
 
-	// Store machine identity in state
-	err = storeMachineIdentityInState(machineIdentity, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	tflog.Info(ctx, "cloud keystore installation stored in state", logFieldsMap)
+		// Store machine identity in state
+		err = storeMachineIdentityInState(machineIdentity, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		tflog.Info(ctx, "cloud keystore installation stored in state", logFieldsMap)
 
-	tflog.Info(ctx, "cloud keystore installation read", logFieldsMap)
+		tflog.Info(ctx, "cloud keystore installation read", logFieldsMap)
+	}
+
 	return diag.Diagnostics{}
 }
 
@@ -403,45 +412,48 @@ func storeMachineIdentityInState(machineIdentity *domain.CloudMachineIdentity, d
 	if err != nil {
 		return err
 	}
-	cloudID, err := getCloudIDFromMachineIdentity(machineIdentity.Metadata)
-	if err != nil {
-		return err
-	}
-	err = d.Set(cloudKeystoreInstallationCloudCertificateID, cloudID)
-	if err != nil {
-		return err
-	}
-	metadataMap, err := getMetadataMapFromMachineIdentity(machineIdentity.Metadata)
-	if err != nil {
-		return err
-	}
-	err = d.Set(cloudKeystoreInstallationCloudCertificateMetadata, metadataMap)
-	if err != nil {
-		return err
-	}
 
-	if machineIdentity.Metadata.GetKeystoreType() == domain.CloudKeystoreTypeACM {
-		arn, err := getCloudIDFromMachineIdentityACM(machineIdentity.Metadata)
+	if machineIdentity.Metadata != nil {
+		cloudID, err := getCloudIDFromMachineIdentity(machineIdentity.Metadata)
 		if err != nil {
 			return err
 		}
-		if arn != "" {
-			err = d.Set(cloudKeystoreInstallationARN, arn)
+		err = d.Set(cloudKeystoreInstallationCloudCertificateID, cloudID)
+		if err != nil {
+			return err
+		}
+		metadataMap, err := getMetadataMapFromMachineIdentity(machineIdentity.Metadata)
+		if err != nil {
+			return err
+		}
+		err = d.Set(cloudKeystoreInstallationCloudCertificateMetadata, metadataMap)
+		if err != nil {
+			return err
+		}
+
+		if machineIdentity.Metadata.GetKeystoreType() == domain.CloudKeystoreTypeACM {
+			arn, err := getCloudIDFromMachineIdentityACM(machineIdentity.Metadata)
 			if err != nil {
 				return err
 			}
+			if arn != "" {
+				err = d.Set(cloudKeystoreInstallationARN, arn)
+				if err != nil {
+					return err
+				}
+			}
 		}
-	}
 
-	if machineIdentity.Metadata.GetKeystoreType() != domain.CloudKeystoreTypeACM {
-		cloudCertificateName, err := getCloudCertNameFromMachineIdentity(machineIdentity.Metadata)
-		if err != nil {
-			return err
-		}
-		if cloudCertificateName != "" {
-			err = d.Set(cloudKeystoreInstallationCloudCertificateName, cloudCertificateName)
+		if machineIdentity.Metadata.GetKeystoreType() != domain.CloudKeystoreTypeACM {
+			cloudCertificateName, err := getCloudCertNameFromMachineIdentity(machineIdentity.Metadata)
 			if err != nil {
 				return err
+			}
+			if cloudCertificateName != "" {
+				err = d.Set(cloudKeystoreInstallationCloudCertificateName, cloudCertificateName)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
