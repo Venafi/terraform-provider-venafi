@@ -11,6 +11,7 @@ import (
 	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
+	"github.com/Venafi/vcert/v5/pkg/venafi/ngts"
 )
 
 const (
@@ -63,14 +64,25 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	if connector.GetType() != endpoint.ConnectorTypeCloud {
+	if !(connector.GetType() == endpoint.ConnectorTypeCloud || connector.GetType() == endpoint.ConnectorTypeNGTS) {
 		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Keystore data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
 	}
 
-	keystore, err := connector.(*cloud.Connector).GetCloudKeystore(domain.GetCloudKeystoreRequest{
-		CloudProviderID:   &providerID,
-		CloudKeystoreName: &keystoreName,
-	})
+	var keystore *domain.CloudKeystore
+	switch conn := connector.(type) {
+	case *cloud.Connector:
+		keystore, err = conn.GetCloudKeystore(domain.GetCloudKeystoreRequest{
+			CloudProviderID:   &providerID,
+			CloudKeystoreName: &keystoreName,
+		})
+	case *ngts.Connector:
+		keystore, err = conn.GetCloudKeystore(domain.GetCloudKeystoreRequest{
+			CloudProviderID:   &providerID,
+			CloudKeystoreName: &keystoreName,
+		})
+	default:
+		return buildStandardDiagError(fmt.Sprintf("unexpected connector type for platform %s", connector.GetType().String()))
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}

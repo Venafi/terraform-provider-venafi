@@ -33,10 +33,23 @@ const (
 	messageUseVaas                           = "Using `CyberArk Certificate Manager, SaaS` to issue certificate"
 	messageUseTLSPDC                         = "Using `CyberArk Certificate Manager, Self-Hosted` with url %s to issue certificate"
 	messageVenafiAuthFailed                  = "Failed to authenticate to CyberArk platform"
+	messageUseNGTS                           = "Using `Palo Alto Networks Next-Gen Trust Security (NGTS)` to issue certificate"
+	messageNGTSPingFailed                    = "Failed to ping Palo Alto Networks Next-Gen Trust Security (NGTS) endpoint"
+	messageNGTSPingSuccessful                = "Palo Alto Networks Next-Gen Trust Security (NGTS) ping successful"
+	messageNGTSClientInitFailed              = "Failed to initialize Palo Alto Networks Next-Gen Trust Security (NGTS) client"
+	messageNGTSProviderConfigCastingFailed   = "Failed to retrieve Palo Alto Networks Next-Gen Trust Security (NGTS) Provider Configuration from context/meta"
+	messageNGTSClientNil                     = "Palo Alto Networks Next-Gen Trust Security (NGTS) connector is nil"
+	messageNGTSConfigFailed                  = "Failed to build config for Palo Alto Networks Next-Gen Trust Security (NGTS) issuer"
+	messageNGTSAuthFailed                    = "Failed to authenticate to the Palo Alto Networks Next-Gen Trust Security (NGTS) platform"
 
 	utilityName           = "HashiCorp Terraform"
 	defaultClientID       = "hashicorp-terraform-by-venafi"
 	defaultSkipRetirement = false
+
+	// Supported platforms
+	platformCloud = "cloud"
+	platformTPP   = "tpp"
+	platformNGTS  = "ngts"
 
 	// Environment variables for Provider attributes
 	envVenafiURL            = "VENAFI_URL"
@@ -51,7 +64,9 @@ const (
 	envVenafiP12Certificate = "VENAFI_P12_CERTIFICATE"
 	envVenafiP12Password    = "VENAFI_P12_PASSWORD" // #nosec G101 // This is not a hardcoded credential
 	envVenafiClientID       = "VENAFI_CLIENT_ID"
+	envVenafiClientSecret   = "VENAFI_CLIENT_SECRET" // #nosec G101 // This is not a hardcoded credential
 	envVenafiSkipRetirement = "VENAFI_SKIP_RETIREMENT"
+	envVenafiTsgId          = "VENAFI_TSG_ID"
 
 	// Attributes of the provider
 	providerURL            = "url"
@@ -68,7 +83,10 @@ const (
 	providerExternalJWT    = "external_jwt"
 	providerTrustBundle    = "trust_bundle"
 	providerClientID       = "client_id"
+	providerClientSecret   = "client_secret"
 	providerSkipRetirement = "skip_retirement"
+	providerPlatform       = "platform"
+	providerTsgId          = "tsg_id"
 
 	// Resource names
 	resourceVenafiCertificateName         = "venafi_certificate"
@@ -187,11 +205,29 @@ Example:
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiClientID, defaultClientID),
 				Description: "application that will be using the token",
 			},
+			providerClientSecret: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiClientSecret, nil),
+				Description: "Client Secret for CyberArk Certificate Manager, Self-Hosted or Palo Alto Networks Next-Gen Trust Security (NGTS)",
+				Sensitive:   true,
+			},
 			providerSkipRetirement: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
 				Description: `When true, certificates will not be retired on CyberArk platforms when terraform destroy is run. Default is false`,
+			},
+			providerPlatform: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The platform to integrate with. Valid values are 'cloud' for CyberArk Certificate Manager, SaaS, 'tpp' for CyberArk Certificate Manager, Self-Hosted, and 'ngts' for Palo Alto Networks Next-Gen Trust Security (NGTS). If not specified, the provider will attempt to auto-detect the platform based on the provided credentials and URL.",
+			},
+			providerTsgId: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(envVenafiTsgId, nil),
+				Description: "The Palo Alto Networks Next-Gen Trust Security (NGTS) TSG ID to use when issuing a token. Only used if platform is set to 'ngts'",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -230,9 +266,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	p12CertData := d.Get(providerP12CertData).(string)
 	p12Password := d.Get(providerP12Password).(string)
 	clientID := d.Get(providerClientID).(string)
+	clientSecret := d.Get(providerClientSecret).(string)
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
 	tokenURL := d.Get(providerTokenURL).(string)
 	externalJWT := d.Get(providerExternalJWT).(string)
+	platform := d.Get(providerPlatform).(string)
+	tsgId := d.Get(providerTsgId).(string)
 
 	// Normalize zone for VCert usage
 	zone = normalizeZone(zone)
@@ -246,11 +285,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// CyberArk Certificate Manager, SaaS auth methods
 	apiKeyMethod := apiKey != ""
 	svcAccountMethod := tokenURL != "" && externalJWT != ""
+	ngtsServiceAccountMethod := clientID != "" && clientSecret != "" && tokenURL != "" && tsgId != ""
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !svcAccountMethod && !devMode {
+	if !accessTokenMethod && !clientCertMethod && !userPassMethod && !apiKeyMethod && !svcAccountMethod && !devMode && !ngtsServiceAccountMethod {
 		tflog.Error(ctx, messageVenafiNoAuthProvided)
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -274,6 +314,13 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, messageUseDevMode)
 		cfg.ConnectorType = endpoint.ConnectorTypeFake
 
+	} else if platform == platformNGTS {
+		tflog.Info(ctx, messageUseNGTS)
+		cfg.ConnectorType = endpoint.ConnectorTypeNGTS
+		cfg.Credentials.ClientSecret = clientSecret
+		cfg.Credentials.TokenURL = tokenURL
+		cfg.Credentials.AccessToken = accessToken
+		cfg.Credentials.Scope = fmt.Sprintf("tsg_id:%s", tsgId)
 	} else if accessTokenMethod {
 		tflog.Info(ctx, fmt.Sprintf(messageUseTLSPDC, url))
 		cfg.ConnectorType = endpoint.ConnectorTypeTPP
