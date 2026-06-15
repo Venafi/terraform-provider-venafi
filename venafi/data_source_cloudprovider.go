@@ -2,10 +2,8 @@ package venafi
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/Venafi/vcert/v5/pkg/verror"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -70,7 +68,7 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if !(connector.GetType() == endpoint.ConnectorTypeCloud || connector.GetType() == endpoint.ConnectorTypeNGTS) {
-		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Provider data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("Platform detected as [%s]. Cloud Provider data source is only available for %s or %s", connector.GetType(), endpoint.ConnectorTypeCloud, endpoint.ConnectorTypeNGTS))
 	}
 
 	var cloudProvider *domain.CloudProvider
@@ -84,14 +82,9 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 			Name: cpName.(string),
 		})
 	default:
-		return buildStandardDiagError(fmt.Sprintf("unexpected connector type for platform %s", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("connector type not supported %s", connector.GetType()))
 	}
 	if err != nil {
-		if errors.Is(err, verror.CloudProviderNotFoundError) {
-			tflog.Info(ctx, "cloud provider not found, removing from state")
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 	tflog.Info(ctx, "successfully retrieved cloud provider from CyberArk Certificate Manager, SaaS API", map[string]interface{}{

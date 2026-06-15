@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
+	"github.com/Venafi/vcert/v5/pkg/venafi/ngts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
-	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
-	"github.com/Venafi/vcert/v5/pkg/venafi/ngts"
 )
 
 const (
@@ -65,7 +65,7 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if !(connector.GetType() == endpoint.ConnectorTypeCloud || connector.GetType() == endpoint.ConnectorTypeNGTS) {
-		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Keystore data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("Platform detected as [%s]. Cloud Keystore data source is only available for %s or %s", connector.GetType(), endpoint.ConnectorTypeCloud, endpoint.ConnectorTypeNGTS))
 	}
 
 	var keystore *domain.CloudKeystore
@@ -81,12 +81,12 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 			CloudKeystoreName: &keystoreName,
 		})
 	default:
-		return buildStandardDiagError(fmt.Sprintf("unexpected connector type for platform %s", connector.GetType().String()))
+		return buildStandardDiagError(fmt.Sprintf("connector type not supported %s", connector.GetType()))
 	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud keystore from CyberArk Certificate Manager, SaaS API", map[string]interface{}{
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved cloud keystore from %s", connector.GetType()), map[string]interface{}{
 		cloudKeystoreProviderID: providerID,
 		cloudKeystoreName:       keystoreName,
 	})
