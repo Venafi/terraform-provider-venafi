@@ -87,7 +87,7 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud provider from CyberArk Certificate Manager, SaaS API", map[string]interface{}{
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved cloud provider from %s", connector.GetType()), map[string]interface{}{
 		cloudProviderName: cpName,
 	})
 

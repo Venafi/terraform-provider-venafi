@@ -156,7 +156,7 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud keystore installation from CyberArk Certificate Manager, SaaS", logFieldsMap)
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved cloud keystore installation from %s", connector.GetType()), logFieldsMap)
 
 	// Provision certificate to keystore
 	options := getProvisioningOptions(ctx, cloudKeystore.Type, provisionOptionsMap)
@@ -177,7 +177,7 @@ func resourceCloudKeystoreInstallationCreate(ctx context.Context, d *schema.Reso
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved machine identity from CyberArk Certificate Manager, SaaS", logFieldsMap)
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved machine identity from %s", connector.GetType()), logFieldsMap)
 
 	// Store machine identity in state
 	err = storeMachineIdentityInState(machineIdentity, d)
@@ -195,17 +195,17 @@ func resourceCloudKeystoreInstallationRead(ctx context.Context, d *schema.Resour
 	logFieldsMap := map[string]interface{}{cloudKeystoreInstallationID: id}
 	tflog.Info(ctx, "reading cloud keystore installation", logFieldsMap)
 
-	// Get machine identity from CyberArk Certificate Manager, SaaS
+	// Get machine identity
 	machineIdentity, err := getMachineIdentity(ctx, id, meta)
 	if err != nil {
 		if errors.Is(err, verror.CloudMachineIdentityNotFoundError) {
-			tflog.Info(ctx, "machine identity not found in CyberArk Certificate Manager, SaaS", logFieldsMap)
+			tflog.Info(ctx, "machine identity not found", logFieldsMap)
 			d.SetId("")
 		} else {
 			return diag.FromErr(err)
 		}
 	} else {
-		tflog.Info(ctx, "successfully retrieved machine identity from CyberArk Certificate Manager, SaaS", logFieldsMap)
+		tflog.Info(ctx, "successfully retrieved machine identity", logFieldsMap)
 
 		// Store machine identity in state
 		err = storeMachineIdentityInState(machineIdentity, d)
@@ -268,14 +268,14 @@ func resourceCloudKeystoreInstallationUpdate(ctx context.Context, d *schema.Reso
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully provisioned certificate to existing machine identity in CyberArk Certificate Manager, SaaS", logFieldsMap)
+	tflog.Info(ctx, fmt.Sprintf("successfully provisioned certificate to existing machine identity in %s", connector.GetType()), logFieldsMap)
 
 	// Get newly created machine identity
 	machineIdentity, err := getMachineIdentity(ctx, metadata.MachineIdentityID, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved machine identity from CyberArk Certificate Manager, SaaS", logFieldsMap)
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved machine identity from %s", connector.GetType()), logFieldsMap)
 
 	// Store machine identity in state
 	err = storeMachineIdentityInState(machineIdentity, d)
@@ -311,12 +311,12 @@ func resourceCloudKeystoreInstallationImport(ctx context.Context, d *schema.Reso
 		return nil, fmt.Errorf("cloud keystore installation ID is empty")
 	}
 
-	// Get machine identity from CyberArk Certificate Manager, SaaS
+	// Get machine identity
 	machineIdentity, err := getMachineIdentity(ctx, id, meta)
 	if err != nil {
 		return nil, err
 	}
-	tflog.Info(ctx, "successfully retrieved machine identity from CyberArk Certificate Manager, SaaS", logFieldsMap)
+	tflog.Info(ctx, "successfully retrieved machine identity", logFieldsMap)
 
 	// Store machine identity in state
 	err = storeMachineIdentityInState(machineIdentity, d)
