@@ -34,22 +34,9 @@ const (
 	messageUseTLSPDC                         = "Using `CyberArk Certificate Manager, Self-Hosted` with url %s to issue certificate"
 	messageVenafiAuthFailed                  = "Failed to authenticate to CyberArk platform"
 	messageUseNGTS                           = "Using `Palo Alto Networks Next-Gen Trust Security (NGTS)` to issue certificate"
-	messageNGTSPingFailed                    = "Failed to ping Palo Alto Networks Next-Gen Trust Security (NGTS) endpoint"
-	messageNGTSPingSuccessful                = "Palo Alto Networks Next-Gen Trust Security (NGTS) ping successful"
-	messageNGTSClientInitFailed              = "Failed to initialize Palo Alto Networks Next-Gen Trust Security (NGTS) client"
-	messageNGTSProviderConfigCastingFailed   = "Failed to retrieve Palo Alto Networks Next-Gen Trust Security (NGTS) Provider Configuration from context/meta"
-	messageNGTSClientNil                     = "Palo Alto Networks Next-Gen Trust Security (NGTS) connector is nil"
-	messageNGTSConfigFailed                  = "Failed to build config for Palo Alto Networks Next-Gen Trust Security (NGTS) issuer"
-	messageNGTSAuthFailed                    = "Failed to authenticate to the Palo Alto Networks Next-Gen Trust Security (NGTS) platform"
-
-	utilityName           = "HashiCorp Terraform"
-	defaultClientID       = "hashicorp-terraform-by-venafi"
-	defaultSkipRetirement = false
-
-	// Supported platforms
-	platformCloud = "cloud"
-	platformTPP   = "tpp"
-	platformNGTS  = "ngts"
+	utilityName                              = "HashiCorp Terraform"
+	defaultClientID                          = "hashicorp-terraform-by-venafi"
+	defaultSkipRetirement                    = false
 
 	// Environment variables for Provider attributes
 	envVenafiURL            = "VENAFI_URL"
@@ -218,16 +205,11 @@ Example:
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiSkipRetirement, defaultSkipRetirement),
 				Description: `When true, certificates will not be retired on CyberArk platforms when terraform destroy is run. Default is false`,
 			},
-			providerPlatform: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The platform to integrate with. Valid values are 'cloud' for CyberArk Certificate Manager, SaaS, 'tpp' for CyberArk Certificate Manager, Self-Hosted, and 'ngts' for Palo Alto Networks Next-Gen Trust Security (NGTS). If not specified, the provider will attempt to auto-detect the platform based on the provided credentials and URL.",
-			},
 			providerTsgId: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(envVenafiTsgId, nil),
-				Description: "The Palo Alto Networks Next-Gen Trust Security (NGTS) TSG ID to use when issuing a token. Only used if platform is set to 'ngts'",
+				Description: "The Palo Alto Networks Next-Gen Trust Security (NGTS) TSG ID to use when issuing a token. Only used if platform is detected as 'ngts'",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -270,7 +252,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	skipRetirement := d.Get(providerSkipRetirement).(bool)
 	tokenURL := d.Get(providerTokenURL).(string)
 	externalJWT := d.Get(providerExternalJWT).(string)
-	platform := d.Get(providerPlatform).(string)
 	tsgId := d.Get(providerTsgId).(string)
 
 	// Normalize zone for VCert usage
@@ -314,7 +295,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		tflog.Info(ctx, messageUseDevMode)
 		cfg.ConnectorType = endpoint.ConnectorTypeFake
 
-	} else if platform == platformNGTS {
+	} else if ngtsServiceAccountMethod {
 		tflog.Info(ctx, messageUseNGTS)
 		cfg.ConnectorType = endpoint.ConnectorTypeNGTS
 		cfg.Credentials.ClientSecret = clientSecret
