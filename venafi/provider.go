@@ -72,7 +72,6 @@ const (
 	providerClientID       = "client_id"
 	providerClientSecret   = "client_secret"
 	providerSkipRetirement = "skip_retirement"
-	providerPlatform       = "platform"
 	providerTsgId          = "tsg_id"
 
 	// Resource names
