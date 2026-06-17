@@ -4,13 +4,12 @@ package venafi
 import (
 	"context"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -117,7 +116,7 @@ func getPrivateKey(keyBytes []byte, passphrase string) ([]byte, error) {
 	if util.X509IsEncryptedPEMBlock(pemBlock) {
 		keyBytes, err = util.X509DecryptPEMBlock(pemBlock, []byte(passphrase))
 		if err != nil {
-			return nil, errors.Wrap(err, "private key is encrypted, but could not decrypt it")
+			return nil, fmt.Errorf("private key is encrypted, but could not decrypt it: %w", err)
 		}
 		keyBytes = pem.EncodeToMemory(&pem.Block{Type: pemBlock.Type, Bytes: keyBytes})
 	}
