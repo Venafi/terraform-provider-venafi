@@ -86,8 +86,8 @@ const (
 
 var (
 	messageVenafiNoAuthProvided = fmt.Sprintf("no authorization attributes defined in provider. "+
-		"One of the following must be set: %s, %s/%s, %s/%s, or %s",
-		providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey)
+		"One of the following must be set: %s, %s/%s, %s/%s, %s or %s, %s, %s, %s (NGTS)",
+		providerAccessToken, providerP12Cert, providerP12Password, providerUsername, providerPassword, providerApiKey, providerClientID, providerClientSecret, providerZone, providerTsgId)
 	// this variable gets populated at build time, it represents the version of the provider
 	versionString string
 	userAgent     = fmt.Sprintf("%s/%s", defaultClientID, getVersionString()[1:])
