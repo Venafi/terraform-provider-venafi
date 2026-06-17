@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	ngtsEnvironmentVariables = fmt.Sprintf(`
+	ngtsEnvironmentVariables2 = fmt.Sprintf(`
 variable "CLOUD_URL" {default = "%s"}
 variable "CLIENT_ID" {default = "%s"}
 variable "CLIENT_SECRET" {default = "%s"}
@@ -40,7 +40,7 @@ variable "CLOUD_ZONE_RESTRICTED_2" {default = "%s"}
 		os.Getenv("CLOUD_ZONE_RESTRICTED_2"),
 	)
 
-	ngtsProviderImport = ngtsEnvironmentVariables + `
+	ngtsProviderImport = ngtsEnvironmentVariables2 + `
 provider "venafi" {
 	url = "${var.CLOUD_URL}"
 	client_id = "${var.CLIENT_ID}"
@@ -49,7 +49,7 @@ provider "venafi" {
 	tsg_id = "${var.TSG_ID}"
 	zone = "${var.CLOUD_ZONE}"
 }`
-	ngtsProvider = ngtsEnvironmentVariables + `
+	ngtsProvider = ngtsEnvironmentVariables2 + `
 provider "venafi" {
 	alias = "ngts"
 	url = "${var.CLOUD_URL}"
@@ -60,7 +60,7 @@ provider "venafi" {
 	zone = "${var.CLOUD_ZONE}"
 }
 `
-	ngtsProviderCITRestricted = ngtsEnvironmentVariables + `
+	ngtsProviderCITRestricted = ngtsEnvironmentVariables2 + `
 provider "venafi" {
 	alias = "ngts"
 	url = "${var.CLOUD_URL}"
