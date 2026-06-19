@@ -1211,7 +1211,7 @@ func buildAbsoluteZoneTPP(zone string) string {
 }
 
 func IPArrayToStringArray(ipArray []net.IP) []string {
-	s := make([]string, 0)
+	s := make([]string, 0, len(ipArray))
 	for _, ip := range ipArray {
 		s = append(s, ip.String())
 	}
@@ -1219,7 +1219,7 @@ func IPArrayToStringArray(ipArray []net.IP) []string {
 }
 
 func UriArrayToStringArray(uriArray []*url.URL) []string {
-	s := make([]string, 0)
+	s := make([]string, 0, len(uriArray))
 	for _, uri := range uriArray {
 		s = append(s, uri.String())
 	}

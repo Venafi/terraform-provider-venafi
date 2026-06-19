@@ -241,5 +241,5 @@ test_e2e_vc_43631:
 	cat /tmp/cert_private_key_VC-43631.pem
 
 linter:
-	@golangci-lint --version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin
+	@golangci-lint --version || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	golangci-lint run --timeout 10m0s
