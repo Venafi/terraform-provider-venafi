@@ -273,7 +273,7 @@ func buildStandardDiagError(msg string) diag.Diagnostics {
 }
 
 func stringArrayToIParray(arrayIPstring []string) []net.IP {
-	s := make([]net.IP, 0)
+	s := make([]net.IP, 0, len(arrayIPstring))
 	for _, ipString := range arrayIPstring {
 		s = append(s, net.ParseIP(ipString))
 	}
