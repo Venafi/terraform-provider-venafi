@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/Venafi/vcert/v5/pkg/verror"
-	"github.com/pkg/errors"
 	"github.com/youmark/pkcs8"
 	"software.sslmate.com/src/go-pkcs12"
 
