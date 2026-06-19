@@ -131,15 +131,15 @@ resource "venafi_certificate" "webserver" {
 
 ## Example Usage for CyberArk Certificate Manager, Self-Hosted
 
-Your CyberArk administrator can provide you with the URL for the CyberArk Certificate Manager, Self-Hosted REST API and grant you 
-permission to use it.  At the same time they'll provide you with the Distinguished Name of a policy folder to specify 
-for the `zone`. Policy folders define the machine identity policy applied  to certificate requests and the certificate 
-authority that will issue certificates. You may also need to ask them for a root CA certificate for your `trust_bundle` 
+Your CyberArk administrator can provide you with the URL for the CyberArk Certificate Manager, Self-Hosted REST API and grant you
+permission to use it.  At the same time they'll provide you with the Distinguished Name of a policy folder to specify
+for the `zone`. Policy folders define the machine identity policy applied  to certificate requests and the certificate
+authority that will issue certificates. You may also need to ask them for a root CA certificate for your `trust_bundle`
 if the CyberArk Certificate Manager, Self-Hosted URL is secured by a certificate your Terraform computer does not already trust.
 
 Obtain the required `access_token` for CyberArk Certificate Manager, Self-Hosted using the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token)
-(`getcred action` with `--client-id "hashicorp-terraform-by-venafi"` and `--scope "certificate:manage"`) or the 
-CyberArk Certificate Manager, Self-Hosted Platform's Authorize REST API method. The *configuration:manage* scope is required to set certificate policy using the 
+(`getcred action` with `--client-id "hashicorp-terraform-by-venafi"` and `--scope "certificate:manage"`) or the
+CyberArk Certificate Manager, Self-Hosted Platform's Authorize REST API method. The *configuration:manage* scope is required to set certificate policy using the
 `venafi_policy` resource.
 
 ```hcl
@@ -157,35 +157,55 @@ resource "venafi_certificate" "webserver" {
 }
 ```
 
+## Example Usage for Palo Alto Networks Next-Gen Trust Security (NGTS)
+
+```hcl
+# Configure the CyberArk Certificate Manager Provider for NGTS
+provider "venafi" {
+  url           = "https://api.strata.paloaltonetworks.com/ngts"
+  client_id     = "your-service-account@panserviceaccount.com"
+  client_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  token_url     = "https://auth.apps.paloaltonetworks.com/auth/v1/oauth2/access_token"
+  tsg_id        = "1234567890"
+  zone          = "Built-In CA Open Policy"
+}
+
+# Generate a key pair and request a certificate
+resource "venafi_certificate" "webserver" {
+  # ...
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
-* `access_token` - (Optional, string) Authentication token for the 'hashicorp-terraform-by-venafi' API Application. 
+* `access_token` - (Optional, string) Authentication token for the 'hashicorp-terraform-by-venafi' API Application.
 Applies only to CyberArk Certificate Manager, Self-Hosted.
 * `api_key` - (Optional, string) REST API key for authentication. Applies only to CyberArk Certificate Manager, SaaS.
-* `client_id` - (Optional, string) ID of the application that will request a token. Not necessary when `access_token`
-  provided. If not provided, defaults to `hashicorp-terraform-by-venafi`.
-* `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to CyberArk Certificate Manager, Self-Hosted 
+* `client_id` - (Optional, string) Application that will be using the token. Defaults to `hashicorp-terraform-by-venafi`.
+* `client_secret` - (Optional, string) Client Secret for CyberArk Certificate Manager, Self-Hosted or NGTS authentication.
+* `dev_mode` - (Optional, boolean) When "true" will test the provider without connecting to CyberArk Certificate Manager, Self-Hosted
 or CyberArk Certificate Manager, SaaS
-* `external_jwt` - (Optional, string) JWT of the Identity Provider associated to a service account for authentication. 
-Applies only to CyberArk Certificate Manager, SaaS. 
+* `external_jwt` - (Optional, string) JWT of the Identity Provider associated to a service account for authentication.
+Applies only to CyberArk Certificate Manager, SaaS.
 * `p12_cert_filename` - (Optional, string) Filename of PKCS#12 keystore containing a client certificate, private key,
 * `p12_cert_data` - (Optional, string) Base64 encoded PKCS#12 keystore containing a client certificate, private key,
   and chain certificates to authenticate to CyberArk Certificate Manager, Self-Hosted.
-* `p12_cert_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert_filename` or in `p12_cert_data`. Applies 
+* `p12_cert_password` - (Optional, string) Password for the PKCS#12 keystore declared in `p12_cert_filename` or in `p12_cert_data`. Applies
 only to CyberArk Certificate Manager, Self-Hosted.
 * `skip_retirement` - (Optional, boolean) If it's specified with value `true` then the certificate retirement on the
   related CyberArk Certificate Manager, Self-Hosted or CyberArk Certificate Manager, SaaS will be skipped. A value of `false` is equivalent to omit this argument.
-* `token_url` - (Optional, string) - URL to request access tokens for CyberArk Certificate Manager, SaaS.
+* `token_url` - (Optional, string) - URL to request access tokens for CyberArk Certificate Manager, SaaS or NGTS.
 * `tpp_password` **[DEPRECATED]** - (Optional, string) WebSDK account password for authentication (applies only to
   CyberArk Certificate Manager, Self-Hosted).
-* `tpp_username` **[DEPRECATED]** - (Optional, string) WebSDK account username for authentication (applies only to 
+* `tpp_username` **[DEPRECATED]** - (Optional, string) WebSDK account username for authentication (applies only to
 CyberArk Certificate Manager, Self-Hosted).
 * `trust_bundle` - (Optional, string) PEM trust bundle for CyberArk Certificate Manager, Self-Hosted server certificate (e.g. "${file("bundle.pem")}").
-* `url` - (Optional, string) CyberArk Certificate Manager, Self-Hosted URL (e.g. "https://tpp.cyberark.example").
+* `tsg_id` - (Optional, string) The Palo Alto Networks NGTS TSG ID used when issuing a token. Only used when platform is NGTS.
+* `url` - (Optional, string) CyberArk Certificate Manager, Self-Hosted URL (e.g. "https://tpp.cyberark.example") or NGTS URL (e.g. "https://api.strata.paloaltonetworks.com/ngts").
 * `zone` - (**Required**, string) Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT")
-  for CyberArk Certificate Manager, SaaS or policy folder for CyberArk Certificate Manager, Self-Hosted.
+  for CyberArk Certificate Manager, SaaS, policy folder for CyberArk Certificate Manager, Self-Hosted, or Certificate Issuing Template name for NGTS.
 
 ## Environment Variables
 
@@ -194,6 +214,7 @@ argument values:
 
 * `VENAFI_API` - for `api_key` argument
 * `VENAFI_CLIENT_ID` - for `client_id` argument
+* `VENAFI_CLIENT_SECRET` - for `client_secret` argument
 * `VENAFI_DEVMODE` - for `dev_mode` argument
 * `VENAFI_EXTERNAL_JWT` - for `external_jwt` argument
 * `VENAFI_PASS` - for `tpp_password` argument
@@ -202,6 +223,7 @@ argument values:
 * `VENAFI_SKIP_RETIREMENT` - for `skip_retirement` argument
 * `VENAFI_TOKEN` - for `access_token` argument
 * `VENAFI_TOKEN_URL` - for `token_url` argument
+* `VENAFI_TSG_ID` - for `tsg_id` argument
 * `VENAFI_URL` - for `url` argument
 * `VENAFI_USER` - for `tpp_username` argument
 * `VENAFI_ZONE` - for `zone` argument

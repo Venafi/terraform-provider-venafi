@@ -11,6 +11,7 @@ import (
 	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
 	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
+	"github.com/Venafi/vcert/v5/pkg/venafi/ngts"
 )
 
 const (
@@ -66,17 +67,27 @@ func dataSourceCloudProviderRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	if connector.GetType() != endpoint.ConnectorTypeCloud {
-		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Provider data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
+	if !(connector.GetType() == endpoint.ConnectorTypeCloud || connector.GetType() == endpoint.ConnectorTypeNGTS) {
+		return buildStandardDiagError(fmt.Sprintf("Platform detected as [%s]. Cloud Provider data source is only available for %s or %s", connector.GetType(), endpoint.ConnectorTypeCloud, endpoint.ConnectorTypeNGTS))
 	}
 
-	cloudProvider, err := connector.(*cloud.Connector).GetCloudProvider(domain.GetCloudProviderRequest{
-		Name: cpName.(string),
-	})
+	var cloudProvider *domain.CloudProvider
+	switch conn := connector.(type) {
+	case *cloud.Connector:
+		cloudProvider, err = conn.GetCloudProvider(domain.GetCloudProviderRequest{
+			Name: cpName.(string),
+		})
+	case *ngts.Connector:
+		cloudProvider, err = conn.GetCloudProvider(domain.GetCloudProviderRequest{
+			Name: cpName.(string),
+		})
+	default:
+		return buildStandardDiagError(fmt.Sprintf("connector type not supported %s", connector.GetType()))
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud provider from CyberArk Certificate Manager, SaaS API", map[string]interface{}{
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved cloud provider from %s", connector.GetType()), map[string]interface{}{
 		cloudProviderName: cpName,
 	})
 

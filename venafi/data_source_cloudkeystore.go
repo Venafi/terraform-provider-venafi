@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
+	"github.com/Venafi/vcert/v5/pkg/venafi/ngts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/Venafi/vcert/v5/pkg/domain"
 	"github.com/Venafi/vcert/v5/pkg/endpoint"
-	"github.com/Venafi/vcert/v5/pkg/venafi/cloud"
 )
 
 const (
@@ -63,18 +64,29 @@ func dataSourceCloudKeystoreRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	if connector.GetType() != endpoint.ConnectorTypeCloud {
-		return buildStandardDiagError(fmt.Sprintf("cyberark platform detected as [%s]. Cloud Keystore data source is only available for CyberArk Certificate Manager, SaaS", connector.GetType().String()))
+	if !(connector.GetType() == endpoint.ConnectorTypeCloud || connector.GetType() == endpoint.ConnectorTypeNGTS) {
+		return buildStandardDiagError(fmt.Sprintf("Platform detected as [%s]. Cloud Keystore data source is only available for %s or %s", connector.GetType(), endpoint.ConnectorTypeCloud, endpoint.ConnectorTypeNGTS))
 	}
 
-	keystore, err := connector.(*cloud.Connector).GetCloudKeystore(domain.GetCloudKeystoreRequest{
-		CloudProviderID:   &providerID,
-		CloudKeystoreName: &keystoreName,
-	})
+	var keystore *domain.CloudKeystore
+	switch conn := connector.(type) {
+	case *cloud.Connector:
+		keystore, err = conn.GetCloudKeystore(domain.GetCloudKeystoreRequest{
+			CloudProviderID:   &providerID,
+			CloudKeystoreName: &keystoreName,
+		})
+	case *ngts.Connector:
+		keystore, err = conn.GetCloudKeystore(domain.GetCloudKeystoreRequest{
+			CloudProviderID:   &providerID,
+			CloudKeystoreName: &keystoreName,
+		})
+	default:
+		return buildStandardDiagError(fmt.Sprintf("connector type not supported %s", connector.GetType()))
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	tflog.Info(ctx, "successfully retrieved cloud keystore from CyberArk Certificate Manager, SaaS API", map[string]interface{}{
+	tflog.Info(ctx, fmt.Sprintf("successfully retrieved cloud keystore from %s", connector.GetType()), map[string]interface{}{
 		cloudKeystoreProviderID: providerID,
 		cloudKeystoreName:       keystoreName,
 	})

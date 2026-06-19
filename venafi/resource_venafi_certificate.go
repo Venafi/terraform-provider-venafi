@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Venafi/vcert/v5/pkg/verror"
+	"github.com/pkg/errors"
 	"github.com/youmark/pkcs8"
 	"software.sslmate.com/src/go-pkcs12"
 
@@ -347,7 +349,7 @@ func resourceVenafiCertificateRead(ctx context.Context, d *schema.ResourceData, 
 		}
 		strErr := (err).Error()
 
-		ok := strings.Contains(strErr, notFoundMsg)
+		ok := strings.Contains(strErr, notFoundMsg) || errors.Is(err, verror.CertificateRequestNotFoundError)
 		if ok {
 			tflog.Warn(ctx, fmt.Sprintf("certificate (%s) not found, removing from state", d.Id()))
 			d.SetId("")
@@ -1114,7 +1116,7 @@ func fillSchemaPropertiesImport(d *schema.ResourceData, data *certificate.PEMCol
 			}
 			pemType = "RSA PRIVATE KEY"
 		case *ecdsa.PrivateKey:
-			if connectorType == endpoint.ConnectorTypeCloud {
+			if connectorType == endpoint.ConnectorTypeCloud || connectorType == endpoint.ConnectorTypeNGTS {
 				return fmt.Errorf("ecdsa private key import operation currently is not supported for CyberArk Certificate Manager, SaaS")
 			}
 			keySize := strconv.Itoa(keyValue.Curve.Params().BitSize)

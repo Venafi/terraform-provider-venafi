@@ -19,6 +19,22 @@ variable "CLOUD_URL" {
   default = ""
 }
 
+variable "NGTS_CLIENT_ID" {
+    default = ""
+}
+
+variable "NGTS_CLIENT_SECRET" {
+  default = ""
+}
+
+variable "NGTS_TSG_ID" {
+    default = ""
+}
+
+variable "NGTS_TOKEN_URL" {
+  default = ""
+}
+
 variable "TPP_USER" {
   default = ""
 }
@@ -68,6 +84,20 @@ provider "venafi" {
   api_key = var.CLOUD_APIKEY
   zone    = var.CLOUD_ZONE
   url     = var.CLOUD_URL
+}
+
+/*
+Palo Alto Networks Next-Gen Trust Security (NGTS) provider configuration (alias = "ngts")
+Here we are getting credentials from variables NGTS_CLIENT_ID, NGTS_CLIENT_SECRET, NGTS_TSG_ID and NGTS_TOKEN_URL
+*/
+provider "venafi" {
+  alias   = "ngts"
+  zone    = var.CLOUD_ZONE
+  url     = var.CLOUD_URL
+  token_url = var.NGTS_TOKEN_URL
+  client_id = var.NGTS_CLIENT_ID
+  client_secret = var.NGTS_CLIENT_SECRET
+  tsg_id = var.NGTS_TSG_ID
 }
 
 /*
@@ -179,6 +209,15 @@ resource "venafi_certificate" "vaas_certificate" {
 
 output "cert_certificate_vaas" {
   value = venafi_certificate.vaas_certificate.certificate
+}
+
+resource "venafi_certificate" "ngts_certificate" {
+  provider    = venafi.ngts
+  common_name = "ngts-${random_string.cn.result}.venafi.example.com"
+}
+
+output "cert_certificate_ngts" {
+  value = venafi_certificate.ngts_certificate.certificate
 }
 
 output "cert_chain_vaas" {

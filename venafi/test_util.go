@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert/v5/pkg/policy"
 	"io"
 	"math/rand"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Venafi/vcert/v5/pkg/policy"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -30,6 +31,7 @@ import (
 
 const (
 	emptyPolicy                               = "/test_files/empty_policy.json"
+	policySpecNgts                            = "/test_files/policy_specification_ngts.json"
 	policySpecVaas                            = "/test_files/policy_specification_vaas.json"
 	policySpecTpp                             = "/test_files/policy_specification_tpp.json"
 	policyReadSpecTpp                         = "/test_files/policy_specification_tpp_management.json"
@@ -453,6 +455,13 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		cfg.Zone = os.Getenv("CLOUD_ZONE")
 		cfg.Zone = removingFirstDoubleBackslash(cfg.Zone)
 		auth.APIKey = os.Getenv("CLOUD_APIKEY")
+	case endpoint.ConnectorTypeNGTS:
+		cfg.BaseUrl = os.Getenv("CLOUD_URL")
+		cfg.Zone = os.Getenv("CLOUD_ZONE")
+		auth.ClientId = os.Getenv("CLIENT_ID")
+		auth.ClientSecret = os.Getenv("CLIENT_SECRET")
+		auth.Scope = fmt.Sprintf("tsg_id:%s", os.Getenv("TSG_ID"))
+		auth.TokenURL = os.Getenv("TOKEN_URL")
 	default:
 		t.Fatalf("Unsupported connector type: %s", cfg.ConnectorType)
 	}

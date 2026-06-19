@@ -42,6 +42,7 @@ func TestNormalizedZones(t *testing.T) {
 		"Certificates\\\\Automation\\\\Terraform",
 		"\\VED\\Policy\\One\\Two\\Three",
 		"\\\\VED\\\\Policy\\\\One\\\\Two\\\\Three",
+		"Unrestricted",
 	}
 
 	var re, _ = regexp.Compile("^(\\\\VED|[\\w\\-]+)(\\s?[\\w\\-]+)*(\\\\[\\w\\-]+(\\s?[\\w\\-]+)*)*$") //nolint

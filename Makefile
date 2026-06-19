@@ -149,11 +149,16 @@ test_tpp: test_tpp_tf_acc test_e2e_tpp test_e2e_tpp_token
 
 test_vaas: test_vaas_tf_acc test_e2e_vaas
 
+test_ngts: test_ngts_tf_acc test_e2e_ngts
+
 test_tpp_tf_acc:
 	TF_ACC=1 go test -tags=tpp -run ^TestTPP $(TEST) -v $(TESTARGS) -timeout 120m
 
 test_vaas_tf_acc:
 	TF_ACC=1 go test -tags=vaas -run ^TestVAAS $(TEST) -v $(TESTARGS) -timeout 120m
+
+test_ngts_tf_acc:
+	TF_ACC=1 go test -tags=ngts -run ^TestNGTS $(TEST) -v $(TESTARGS) -timeout 120m
 
 test_go:
 	go test -v -coverprofile=cov1.out ./venafi
@@ -169,7 +174,7 @@ fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 # Integration tests using real terraform binary
-test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_vaas test_e2e_tpp_token
+test_e2e: e2e_init test_e2e_dev test_e2e_tpp test_e2e_vaas test_e2e_ngts test_e2e_tpp_token
 
 # This step copies the built terraform plugin to the terraform folder structure, so  changes can be tested.
 e2e_init: build_dev
@@ -193,6 +198,13 @@ test_e2e_vaas:
 	terraform output cert_certificate_vaas > /tmp/cert_certificate_vaas.pem
 	cat /tmp/cert_certificate_vaas.pem
 	cat /tmp/cert_certificate_vaas.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
+
+test_e2e_ngts:
+	echo yes|terraform apply -target=venafi_certificate.ngts_certificate -auto-approve
+	terraform state show venafi_certificate.ngts_certificate
+	terraform output cert_certificate_ngts > /tmp/cert_certificate_ngts.pem
+	cat /tmp/cert_certificate_ngts.pem
+	cat /tmp/cert_certificate_ngts.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_tpp_token:
 	echo yes|terraform apply -target=venafi_certificate.token_certificate -auto-approve
