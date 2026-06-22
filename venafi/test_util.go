@@ -444,6 +444,7 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 			cfg.Zone = data.zone
 		}
 		trustBundlePath := os.Getenv("TRUST_BUNDLE")
+		// #nosec G703
 		trustBundleBytes, err := os.ReadFile(trustBundlePath)
 		if err != nil {
 			t.Fatalf("Error opening trust bundle file: %s", err.Error())
