@@ -80,6 +80,8 @@ Defaults to `168`.
 
 * `tags` - (Optional, set of strings) List of Certificate Tags defined in CyberArk Certificate Manager, SaaS.
 
+* `certificate_authority_dn` - (Optional, string) The Distinguished Name (DN) of the Certificate Authority Template. This value is not required if it is defined by policy. Applies only to Venafi Trust Protection Platform.
+
 ## Attributes Reference
 
 The following attributes are exported:
