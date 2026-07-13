@@ -1,3 +1,9 @@
+## 0.23.2 (November 14th, 2025)
+- CyberArk Rebranding.
+
+## 0.23.1 (October 6th, 2025)
+- Fixes panic caused by SanURI in Cloud Zone.
+
 ## 0.23.0 (September 5th, 2025)
 - Add support to provide certificate tags for Venafi Control Plane.
 
