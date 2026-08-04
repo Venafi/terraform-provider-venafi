@@ -90,14 +90,26 @@ The following attributes are exported:
 
 * `certificate` - The X509 certificate in PEM format.
 
-* `pkcs12` - A base64-encoded PKCS#12 keystore secured by the `key_password`. Useful when working with resources like 
+* `pkcs12` - A base64-encoded PKCS#12 keystore secured by the `key_password`. Useful when working with resources like
 [azure key_vault_certificate](https://www.terraform.io/docs/providers/azurerm/r/key_vault_certificate.html).
+
+* `renew_required` - (Read-only) Whether the certificate in state is within its `expiration_window` and will be renewed
+on the next apply. Maintained by the provider during refresh; see [Certificate Renewal](#certificate-renewal).
 
 ## Certificate Renewal
 
-The `venafi_certificate` resource handles certificate renewals as long as a `terraform apply` is done within the 
-`expiration_window` period. Keep in mind that the `expiration_window` in the Terraform configuration needs to align with 
-the renewal window of the issuing CA to achieve the desired result.
+The `venafi_certificate` resource renews a certificate by replacing it: when the certificate held in state is within
+`expiration_window` of expiry, `terraform plan` marks the resource for replacement, and the next `terraform apply`
+enrolls a new certificate and retires the old one.
+
+Because the decision is based on the certificate stored in state, a **refresh must happen before the certificate is
+renewed**. A normal `terraform plan`/`terraform apply` refreshes by default; runs made with `-refresh=false`, or applies
+of a saved plan, will not renew until a subsequent refreshed run. Keep the `expiration_window` in the Terraform
+configuration aligned with the renewal window of the issuing CA to achieve the desired result.
+
+~>**Note:** The `renew_required` attribute is maintained by the provider and is **deprecated** as an input. Setting it
+in your configuration has no effect on whether renewal happens and is ignored; it will be removed in a future major
+release. To force a one-off reissue, use `terraform apply -replace=venafi_certificate.<name>` instead.
 
 ## Import
 

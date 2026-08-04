@@ -1,3 +1,6 @@
+## 0.24.2 (Unreleased)
+- Fixed automatic certificate renewal for [venafi_certificate](./website/docs/r/venafi_certificate.html.markdown): a certificate within its `expiration_window` is now renewed even when `renew_required` is set in the configuration or excluded with `ignore_changes`, which previously caused `terraform plan` to report "No changes". The `renew_required` attribute is now maintained by the provider and is deprecated as an input.
+
 ## 0.23.0 (September 5th, 2025)
 - Add support to provide certificate tags for Venafi Control Plane.
 

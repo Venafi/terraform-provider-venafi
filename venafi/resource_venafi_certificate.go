@@ -235,12 +235,63 @@ func resourceVenafiCertificate() *schema.Resource {
 				ForceNew:    true,
 				Default:     false,
 				Description: "Indicates the certificate should be reissued. This means the resource will destroyed and recreated",
+				Deprecated: "renew_required is maintained by the provider from the certificate's remaining validity and " +
+					"is ignored when set in a configuration. Remove it; to reissue on demand run " +
+					"terraform apply -replace=<resource address>.",
+				// The value is the provider's verdict, so a configuration cannot ask for a
+				// renewal the last refresh did not call for. Without this, a pinned
+				// renew_required = true disagrees with every refresh that finds the
+				// certificate outside its expiration window and reissues it on every apply.
+				DiffSuppressFunc: func(_, old, new string, _ *schema.ResourceData) bool {
+					return old == "false" && new == "true"
+				},
 			},
 		},
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceVenafiCertificateImport,
 		},
+		CustomizeDiff: resourceVenafiCertificateCustomizeDiff,
 	}
+}
+
+// resourceVenafiCertificateCustomizeDiff plans a replacement when the last refresh found
+// the certificate within expiration_window.
+//
+// Renewal must not depend on a value the configuration can supply: renew_required is
+// Optional, so when it is set in the configuration (or excluded via ignore_changes) the
+// refreshed "true" and the planned value match, the SDK produces an empty diff and
+// renewal is silently disabled. Reading the verdict Read stored in state, rather than the
+// planned value, keeps the decision in the provider's hands. A refresh remains a
+// precondition: without one there is no verdict to act on.
+func resourceVenafiCertificateCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	if d.Id() == "" {
+		// The resource does not exist yet; enrollment is already planned.
+		return nil
+	}
+
+	// GetChange's old value comes from state, so it is the value Read wrote, not the one
+	// the configuration asks for.
+	if renewFromState, _ := d.GetChange(venafiCertificateAttrRenew); renewFromState != true {
+		return nil
+	}
+
+	// Re-enrollment produces a new certificate, so plan the issued values as unknown.
+	// That is also the change ForceNew hangs off: it only accepts a key that already
+	// differs, and only computed keys can be given a new planned value, which rules out
+	// renew_required itself. Attributes are empty in some configurations (a service
+	// generated CSR without key_password keeps nothing but the id), so take the first
+	// one that yields a change.
+	for _, anchor := range []string{"certificate", venafiCertificateAttrCertificateID, "chain", "csr_pem"} {
+		if err := d.SetNewComputed(anchor); err != nil {
+			return err
+		}
+		if err := d.ForceNew(anchor); err == nil {
+			return nil
+		}
+	}
+
+	tflog.Warn(ctx, "certificate is within its expiration window but no attribute could carry the forced replacement")
+	return nil
 }
 
 func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -257,6 +308,15 @@ func resourceVenafiCertificateCreate(ctx context.Context, d *schema.ResourceData
 
 	err = enrollVenafiCertificate(ctx, d, cl)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// A freshly enrolled certificate is never pending renewal. Recording that here,
+	// rather than leaving whatever the configuration supplied, keeps the state
+	// consistent even before the first refresh: renewal is planned by
+	// resourceVenafiCertificateCustomizeDiff from this value, so a stale true would
+	// otherwise force an immediate, spurious replacement.
+	if err = d.Set(venafiCertificateAttrRenew, false); err != nil {
 		return diag.FromErr(err)
 	}
 
