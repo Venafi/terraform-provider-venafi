@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 // vcert's fake connector.
 type fakeCloudConnector struct {
 	*fake.Connector
+	// Terraform calls resources concurrently
+	mu            sync.Mutex
 	connectorType endpoint.ConnectorType
 	providers     map[string]*domain.CloudProvider
 	keystores     map[string]*domain.CloudKeystore
@@ -32,10 +35,11 @@ type fakeCloudConnector struct {
 	validationResults []domain.CloudProviderValidationResult
 	validateCalls     int
 
-	createdProvider *domain.CreateCloudProviderRequest
-	updatedProvider *domain.UpdateCloudProviderRequest
-	createdKeystore *domain.CreateCloudKeystoreRequest
-	updatedKeystore *domain.UpdateCloudKeystoreRequest
+	createdProvider  *domain.CreateCloudProviderRequest
+	updatedProvider  *domain.UpdateCloudProviderRequest
+	createdKeystore  *domain.CreateCloudKeystoreRequest
+	updatedKeystore  *domain.UpdateCloudKeystoreRequest
+	keystoresCreated int
 }
 
 func newFakeCloudConnector(connectorType endpoint.ConnectorType) *fakeCloudConnector {
@@ -55,6 +59,8 @@ func (f *fakeCloudConnector) newID() string {
 }
 
 func (f *fakeCloudConnector) ListCloudProviders(filter domain.GetCloudProviderRequest) ([]domain.CloudProvider, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	result := make([]domain.CloudProvider, 0)
 	for _, p := range f.providers {
 		if strings.Contains(p.Name, filter.Name) {
@@ -67,6 +73,8 @@ func (f *fakeCloudConnector) ListCloudProviders(filter domain.GetCloudProviderRe
 // CreateCloudProvider stores the configuration the way the platform returns
 // it: without the Azure secret, and with generated values
 func (f *fakeCloudConnector) CreateCloudProvider(request domain.CreateCloudProviderRequest) (*domain.CloudProvider, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.createdProvider = &request
 	p := &domain.CloudProvider{ID: f.newID(), Name: request.Name, Type: request.Type, Status: domain.CloudProviderStatusNotValidated}
 	if request.AWS != nil {
@@ -105,6 +113,8 @@ func copyProvider(p *domain.CloudProvider) *domain.CloudProvider {
 }
 
 func (f *fakeCloudConnector) UpdateCloudProvider(request domain.UpdateCloudProviderRequest) (*domain.CloudProvider, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.updatedProvider = &request
 	p, ok := f.providers[request.ID]
 	if !ok {
@@ -127,11 +137,15 @@ func (f *fakeCloudConnector) UpdateCloudProvider(request domain.UpdateCloudProvi
 }
 
 func (f *fakeCloudConnector) DeleteCloudProvider(id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	delete(f.providers, id)
 	return nil
 }
 
 func (f *fakeCloudConnector) ValidateCloudProvider(id string) (*domain.CloudProviderValidationResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	result := domain.CloudProviderValidationResult{Status: domain.CloudProviderStatusValidated}
 	if len(f.validationResults) > 0 {
 		i := f.validateCalls
@@ -149,6 +163,8 @@ func (f *fakeCloudConnector) ValidateCloudProvider(id string) (*domain.CloudProv
 }
 
 func (f *fakeCloudConnector) ListCloudKeystores(filter domain.GetCloudKeystoreRequest) ([]domain.CloudKeystore, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	result := make([]domain.CloudKeystore, 0)
 	for _, k := range f.keystores {
 		if filter.CloudKeystoreID == nil || *filter.CloudKeystoreID == k.ID {
@@ -159,7 +175,15 @@ func (f *fakeCloudConnector) ListCloudKeystores(filter domain.GetCloudKeystoreRe
 }
 
 func (f *fakeCloudConnector) CreateCloudKeystore(request domain.CreateCloudKeystoreRequest) (*domain.CloudKeystore, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// like the platform, keystores need a validated provider; providers the
+	// fake does not know about are accepted so tests can use any ID
+	if p, ok := f.providers[request.CloudProviderID]; ok && p.Status != domain.CloudProviderStatusValidated {
+		return nil, fmt.Errorf("cloud provider %s is not validated", p.Name)
+	}
 	f.createdKeystore = &request
+	f.keystoresCreated++
 	k := &domain.CloudKeystore{
 		ID: f.newID(), Name: request.Name, Type: request.Type,
 		CloudProviderID: request.CloudProviderID, CloudProviderName: "provider",
@@ -174,6 +198,8 @@ func (f *fakeCloudConnector) CreateCloudKeystore(request domain.CreateCloudKeyst
 }
 
 func (f *fakeCloudConnector) UpdateCloudKeystore(request domain.UpdateCloudKeystoreRequest) (*domain.CloudKeystore, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.updatedKeystore = &request
 	k, ok := f.keystores[request.ID]
 	if !ok {
@@ -203,6 +229,8 @@ func applyDiscoveryOptions(config *domain.CloudDiscoveryConfiguration, options *
 }
 
 func (f *fakeCloudConnector) DeleteCloudKeystore(id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	delete(f.keystores, id)
 	return nil
 }
@@ -621,7 +649,7 @@ func TestCloudProviderValidationTimesOut(t *testing.T) {
 	}
 	meta := &ProviderConfig{VCertClient: connector}
 	r := resourceVenafiCloudProviderValidation()
-	timeout := 30 * time.Millisecond
+	timeout := 200 * time.Millisecond
 	r.Timeouts.Create = &timeout
 
 	ctx := context.Background()
@@ -631,7 +659,7 @@ func TestCloudProviderValidationTimesOut(t *testing.T) {
 	}
 	state, diags := r.Apply(ctx, nil, diff, meta)
 
-	if !diags.HasError() || !strings.Contains(diags[0].Summary, "was not validated within 30ms: role cannot be assumed") {
+	if !diags.HasError() || !strings.Contains(diags[0].Summary, "was not validated within 200ms: role cannot be assumed") {
 		t.Fatalf("expected a timeout error with the details, got %v", diags)
 	}
 	if connector.validateCalls < 2 {
