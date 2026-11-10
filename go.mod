@@ -3,8 +3,9 @@ module github.com/Venafi/terraform-provider-venafi
 go 1.27.3
 
 require (
-	github.com/Venafi/vcert/v5 v5.14.0
+	github.com/Venafi/vcert/v5 v5.14.1-0.20261110220926-4aaf51c19fe0
 	github.com/client9/misspell v0.3.4
+	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
@@ -25,7 +26,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-cty v1.5.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-plugin v1.7.0 // indirect
