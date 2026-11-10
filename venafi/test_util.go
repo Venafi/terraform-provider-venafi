@@ -13,6 +13,8 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -425,11 +427,21 @@ func checkImportedCustomFields(t *testing.T, dataCf string, attr map[string]stri
 	}
 	for key, value := range customFieldsMap {
 		keyAttr := fmt.Sprintf("custom_fields.%s", key)
-		if attr[keyAttr] != value {
+		if !sameCustomFieldValues(attr[keyAttr], value) {
 			return fmt.Errorf("\"%s\" custom field is different, expected: %s, got: %s", key, value, attr[keyAttr])
 		}
 	}
 	return nil
+}
+
+// sameCustomFieldValues compares custom field values, ignoring the order of
+// multi-value ("a|b|c") fields: TPP 26.1 does not return them in the order
+// they were set.
+func sameCustomFieldValues(got, want string) bool {
+	g, w := strings.Split(got, "|"), strings.Split(want, "|")
+	sort.Strings(g)
+	sort.Strings(w)
+	return slices.Equal(g, w)
 }
 
 func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceGenerated bool) string {
