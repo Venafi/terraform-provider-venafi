@@ -185,7 +185,7 @@ e2e_init: build_dev
 	terraform init
 
 test_e2e_tpp:
-	echo yes|terraform apply -target=venafi_certificate.tpp_certificate -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.tpp_certificate -auto-approve
 	terraform state show venafi_certificate.tpp_certificate
 	terraform output cert_certificate_tpp > /tmp/cert_certificate_tpp.pem
 	terraform output cert_private_key_tpp > /tmp/cert_private_key_tpp.pem
@@ -193,28 +193,28 @@ test_e2e_tpp:
 	cat /tmp/cert_certificate_tpp.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_vaas:
-	echo yes|terraform apply -target=venafi_certificate.vaas_certificate -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.vaas_certificate -auto-approve
 	terraform state show venafi_certificate.vaas_certificate
 	terraform output cert_certificate_vaas > /tmp/cert_certificate_vaas.pem
 	cat /tmp/cert_certificate_vaas.pem
 	cat /tmp/cert_certificate_vaas.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_ngts:
-	echo yes|terraform apply -target=venafi_certificate.ngts_certificate -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.ngts_certificate -auto-approve
 	terraform state show venafi_certificate.ngts_certificate
 	terraform output cert_certificate_ngts > /tmp/cert_certificate_ngts.pem
 	cat /tmp/cert_certificate_ngts.pem
 	cat /tmp/cert_certificate_ngts.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_tpp_token:
-	echo yes|terraform apply -target=venafi_certificate.token_certificate -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.token_certificate -auto-approve
 	terraform state show venafi_certificate.token_certificate
 	terraform output cert_certificate_token > /tmp/cert_certificate_tpp_token.pem
 	cat /tmp/cert_certificate_tpp_token.pem
 	cat /tmp/cert_certificate_tpp_token.pem|openssl x509 -inform pem -noout -issuer -serial -subject -dates
 
 test_e2e_dev:
-	echo yes|terraform apply -target=venafi_certificate.dev_certificate -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.dev_certificate -auto-approve
 	terraform state show venafi_certificate.dev_certificate
 	terraform output cert_certificate_dev > /tmp/cert_certificate_dev.pem
 	cat /tmp/cert_certificate_dev.pem
@@ -223,7 +223,7 @@ test_e2e_dev:
 	cat /tmp/cert_private_key_dev.pem
 
 test_e2e_dev_ecdsa:
-	echo yes|terraform apply -target=venafi_certificate.dev_certificate_ecdsa -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.dev_certificate_ecdsa -auto-approve
 	terraform state show venafi_certificate.dev_certificate_ecdsa
 	terraform output cert_certificate_dev_ecdsa > /tmp/cert_certificate_dev_ecdsa.pem
 	cat /tmp/cert_certificate_dev_ecdsa.pem
@@ -232,7 +232,7 @@ test_e2e_dev_ecdsa:
 	cat /tmp/cert_private_key_dev_ecdsa.pem
 
 test_e2e_vc_43631:
-	echo yes|terraform apply -target=venafi_certificate.VC-43631 -auto-approve
+	echo yes|terraform apply -lock-timeout=5m -target=venafi_certificate.VC-43631 -auto-approve
 	terraform state show venafi_certificate.VC-43631
 	terraform output cert_certificate_VC-43631 > /tmp/cert_certificate_VC-43631.pem
 	cat /tmp/cert_certificate_VC-43631.pem
