@@ -35,14 +35,6 @@ variable "NGTS_TOKEN_URL" {
   default = ""
 }
 
-variable "TPP_USER" {
-  default = ""
-}
-
-variable "TPP_PASSWORD" {
-  default = ""
-}
-
 variable "TPP_URL" {
   default = ""
 }
@@ -106,8 +98,7 @@ Platform provider configuration (alias = "tpp")
 provider "venafi" {
   alias        = "tpp"
   url          = var.TPP_URL
-  tpp_username = var.TPP_USER
-  tpp_password = var.TPP_PASSWORD
+  access_token = var.TPP_ACCESS_TOKEN
   zone         = var.TPP_ZONE
   trust_bundle = file(var.TRUST_BUNDLE)
 }
