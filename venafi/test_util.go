@@ -443,6 +443,9 @@ func createCertificate(t *testing.T, cfg *vcert.Config, data *testData, serviceG
 		if data.zone != "" {
 			cfg.Zone = data.zone
 		}
+		// TPP_ZONE is escaped for Terraform ("Open Source\\vcert"); vcert needs
+		// a single backslash, and TPP 26.1 rejects the doubled one.
+		cfg.Zone = strings.ReplaceAll(cfg.Zone, `\\`, `\`)
 		trustBundlePath := os.Getenv("TRUST_BUNDLE")
 		// #nosec G703
 		trustBundleBytes, err := os.ReadFile(trustBundlePath)

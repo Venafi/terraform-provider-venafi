@@ -21,16 +21,12 @@ import (
 // #nosec
 var (
 	envVariables = fmt.Sprintf(`
-variable "TPP_USER" {default = "%s"}
-variable "TPP_PASSWORD" {default = "%s"}
 variable "TPP_URL" {default = "%s"}
 variable "TPP_ZONE" {default = "%s"}
 variable "TPP_ZONE_ECDSA" {default = "%s"}
 variable "TRUST_BUNDLE" {default = "%s"}
 variable "TPP_ACCESS_TOKEN" {default = "%s"}
 `,
-		os.Getenv("TPP_USER"),
-		os.Getenv("TPP_PASSWORD"),
 		os.Getenv("TPP_URL"),
 		os.Getenv("TPP_ZONE"),
 		os.Getenv("TPP_ZONE_ECDSA"),
