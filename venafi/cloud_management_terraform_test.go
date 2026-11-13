@@ -203,6 +203,103 @@ resource "venafi_cloud_provider" "gcp" {
 	})
 }
 
+func TestTerraformCloudProviderGCPWorkloadIdentityFieldsAreKept(t *testing.T) {
+	requireTerraformBinary(t)
+	connector := newFakeCloudConnector(endpoint.ConnectorTypeNGTS)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: fakeProviderFactories(connector),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "venafi_cloud_provider" "gcp" {
+  name = "gcp"
+  type = "GCP"
+  gcp {
+    service_account_email              = "sa@p.iam.gserviceaccount.com"
+    authorization_method               = "WORKLOAD_IDENTITY_FEDERATION"
+    project_number                     = "123456789"
+    workload_identity_pool_id          = "pool"
+    workload_identity_pool_provider_id = "pool-provider"
+  }
+}
+`,
+			},
+			{
+				// The platform cannot clear the workload identity fields, so
+				// removing them keeps the current values rather than leaving a
+				// diff that never goes away
+				Config: `
+resource "venafi_cloud_provider" "gcp" {
+  name = "gcp"
+  type = "GCP"
+  gcp {
+    service_account_email = "sa@p.iam.gserviceaccount.com"
+    authorization_method  = "VENAFI_GENERATED_KEY"
+  }
+}
+`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("venafi_cloud_provider.gcp", "gcp.0.authorization_method", "VENAFI_GENERATED_KEY"),
+					resource.TestCheckResourceAttr("venafi_cloud_provider.gcp", "gcp.0.project_number", "123456789"),
+					resource.TestCheckResourceAttr("venafi_cloud_provider.gcp", "gcp.0.workload_identity_pool_id", "pool"),
+					checkFake(func() error {
+						gcp := connector.updatedProvider.GCP
+						if gcp == nil || gcp.AuthorizationMethod != domain.GCPAuthorizationMethodVenafiGeneratedKey {
+							return fmt.Errorf("expected the authorization method to be updated, got %+v", gcp)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
+func TestTerraformCloudProviderStatusIsKnownAfterConfigurationChange(t *testing.T) {
+	requireTerraformBinary(t)
+	connector := newFakeCloudConnector(endpoint.ConnectorTypeNGTS)
+
+	config := func(role string) string {
+		return fmt.Sprintf(`
+resource "venafi_cloud_provider" "aws" {
+  name = "aws"
+  type = "AWS"
+  aws {
+    account_id = "123456789012"
+    role       = %q
+  }
+}
+
+output "status" {
+  value = venafi_cloud_provider.aws.status
+}
+`, role)
+	}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: fakeProviderFactories(connector),
+		Steps: []resource.TestStep{
+			{Config: config("role-a")},
+			{
+				// validated outside this configuration, then the role changes,
+				// which resets the status: the plan must not promise the
+				// refreshed VALIDATED, or the output would change on the next plan
+				PreConfig: func() {
+					for _, p := range connector.providers {
+						p.Status = domain.CloudProviderStatusValidated
+					}
+				},
+				Config: config("role-b"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("venafi_cloud_provider.aws", "status", "NOT_VALIDATED"),
+					resource.TestCheckOutput("status", "NOT_VALIDATED"),
+				),
+			},
+		},
+	})
+}
+
 func TestTerraformCloudKeystoreDiscoverySchedule(t *testing.T) {
 	requireTerraformBinary(t)
 	connector := newFakeCloudConnector(endpoint.ConnectorTypeNGTS)

@@ -151,6 +151,23 @@ func resourceCloudProviderValidationImport(ctx context.Context, d *schema.Resour
 	if d.Id() == "" {
 		return nil, fmt.Errorf("cloud provider ID is empty")
 	}
+	// Read drops a validation whose provider is not validated, which Terraform
+	// would report as a missing object; say why instead
+	manager, _, err := getCloudProviderManager(ctx, meta, resourceVenafiCloudProviderValidationName)
+	if err != nil {
+		return nil, err
+	}
+	provider, err := findCloudProviderByID(manager, d.Id())
+	if err != nil {
+		return nil, err
+	}
+	if provider == nil {
+		return nil, fmt.Errorf("cloud provider %s does not exist", d.Id())
+	}
+	if provider.Status != domain.CloudProviderStatusValidated {
+		return nil, fmt.Errorf("cloud provider %s is %s, so there is no validation to import; "+
+			"create the venafi_cloud_provider_validation resource to validate it", d.Id(), provider.Status)
+	}
 	if err := d.Set(cloudProviderValidationCloudProviderID, d.Id()); err != nil {
 		return nil, err
 	}

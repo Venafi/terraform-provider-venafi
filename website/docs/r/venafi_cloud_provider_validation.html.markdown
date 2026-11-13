@@ -107,3 +107,5 @@ Using `terraform import`, import the validation of a Cloud Provider using the Cl
 ```console
 terraform import venafi_cloud_provider_validation.example 2155bd32-2234-22ac-7cfd-ff1198845aa2
 ```
+
+Only a validated Cloud Provider can be imported; for one that is not validated, create the resource instead, which validates it.

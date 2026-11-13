@@ -388,6 +388,12 @@ func resourceCloudKeystoreDelete(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if err := manager.DeleteCloudKeystore(d.Id()); err != nil {
+		// deleted outside Terraform since the last refresh
+		if keystore, findErr := findCloudKeystoreByID(manager, d.Id()); findErr == nil && keystore == nil {
+			tflog.Info(ctx, "cloud keystore is already gone", logFields)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

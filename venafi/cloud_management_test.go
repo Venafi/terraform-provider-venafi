@@ -133,12 +133,31 @@ func (f *fakeCloudConnector) UpdateCloudProvider(request domain.UpdateCloudProvi
 		p.Azure.DirectoryID = *request.Azure.DirectoryID
 		p.Status = domain.CloudProviderStatusNotValidated
 	}
+	// like the platform, workload identity fields that are not sent keep
+	// their stored values
+	if request.GCP != nil {
+		keep := func(stored *string, update *string) {
+			if update != nil && *update != "" {
+				*stored = *update
+			}
+		}
+		keep(&p.GCP.ProjectNumber, request.GCP.ProjectNumber)
+		keep(&p.GCP.WorkloadIdentityPoolID, request.GCP.WorkloadIdentityPoolID)
+		keep(&p.GCP.WorkloadIdentityPoolProviderID, request.GCP.WorkloadIdentityPoolProviderID)
+		if request.GCP.AuthorizationMethod != domain.GCPAuthorizationMethodUnknown {
+			p.GCP.AuthorizationMethod = request.GCP.AuthorizationMethod
+		}
+		p.Status = domain.CloudProviderStatusNotValidated
+	}
 	return copyProvider(p), nil
 }
 
 func (f *fakeCloudConnector) DeleteCloudProvider(id string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if _, ok := f.providers[id]; !ok {
+		return fmt.Errorf("cloud provider %s not found", id)
+	}
 	delete(f.providers, id)
 	return nil
 }
@@ -231,6 +250,9 @@ func applyDiscoveryOptions(config *domain.CloudDiscoveryConfiguration, options *
 func (f *fakeCloudConnector) DeleteCloudKeystore(id string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if _, ok := f.keystores[id]; !ok {
+		return fmt.Errorf("cloud keystore %s not found", id)
+	}
 	delete(f.keystores, id)
 	return nil
 }
@@ -710,5 +732,43 @@ func TestCloudProviderValidationTriggersForceRevalidation(t *testing.T) {
 	}
 	if !diff.RequiresNew() {
 		t.Fatalf("expected a trigger change to validate again")
+	}
+}
+
+func TestCloudResourcesDeleteObjectsAlreadyGone(t *testing.T) {
+	connector := newFakeCloudConnector(endpoint.ConnectorTypeNGTS)
+	meta := &ProviderConfig{VCertClient: connector}
+
+	for _, r := range []*schema.Resource{resourceVenafiCloudProvider(), resourceVenafiCloudKeystore()} {
+		d := r.TestResourceData()
+		d.SetId("deleted-outside-terraform")
+		if diags := r.DeleteContext(context.Background(), d, meta); diags.HasError() {
+			t.Fatalf("delete of an object that is already gone failed: %v", diags)
+		}
+		if d.Id() != "" {
+			t.Fatalf("expected the object to be removed from state")
+		}
+	}
+}
+
+func TestCloudProviderValidationImportExplainsUnvalidatedProvider(t *testing.T) {
+	connector := newFakeCloudConnector(endpoint.ConnectorTypeNGTS)
+	connector.providers["p1"] = &domain.CloudProvider{ID: "p1", Name: "aws", Type: domain.CloudProviderTypeAWS, Status: domain.CloudProviderStatusNotValidated}
+	meta := &ProviderConfig{VCertClient: connector}
+	r := resourceVenafiCloudProviderValidation()
+
+	for id, want := range map[string]string{"p1": "is NOT_VALIDATED", "p2": "does not exist"} {
+		d := r.TestResourceData()
+		d.SetId(id)
+		if _, err := r.Importer.StateContext(context.Background(), d, meta); err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("expected an error containing %q for %s, got %v", want, id, err)
+		}
+	}
+
+	connector.providers["p1"].Status = domain.CloudProviderStatusValidated
+	d := r.TestResourceData()
+	d.SetId("p1")
+	if _, err := r.Importer.StateContext(context.Background(), d, meta); err != nil {
+		t.Fatalf("unexpected error importing a validated provider: %s", err)
 	}
 }
