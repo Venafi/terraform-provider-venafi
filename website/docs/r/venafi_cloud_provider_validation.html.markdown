@@ -20,6 +20,11 @@ platform reported, nothing is stored in the state, and the next apply validates 
 ## Example Usage
 
 ```hcl
+# The role name is known up front, so the Cloud Provider and the IAM role do not depend on each other
+locals {
+  venafi_role_name = "venafi-cloud-provider"
+}
+
 resource "venafi_cloud_provider" "aws" {
   name = "Production AWS"
   type = "AWS"
@@ -27,13 +32,13 @@ resource "venafi_cloud_provider" "aws" {
 
   aws {
     account_id = "123456789012"
-    role       = aws_iam_role.venafi.name
+    role       = local.venafi_role_name
   }
 }
 
 # The IAM role trusts the platform using the external ID it generated
 resource "aws_iam_role" "venafi" {
-  name = "venafi-cloud-provider"
+  name = local.venafi_role_name
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -45,15 +50,37 @@ resource "aws_iam_role" "venafi" {
   })
 }
 
+# The permissions the platform needs in ACM; see the platform documentation for the exact list
+resource "aws_iam_role_policy" "venafi" {
+  name = "venafi-acm"
+  role = aws_iam_role.venafi.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "acm:ListCertificates",
+        "acm:DescribeCertificate",
+        "acm:GetCertificate",
+        "acm:ImportCertificate",
+        "acm:AddTagsToCertificate",
+        "acm:ListTagsForCertificate",
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
 resource "venafi_cloud_provider_validation" "aws" {
   cloud_provider_id = venafi_cloud_provider.aws.id
 
-  # wait for the permissions the platform needs (policy not shown)
+  # validate only once the role and its permissions exist
   depends_on = [aws_iam_role_policy.venafi]
 
-  # validate again whenever the cloud provider changes
   lifecycle {
-    replace_triggered_by = [venafi_cloud_provider.aws]
+    # validate again when the provider's configuration changes, which resets its status;
+    # renaming it or changing its team does not
+    replace_triggered_by = [venafi_cloud_provider.aws.aws]
   }
 
   timeouts {

@@ -56,9 +56,13 @@ func checkFake(check func() error) resource.TestCheckFunc {
 }
 
 func awsSetupConfig(role string) string {
+	return awsSetupConfigNamed("aws", role)
+}
+
+func awsSetupConfigNamed(name string, role string) string {
 	return fmt.Sprintf(`
 resource "venafi_cloud_provider" "aws" {
-  name = "aws"
+  name = %q
   type = "AWS"
   team = "Cloud Admins"
   aws {
@@ -70,7 +74,7 @@ resource "venafi_cloud_provider" "aws" {
 resource "venafi_cloud_provider_validation" "aws" {
   cloud_provider_id = venafi_cloud_provider.aws.id
   lifecycle {
-    replace_triggered_by = [venafi_cloud_provider.aws]
+    replace_triggered_by = [venafi_cloud_provider.aws.aws]
   }
 }
 
@@ -83,7 +87,7 @@ resource "venafi_cloud_keystore" "acm" {
     region = "us-east-1"
   }
 }
-`, role)
+`, name, role)
 }
 
 func TestTerraformCloudProviderValidationAndKeystore(t *testing.T) {
@@ -133,6 +137,20 @@ func TestTerraformCloudProviderValidationAndKeystore(t *testing.T) {
 						}
 						if connector.keystoresCreated != 1 {
 							return fmt.Errorf("expected the keystore to be kept, got %d creations", connector.keystoresCreated)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				// Renaming does not reset the status, so replace_triggered_by on
+				// the aws block does not validate again
+				Config: awsSetupConfigNamed("aws-renamed", "role-b"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("venafi_cloud_provider.aws", "name", "aws-renamed"),
+					checkFake(func() error {
+						if connector.validateCalls != 3 {
+							return fmt.Errorf("expected no new validation after renaming, got %d validation calls", connector.validateCalls)
 						}
 						return nil
 					}),

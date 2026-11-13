@@ -91,4 +91,10 @@ Using `terraform import`, import a Cloud Keystore using its ID. For example:
 terraform import venafi_cloud_keystore.example e48897d0-2762-11ef-198k-79ac590dd358
 ```
 
-The `team` is not read back from the platform.
+The `team` and the discovery schedule need care after an import:
+
+* The `team` is not read back from the platform, so the first apply after the import sets the `team` in the
+  configuration.
+* A `discovery_schedule` missing from the configuration means no schedule, so the first apply removes a schedule set
+  on the platform. Copy the imported `discovery_schedule` from the state into the configuration before applying to keep
+  it.
