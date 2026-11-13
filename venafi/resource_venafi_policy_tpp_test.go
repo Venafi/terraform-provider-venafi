@@ -21,16 +21,12 @@ import (
 // #nosec
 var (
 	envVariables = fmt.Sprintf(`
-variable "TPP_USER" {default = "%s"}
-variable "TPP_PASSWORD" {default = "%s"}
 variable "TPP_URL" {default = "%s"}
 variable "TPP_ZONE" {default = "%s"}
 variable "TPP_ZONE_ECDSA" {default = "%s"}
 variable "TRUST_BUNDLE" {default = "%s"}
 variable "TPP_ACCESS_TOKEN" {default = "%s"}
 `,
-		os.Getenv("TPP_USER"),
-		os.Getenv("TPP_PASSWORD"),
 		os.Getenv("TPP_URL"),
 		os.Getenv("TPP_ZONE"),
 		os.Getenv("TPP_ZONE_ECDSA"),
@@ -253,10 +249,15 @@ func checkImportTppPolicy(states []*terraform.InstanceState) error {
 		return fmt.Errorf("wildcard allowed is different, expected %t but get %t", *(filePolicySpecification.Policy.WildcardAllowed), *(policySpecification.Policy.WildcardAllowed))
 	}
 
-	equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
-
-	if !equal {
-		return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+	// An empty keyTypes list in the file means the folder doesn't restrict key
+	// types. TPP 25.1+ reports that as a locked PkixParameterSet with every
+	// algorithm, which VCert v5.14.0+ returns as the full list (RSA, ECC, MLDSA),
+	// while older TPP or VCert return none, so only compare an explicit list.
+	if len(filePolicySpecification.Policy.KeyPair.KeyTypes) > 0 {
+		equal = IsArrayStringEqual(filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+		if !equal {
+			return fmt.Errorf("key types are different, expected %+q but get %+q", filePolicySpecification.Policy.KeyPair.KeyTypes, policySpecification.Policy.KeyPair.KeyTypes)
+		}
 	}
 
 	if *(filePolicySpecification.Default.Subject.Locality) != *(policySpecification.Default.Subject.Locality) {

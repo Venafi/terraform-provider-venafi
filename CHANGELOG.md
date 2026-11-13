@@ -1,3 +1,25 @@
+## 0.24.2 (November 10th, 2026)
+- Builds with Go 1.27.3. Earlier Go versions accept certificate chains from the compromised eMudhra intermediate CAs; Go 1.27.3 rejects them, so the provider no longer trusts TLS servers presenting those chains.
+- Updates the VCert SDK to v5.14.0.
+- Note: CyberArk Certificate Manager, Self-Hosted 26.1 no longer supports the deprecated username/password authentication (`tpp_username`/`tpp_password`); use `access_token` instead.
+
+## 0.24.1 (July 10th, 2026)
+- Updates the VCert SDK to v5.13.8, which fixes how certificate validity is handled for ZTPKI ([#218](https://github.com/Venafi/terraform-provider-venafi/pull/218)).
+
+## 0.24.0 (June 22nd, 2026)
+- Adds support for Palo Alto Networks Next-Gen Trust Security (NGTS), authenticating with a service account (`client_id`, `client_secret`, `token_url` and `tsg_id`) ([#211](https://github.com/Venafi/terraform-provider-venafi/pull/211)).
+- Replaces unmaintained dependencies and updates dependency libraries ([#210](https://github.com/Venafi/terraform-provider-venafi/pull/210), [#213](https://github.com/Venafi/terraform-provider-venafi/pull/213), [#214](https://github.com/Venafi/terraform-provider-venafi/pull/214)).
+- Moves linting to golangci-lint v2 ([#216](https://github.com/Venafi/terraform-provider-venafi/pull/216), [#217](https://github.com/Venafi/terraform-provider-venafi/pull/217)).
+
+## 0.23.2 (June 11th, 2026)
+- Security: the key password is no longer written to logs when importing a certificate ([#205](https://github.com/Venafi/terraform-provider-venafi/pull/205)).
+- Security: the `pkcs12` attribute of `venafi_certificate` and the `private_key` attribute of `venafi_ssh_certificate` are now marked as sensitive ([#206](https://github.com/Venafi/terraform-provider-venafi/pull/206), [#207](https://github.com/Venafi/terraform-provider-venafi/pull/207)).
+- Fixes the Terraform state when a cloud keystore installation is deleted outside Terraform in CyberArk Certificate Manager, SaaS ([#208](https://github.com/Venafi/terraform-provider-venafi/pull/208)).
+- Updates product names in the documentation, examples, log messages and errors to CyberArk Certificate Manager ([#193](https://github.com/Venafi/terraform-provider-venafi/pull/193), [#194](https://github.com/Venafi/terraform-provider-venafi/pull/194), [#199](https://github.com/Venafi/terraform-provider-venafi/pull/199)).
+
+## 0.23.1 (October 6th, 2025)
+- Fixes a crash caused by certain SAN URI regular expressions in a CyberArk Certificate Manager, SaaS zone.
+
 ## 0.23.0 (September 5th, 2025)
 - Add support to provide certificate tags for Venafi Control Plane.
 

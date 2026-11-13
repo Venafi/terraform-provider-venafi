@@ -19,16 +19,12 @@ import (
 
 var (
 	environmentVariables = fmt.Sprintf(`
-variable "TPP_USER" {default = "%s"}
-variable "TPP_PASSWORD" {default = "%s"}
 variable "TPP_URL" {default = "%s"}
 variable "TPP_ZONE" {default = "%s"}
 variable "TPP_ZONE_ECDSA" {default = "%s"}
 variable "TRUST_BUNDLE" {default = "%s"}
 variable "TPP_ACCESS_TOKEN" {default = "%s"}
 `,
-		os.Getenv("TPP_USER"),
-		os.Getenv("TPP_PASSWORD"),
 		os.Getenv("TPP_URL"),
 		os.Getenv("TPP_ZONE"),
 		os.Getenv("TPP_ZONE_ECDSA"),
@@ -40,8 +36,7 @@ variable "TPP_ACCESS_TOKEN" {default = "%s"}
 provider "venafi" {
 	alias = "tpp"
 	url = "${var.TPP_URL}"
-	tpp_username = "${var.TPP_USER}"
-	tpp_password = "${var.TPP_PASSWORD}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
@@ -49,8 +44,7 @@ provider "venafi" {
 provider "venafi" {
 	alias = "tpp"
 	url = "${var.TPP_URL}"
-	tpp_username = "${var.TPP_USER}"
-	tpp_password = "${var.TPP_PASSWORD}"
+	access_token = "${var.TPP_ACCESS_TOKEN}"
 	zone = "${var.TPP_ZONE_ECDSA}"
 	trust_bundle = "${file(var.TRUST_BUNDLE)}"
 }`
