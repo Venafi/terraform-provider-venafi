@@ -235,12 +235,6 @@ func (f *fakeCloudConnector) DeleteCloudKeystore(id string) error {
 	return nil
 }
 
-func (f *fakeCloudConnector) StartCloudDiscovery(string) (*domain.WorkflowResult, error) {
-	return &domain.WorkflowResult{}, nil
-}
-
-func (f *fakeCloudConnector) AbortCloudDiscovery(string) error { return nil }
-
 func (f *fakeCloudConnector) ListMachineIdentities(domain.ListCloudMachineIdentitiesRequest) ([]domain.CloudMachineIdentity, error) {
 	return nil, nil
 }
